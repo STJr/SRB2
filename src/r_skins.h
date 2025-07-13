@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -20,6 +20,7 @@
 #include "r_patch.h"
 #include "r_picformats.h" // spriteinfo_t
 #include "r_defs.h" // spritedef_t
+#include "simple_hashmap.h"
 
 /// Defaults
 #define SKINNAMESIZE 16
@@ -88,6 +89,9 @@ typedef struct
 		spritedef_t sprites[NUMPLAYERSPRITES];
 		spriteinfo_t sprinfo[NUMPLAYERSPRITES];
 	} super;
+
+	hashentry_int32_int32_t *defaulttocustomstate; // e.g. S_PLAY_WALK => S_SKIN_BIGTHECAT_WALK
+	hashentry_int32_int32_t *customtodefaultstate; // e.g. S_SKIN_BIGTHECAT_WALK => S_PLAY_WALK
 
 	// TODO: 2.3: Delete
 	spritedef_t sprites_compat[NUMPLAYERSPRITES * 2];

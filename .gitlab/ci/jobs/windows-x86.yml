@@ -3,33 +3,86 @@ Windows x86:
 
   stage: build
 
-  when: on_success
+  cache:
+    - key: ccache-$CI_JOB_NAME_SLUG-$CI_COMMIT_REF_SLUG
+      fallback_keys:
+        - ccache-$CI_JOB_NAME_SLUG-$CI_DEFAULT_BRANCH
+        - ccache-$CI_JOB_NAME_SLUG-master
+      paths:
+        - build/ccache
+        - build/ccache_statslog
+
+    - key: apt-$CI_JOB_IMAGE
+      paths:
+        - build/apt-cache
+      unprotect: true
+
+    - key: vcpkg-binary-cache-x86-mingw-static
+      paths:
+        - build/vcpkg-binary-cache
+      unprotect: true
 
   artifacts:
     paths:
-      - "bin/"
-      - "src/comptime.h"
+      - "build.cmake/bin/"
+      - "build.cmake/src/config.h"
     expose_as: "Win32"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-Win32"
 
   variables:
-    PREFIX: i686-w64-mingw32
-    CC: /usr/bin/i686-w64-mingw32-gcc-posix
-    CXX: /usr/bin/i686-w64-mingw32-g++-posix
+    VCPKG_TARGET_TRIPLET: x86-mingw-static
+    CC: i686-w64-mingw32-gcc
+    CXX: i686-w64-mingw32-g++
+    LD: i686-w64-mingw32-ld
 
   script:
+    - |
+        # vcpkg
+        echo -e "\e[0Ksection_start:`date +%s`:vcpkg-root[collapsed=true]\r\e[0KSetting vcpkg cache"
+
+        export VCPKG_DEFAULT_BINARY_CACHE="$(pwd)/build/vcpkg-binary-cache"
+
+        mkdir -p "build/vcpkg-binary-cache"
+
+        echo -e "\e[0Ksection_end:`date +%s`:vcpkg-root\r\e[0K"
+
     - - |
           # apt_toolchain
           echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
-      - apt-get install gcc-mingw-w64-i686-win32
+      - apt-get install g++-mingw-w64-i686-win32
       - |
           # apt_toolchain
           echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
 
     - - |
+          # apt_development
+          echo -e "\e[0Ksection_start:`date +%s`:apt_development[collapsed=true]\r\e[0KInstalling development packages"
+      - apt-get install ninja-build
+      - |
+          # apt_development
+          echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
+
+    - - |
+          # cmake
+          echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
+      - |
+          cmake \
+            -B build.cmake \
+            -G "Unix Makefiles" \
+            -DCMAKE_COLOR_DIAGNOSTICS=OFF \
+            -DSRB2_CONFIG_ENABLE_WEBM_MOVIES=OFF \
+            -DSRB2_CONFIG_ERRORMODE=ON \
+            -DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake \
+            -DVCPKG_TARGET_TRIPLET=${VCPKG_TARGET_TRIPLET} \
+            -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/toolchains/mingw.cmake
+      - |
+          # cmake
+          echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
+
+    - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1 SDL=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 MINGW=1 SDL=1
+      - cmake --build build.cmake --parallel 1 -- --keep-going
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"

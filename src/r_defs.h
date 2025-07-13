@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -76,8 +76,11 @@ typedef struct extracolormap_s
 	lighttable_t *colormap;
 
 #ifdef HWRENDER
-	// The id of the hardware lighttable. Zero means it does not exist yet.
-	UINT32 gl_lighttable_id;
+	struct {
+		UINT32 id; // The id of the hardware lighttable. Zero means it does not exist yet.
+		RGBA_t *data; // The texture data of the hardware lighttable.
+		boolean needs_update; // If the colormap changed recently or not.
+	} gl_lighttable;
 #endif
 
 #ifdef EXTRACOLORMAPLUMPS
@@ -242,9 +245,8 @@ typedef struct sectorportal_s
 		struct sector_s *sector;
 		struct mobj_s *mobj;
 	};
-	struct {
-		fixed_t x, y;
-	} origin;
+	struct sector_s *target;
+	boolean ceiling;
 } sectorportal_t;
 
 typedef struct ffloor_s
@@ -554,6 +556,8 @@ typedef struct sector_s
 	// portals
 	UINT32 portal_floor;
 	UINT32 portal_ceiling;
+
+	struct customargs_s* customargs;
 } sector_t;
 
 //
@@ -616,6 +620,7 @@ typedef struct line_s
 	UINT32 secportal; // transferred sector portal
 
 	struct pslope_s *midtexslope;
+	struct customargs_s *customargs;
 } line_t;
 
 typedef struct
@@ -652,6 +657,7 @@ typedef struct
 	INT16 repeatcnt; // # of times to repeat midtexture
 
 	extracolormap_t *colormap_data; // storage for colormaps; not applied to sectors.
+	struct customargs_s* customargs;
 } side_t;
 
 //

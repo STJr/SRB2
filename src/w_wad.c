@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -65,6 +65,7 @@
 #include "i_video.h" // rendermode
 #include "md5.h"
 #include "lua_script.h"
+#include "lua_hook.h"
 #ifdef SCANTHINGS
 #include "p_setup.h" // P_ScanThings
 #endif
@@ -307,12 +308,10 @@ static void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
   * \param resblock resulting MD5 checksum
   * \return 0 if MD5 checksum was made, and is at resblock, 1 if error was found
   */
+
+#ifndef NOMD5
 static INT32 W_MakeFileMD5(const char *filename, void *resblock)
 {
-#ifdef NOMD5
-	(void)filename;
-	memset(resblock, 0x00, 16);
-#else
 	FILE *fhandle;
 
 	if ((fhandle = fopen(filename, "rb")) != NULL)
@@ -329,9 +328,9 @@ static INT32 W_MakeFileMD5(const char *filename, void *resblock)
 		fclose(fhandle);
 		return 0;
 	}
-#endif
 	return 1;
 }
+#endif
 
 // Invalidates the cache of lump numbers. Call this whenever a wad is added.
 static void W_InvalidateLumpnumCache(void)
@@ -1011,6 +1010,10 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		break;
 	}
 
+	lua_lumploading++;
+	LUA_HookVoid(HOOK(AddonLoaded));
+	lua_lumploading--;
+
 	W_InvalidateLumpnumCache();
 	return wadfile->numlumps;
 }
@@ -1171,6 +1174,11 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	W_ReadFileShaders(wadfile);
 	W_LoadTrnslateLumps(numwadfiles - 1);
 	W_LoadDehackedLumpsPK3(numwadfiles - 1, mainfile);
+
+	lua_lumploading++;
+	LUA_HookVoid(HOOK(AddonLoaded));
+	lua_lumploading--;
+
 	W_InvalidateLumpnumCache();
 
 	return wadfile->numlumps;
@@ -1348,17 +1356,6 @@ UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
 			break;
 	}
 	return i;
-}
-
-// Returns 0 if the folder is not empty, 1 if it is empty, -1 if it doesn't exist
-INT32 W_IsFolderEmpty(const char *name, UINT16 wad)
-{
-	UINT16 start = W_CheckNumForFolderStartPK3(name, wad, 0);
-	if (start == INT16_MAX)
-		return -1;
-
-	// Unlike W_CheckNumForFolderStartPK3, W_CheckNumForFolderEndPK3 doesn't return INT16_MAX.
-	return W_CheckNumForFolderEndPK3(name, wad, start) <= start;
 }
 
 char *W_GetLumpFolderPathPK3(UINT16 wad, UINT16 lump)
@@ -1698,12 +1695,75 @@ lumpnum_t W_GetNumForLongName(const char *name)
 	return i;
 }
 
+// Checks if a given lump might be a valid patch.
+// This will need to read a bit of the file, but it attempts to not load it
+// in its entirety.
+static boolean W_IsProbablyValidPatch(UINT16 wadnum, UINT16 lumpnum)
+{
+	UINT8 header[MIN_PATCH_LUMP_HEADER_SIZE];
+
+	I_StaticAssert(sizeof(header) >= PNG_HEADER_SIZE);
+
+	// Check the file's size first
+	size_t lumplen = W_LumpLengthPwad(wadnum, lumpnum);
+
+	// Cannot be a valid Doom patch
+	if (lumplen < MIN_PATCH_LUMP_SIZE)
+		return false;
+
+	// Check if it's probably a valid PNG
+	if (lumplen >= PNG_MIN_SIZE)
+	{
+		// Read the PNG's header
+		W_ReadLumpHeaderPwad(wadnum, lumpnum, header, PNG_HEADER_SIZE, 0);
+
+		if (Picture_IsLumpPNG(header, lumplen))
+		{
+			// Assume it is if the signature matches.
+			return true;
+		}
+
+		// Otherwise, we read it as a patch
+	}
+
+	// Read the first 12 bytes
+	W_ReadLumpHeaderPwad(wadnum, lumpnum, header, sizeof(header), 0);
+
+	softwarepatch_t patch;
+	memcpy(&patch, header, sizeof(header));
+
+	INT16 width = SHORT(patch.width);
+	INT16 height = SHORT(patch.height);
+
+	// Lump size makes no sense given the width
+	if (!VALID_PATCH_LUMP_SIZE(lumplen, width))
+		return false;
+
+	// Check the dimensions.
+	if (width > 0 && height > 0 && width <= MAX_PATCH_DIMENSIONS && height <= MAX_PATCH_DIMENSIONS)
+	{
+		// Dimensions seem to make sense... But check at least the first column.
+		UINT32 ofs = LONG(patch.columnofs[0]);
+
+		// Need one byte for an empty column (but there's patches that don't know that!)
+		if (ofs < FIRST_PATCH_LUMP_COLUMN(width) || (size_t)ofs >= lumplen)
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	// Not valid if this point was reached
+	return false;
+}
+
 //
 // Same as W_CheckNumForNamePwad, but handles namespaces.
 //
 static UINT16 W_CheckNumForPatchNamePwad(const char *name, UINT16 wad, boolean longname)
 {
-	UINT16 i, start = INT16_MAX, end = INT16_MAX;
+	UINT16 i;
 	static char uname[8 + 1] = { 0 };
 	UINT32 hash = 0;
 	lumpinfo_t *lump_p;
@@ -1718,47 +1778,15 @@ static UINT16 W_CheckNumForPatchNamePwad(const char *name, UINT16 wad, boolean l
 		hash = quickncasehash(uname, 8);
 	}
 
-	// SRB2 doesn't have a specific namespace for graphics, which means someone can do weird things
-	// like placing graphics inside a namespace it doesn't make sense for them to be in, like Sounds/ or SOC/
-	// So for now, this checks for lumps OUTSIDE of the flats namespace.
-	// When this situation changes, change the loops below to check for lumps INSIDE the namespaces to look in.
-	// TODO: cache namespace lump IDs
-	if (W_FileHasFolders(wadfiles[wad]))
-	{
-		if (!W_IsFolderEmpty("Flats/", wad))
-		{
-			start = W_CheckNumForFolderStartPK3("Flats/", wad, 0);
-			end = W_CheckNumForFolderEndPK3("Flats/", wad, start);
-		}
-	}
-	else
-	{
-		start = W_CheckNumForMarkerStartPwad("F_START", wad, 0);
-		end = W_CheckNumForNamePwad("F_END", wad, start);
-		if (end != INT16_MAX)
-			end++;
-	}
-
 	lump_p = wadfiles[wad]->lumpinfo;
 
-	if (start == INT16_MAX)
-		start = wadfiles[wad]->numlumps;
-
-	for (i = 0; i < start; i++, lump_p++)
+	for (i = 0; i < wadfiles[wad]->numlumps; i++, lump_p++)
 	{
 		if ((!longname && lump_p->hash == hash && !strncmp(lump_p->name, uname, sizeof(uname) - 1))
 		|| (longname && stricmp(lump_p->longname, name) == 0))
-			return i;
-	}
-
-	if (end != INT16_MAX && start < end)
-	{
-		lump_p = wadfiles[wad]->lumpinfo + end;
-
-		for (i = end; i < wadfiles[wad]->numlumps; i++, lump_p++)
 		{
-			if ((!longname && lump_p->hash == hash && !strncmp(lump_p->name, uname, sizeof(uname) - 1))
-			|| (longname && stricmp(lump_p->longname, name) == 0))
+			// Found the patch by name, but needs to check if it is valid.
+			if (W_IsProbablyValidPatch(wad, i))
 				return i;
 		}
 	}
@@ -2382,8 +2410,11 @@ static void *W_GetPatchPwad(UINT16 wad, UINT16 lump, INT32 tag)
 #endif
 		}
 
-		dest = Patch_CreateFromDoomPatch(ptr);
+		dest = Patch_CreateFromDoomPatch(ptr, len);
 		Z_Free(ptr);
+
+		if (dest == NULL)
+			return NULL;
 
 		Z_ChangeTag(dest, tag);
 		Z_SetUser(dest, &lumpcache[lump]);
@@ -2402,7 +2433,7 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	patch_t *patch = W_GetPatchPwad(wad, lump, tag);
 
 #ifdef HWRENDER
-	if (rendermode == render_opengl)
+	if (patch != NULL && rendermode == render_opengl)
 		Patch_CreateGL(patch);
 #endif
 
@@ -2657,7 +2688,8 @@ static lumpchecklist_t folderblacklist[] =
 {
 	{"Lua/", 4},
 	{"SOC/", 4},
-	{"Sprites/",  8},
+	{"Sprites/", 8},
+	{"LongSprites/", 12},
 	{"Textures/", 9},
 	{"Patches/", 8},
 	{"Flats/", 6},

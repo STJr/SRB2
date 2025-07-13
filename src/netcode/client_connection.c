@@ -54,6 +54,8 @@ static boolean IsDownloadingFile(void)
 static void DrawConnectionStatusBox(void)
 {
 	M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-16-8, 32, 1);
+	if (cl_mode != CL_DOWNLOADSAVEGAME && filedownload.current != -1)
+		M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-46-8, 32, 1);
 
 	if (cl_mode == CL_CONFIRMCONNECT || IsDownloadingFile())
 		return;
@@ -84,6 +86,33 @@ static void DrawFileProgress(fileneeded_t *file, int y)
 	V_DrawRightAlignedString(BASEVIDWIDTH/2+128, y, V_20TRANS|V_MONOSPACE, va("%3.1fK/s ", ((double)getbps)/1024));
 }
 
+static void DrawOverallProgress(int y)
+{
+	UINT32 totalsize = filedownload.totalsize;
+	INT32 downloadedfiles = filedownload.completednum;
+	INT32 totalfiles = filedownload.remaining + filedownload.completednum;
+	INT32 downloaded = filedownload.completedsize;
+	if (fileneeded[filedownload.current].currentsize != fileneeded[filedownload.current].totalsize)
+		downloaded = filedownload.completedsize + fileneeded[filedownload.current].currentsize;
+
+	INT32 dldlength = (INT32)((downloaded/(double)totalsize) * 256);
+	if (dldlength > 256)
+		dldlength = 256;
+	V_DrawFill(BASEVIDWIDTH/2-128, y, 256, 8, 111);
+	V_DrawFill(BASEVIDWIDTH/2-128, y, dldlength, 8, 96);
+
+	const char *progress_str;
+	if (totalsize >= 1024*1024)
+		progress_str = va(" %.2fMiB/%.2fMiB", (double)downloaded / (1024*1024), (double)totalsize / (1024*1024));
+	else if (totalsize < 1024)
+		progress_str = va(" %4uB/%4uB", downloaded, totalsize);
+	else
+		progress_str = va(" %.2fKiB/%.2fKiB", (double)downloaded / 1024, (double)totalsize / 1024);
+
+	V_DrawString(BASEVIDWIDTH/2-128, y, V_20TRANS|V_ALLOWLOWERCASE, progress_str);
+	V_DrawRightAlignedString(BASEVIDWIDTH/2+128, y, V_20TRANS|V_ALLOWLOWERCASE, va("%2u/%2u Files ", downloadedfiles+1, totalfiles));
+}
+
 //
 // CL_DrawConnectionStatus
 //
@@ -96,7 +125,7 @@ static void CL_DrawConnectionStatus(void)
 	// Draw background fade
 	V_DrawFadeScreen(0xFF00, 16); // force default
 
-	if (cl_mode != CL_DOWNLOADFILES && cl_mode != CL_DOWNLOADHTTPFILES && cl_mode != CL_LOADFILES)
+	if (cl_mode != CL_DOWNLOADFILES && cl_mode != CL_DOWNLOADHTTPFILES && cl_mode != CL_LOADFILES && cl_mode != CL_CHECKFILES && cl_mode != CL_ASKFULLFILELIST)
 	{
 		INT32 animtime = ((ccstime / 4) & 15) + 16;
 		UINT8 palstart;
@@ -179,6 +208,31 @@ static void CL_DrawConnectionStatus(void)
 			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
 				va(" %2u/%2u files",loadcompletednum,fileneedednum));
 		}
+		else if ((cl_mode == CL_CHECKFILES) || (cl_mode == CL_ASKFULLFILELIST))
+		{
+			INT32 totalfileslength;
+			INT32 checkcompletednum = 0;
+			INT32 i;
+
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_YELLOWMAP, "Press ESC to abort");
+
+			//ima just count files here
+			if (fileneeded)
+			{
+				for (i = 0; i < fileneedednum; i++)
+					if (fileneeded[i].status != FS_NOTCHECKED)
+						checkcompletednum++;
+			}
+
+			// Check progress
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_YELLOWMAP, "Checking server addon list...");
+			totalfileslength = (INT32)((checkcompletednum/(double)(fileneedednum)) * 256);
+			M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-16-8, 32, 1);
+			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, 256, 8, 111);
+			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, totalfileslength, 8, 96);
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
+				va(" %2u/%2u Files",checkcompletednum,fileneedednum));
+		}
 		else if (filedownload.current != -1)
 		{
 			char tempname[28];
@@ -224,7 +278,7 @@ static void CL_DrawConnectionStatus(void)
 			const char *download_str = M_GetText("Downloading \"%s\"");
 #endif
 
-			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_ALLOWLOWERCASE|V_YELLOWMAP,
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-46-24, V_ALLOWLOWERCASE|V_YELLOWMAP,
 				va(download_str, tempname));
 
 			// Rusty: actually lets do this instead
@@ -244,16 +298,18 @@ static void CL_DrawConnectionStatus(void)
 					strlcpy(tempname, http_source, sizeof(tempname));
 				}
 
-				V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_ALLOWLOWERCASE|V_YELLOWMAP,
+				V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-46-16, V_ALLOWLOWERCASE|V_YELLOWMAP,
 					va(M_GetText("from %s"), tempname));
 			}
 			else
 			{
-				V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_ALLOWLOWERCASE|V_YELLOWMAP,
+				V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-46-16, V_ALLOWLOWERCASE|V_YELLOWMAP,
 					M_GetText("from the server"));
 			}
+			DrawFileProgress(file, BASEVIDHEIGHT-46);
 
-			DrawFileProgress(file, BASEVIDHEIGHT-16);
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-14, V_ALLOWLOWERCASE|V_YELLOWMAP, "Total Progress");
+			DrawOverallProgress(BASEVIDHEIGHT-16);
 		}
 		else
 		{
@@ -546,6 +602,7 @@ static void AbortConnection(void)
 {
 	Snake_Free(&snake);
 
+	CURLAbortFile();
 	D_QuitNetGame();
 	CL_Reset();
 	D_StartTitle();
@@ -656,6 +713,7 @@ static void ShowDownloadConsentMessage(void)
 		if (IsFileDownloadable(&fileneeded[i]))
 			totalsize += fileneeded[i].totalsize;
 	}
+	filedownload.totalsize = totalsize;
 
 	const char *downloadsize = GetPrintableFileSize(totalsize);
 
@@ -1062,10 +1120,6 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 				}
 			}
 
-			// Rusty TODO: multithread
-			if (filedownload.http_running)
-				CURLGetFile();
-
 			if (waitmore)
 				break; // exit the case
 
@@ -1217,7 +1271,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 
 void CL_ConnectToServer(void)
 {
-	INT32 pnumnodes, nodewaited = doomcom->numnodes, i;
+	INT32 pnumnodes, nodewaited = numnetnodes, i;
 	tic_t oldtic;
 	tic_t asksent;
 	char tmpsave[256];
@@ -1243,7 +1297,7 @@ void CL_ConnectToServer(void)
 	if (gamestate == GS_INTERMISSION)
 		Y_EndIntermission(); // clean up intermission graphics etc
 
-	DEBFILE(va("waiting %d nodes\n", doomcom->numnodes));
+	DEBFILE(va("waiting %d nodes\n", numnetnodes));
 	G_SetGamestate(GS_WAITINGPLAYERS);
 	wipegamestate = GS_WAITINGPLAYERS;
 
@@ -1404,7 +1458,7 @@ void PT_ServerCFG(SINT8 node)
 
 	netnodes[(UINT8)servernode].ingame = true;
 	serverplayer = netbuffer->u.servercfg.serverplayer;
-	doomcom->numslots = SHORT(netbuffer->u.servercfg.totalslotnum);
+	numslots = SHORT(netbuffer->u.servercfg.totalslotnum);
 	mynode = netbuffer->u.servercfg.clientnode;
 	if (serverplayer >= 0)
 		playernode[(UINT8)serverplayer] = servernode;

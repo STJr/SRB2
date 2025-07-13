@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -40,8 +40,7 @@ typedef struct
 enum
 {
 	TEXTURETYPE_UNKNOWN,
-	TEXTURETYPE_SINGLEPATCH,
-	TEXTURETYPE_COMPOSITE,
+	TEXTURETYPE_TEXTURE,
 	TEXTURETYPE_FLAT
 };
 
@@ -100,8 +99,7 @@ void R_SetFlatVars(size_t length);
 
 // Returns the texture number for the texture name.
 INT32 R_TextureNumForName(const char *name);
-INT32 R_CheckTextureNumForName(const char *name);
-INT32 R_CheckFlatNumForName(const char *name);
+INT32 R_CheckTextureNumForName(const char *name, UINT8 type);
 
 // Returns the texture name for the texture number (in case you ever needed it)
 const char *R_CheckTextureNameForNum(INT32 num);

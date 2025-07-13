@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -69,6 +69,7 @@ enum sector_e {
 	sector_triggerer,
 	sector_friction,
 	sector_gravity,
+	sector_customargs
 };
 
 static const char *const sector_opt[] = {
@@ -112,6 +113,7 @@ static const char *const sector_opt[] = {
 	"triggerer",
 	"friction",
 	"gravity",
+	"customargs",
 	NULL};
 
 static int sector_fields_ref = LUA_NOREF;
@@ -147,6 +149,7 @@ enum line_e {
 	line_taglist,
 	line_args,
 	line_stringargs,
+	line_customargs,
 	line_sidenum,
 	line_frontside,
 	line_backside,
@@ -173,6 +176,7 @@ static const char *const line_opt[] = {
 	"taglist",
 	"args",
 	"stringargs",
+	"customargs",
 	"sidenum",
 	"frontside",
 	"backside",
@@ -221,7 +225,8 @@ enum side_e {
 	side_lightabsolute_top,
 	side_lightabsolute_mid,
 	side_lightabsolute_bottom,
-	side_text
+	side_text,
+	side_customargs
 };
 
 static const char *const side_opt[] = {
@@ -258,6 +263,7 @@ static const char *const side_opt[] = {
 	"lightabsolute_mid",
 	"lightabsolute_bottom",
 	"text",
+	"customargs",
 	NULL};
 
 static int side_fields_ref = LUA_NOREF;
@@ -674,6 +680,73 @@ static int sectorlines_num(lua_State *L)
 	return 1;
 }
 
+//////////////////
+// customargs_t //
+//////////////////
+
+FUNCINLINE static ATTRINLINE int customargs_get(lua_State* L, const char* meta)
+{
+	customargs_t *args = *((customargs_t**)luaL_checkudata(L, 1, meta));
+	const char* field = luaL_checkstring(L, 2);
+
+	if (args == NULL) {
+		lua_pushnil(L);
+		return 1;
+	}
+
+	customargs_t* current = args;
+	while (current != NULL)
+	{
+		if (!strcmp(current->name, field))
+		{
+			switch (current->type)
+			{
+				case UDMF_TYPE_STRING:
+					lua_pushstring(L, current->value.vstring);
+					break;
+				case UDMF_TYPE_NUMERIC:
+					lua_pushinteger(L, current->value.vint);
+					break;
+				case UDMF_TYPE_FIXED:
+					lua_pushfixed(L, current->value.vfloat);
+					break;
+				case UDMF_TYPE_BOOLEAN:
+					lua_pushboolean(L, current->value.vbool);
+					break;
+				default:
+					lua_pushnil(L);
+			}
+
+			return 1;
+		}
+
+		current = current->next;
+	}
+
+	lua_pushnil(L);
+	return 1;
+}
+
+static int sectorcustomargs_get(lua_State* L)
+{
+	return customargs_get(L, META_SECTORCUSTOMARGS);
+}
+
+static int sidecustomargs_get(lua_State* L)
+{
+	return customargs_get(L, META_SIDECUSTOMARGS);
+}
+
+static int linecustomargs_get(lua_State* L)
+{
+	return customargs_get(L, META_LINECUSTOMARGS);
+}
+
+static int thingcustomargs_get(lua_State* L)
+{
+	return customargs_get(L, META_THINGCUSTOMARGS);
+}
+
 //////////////
 // sector_t //
 //////////////
@@ -834,6 +907,9 @@ static int sector_get(lua_State *L)
 		return 1;
 	case sector_gravity: // gravity
 		lua_pushfixed(L, sector->gravity);
+		return 1;
+	case sector_customargs:
+		LUA_PushUserdata(L, sector->customargs, META_SECTORCUSTOMARGS);
 		return 1;
 	}
 	return 0;
@@ -1130,6 +1206,9 @@ static int line_get(lua_State *L)
 	case line_stringargs:
 		LUA_PushUserdata(L, line->stringargs, META_LINESTRINGARGS);
 		return 1;
+	case line_customargs:
+		LUA_PushUserdata(L, line->customargs, META_LINECUSTOMARGS);
+		return 1;
 	case line_sidenum:
 		LUA_PushUserdata(L, line->sidenum, META_SIDENUM);
 		return 1;
@@ -1351,6 +1430,9 @@ static int side_get(lua_State *L)
 	case side_lightabsolute_bottom:
 		lua_pushboolean(L, side->lightabsolute_bottom);
 		return 1;
+	case side_customargs:
+		LUA_PushUserdata(L, side->customargs, META_SIDECUSTOMARGS);
+		return 1;
 	// TODO: 2.3: Delete
 	case side_text:
 		{
@@ -1370,6 +1452,7 @@ static int side_get(lua_State *L)
 			return 1;
 		}
 	}
+
 	return 0;
 }
 
@@ -3061,9 +3144,12 @@ int LUA_MapLib(lua_State *L)
 	LUA_RegisterUserdataMetatable(L, META_SECTORLINES, sectorlines_get, NULL, sectorlines_num);
 	LUA_RegisterUserdataMetatable(L, META_SECTOR, sector_get, sector_set, sector_num);
 	LUA_RegisterUserdataMetatable(L, META_SUBSECTOR, subsector_get, NULL, subsector_num);
+	LUA_RegisterUserdataMetatable(L, META_SECTORCUSTOMARGS, sectorcustomargs_get, NULL, NULL);
 	LUA_RegisterUserdataMetatable(L, META_LINE, line_get, NULL, line_num);
 	LUA_RegisterUserdataMetatable(L, META_LINEARGS, lineargs_get, NULL, lineargs_len);
 	LUA_RegisterUserdataMetatable(L, META_LINESTRINGARGS, linestringargs_get, NULL, linestringargs_len);
+	LUA_RegisterUserdataMetatable(L, META_LINECUSTOMARGS, linecustomargs_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_SIDECUSTOMARGS, sidecustomargs_get, NULL, NULL);
 	LUA_RegisterUserdataMetatable(L, META_SIDENUM, sidenum_get, NULL, NULL);
 	LUA_RegisterUserdataMetatable(L, META_SIDE, side_get, side_set, side_num);
 	LUA_RegisterUserdataMetatable(L, META_VERTEX, vertex_get, NULL, vertex_num);
@@ -3073,6 +3159,7 @@ int LUA_MapLib(lua_State *L)
 	LUA_RegisterUserdataMetatable(L, META_VECTOR2, vector2_get, NULL, NULL);
 	LUA_RegisterUserdataMetatable(L, META_VECTOR3, vector3_get, NULL, NULL);
 	LUA_RegisterUserdataMetatable(L, META_MAPHEADER, mapheaderinfo_get, NULL, NULL);
+	LUA_RegisterUserdataMetatable(L, META_THINGCUSTOMARGS, thingcustomargs_get, NULL, NULL);
 
 	sector_fields_ref = Lua_CreateFieldTable(L, sector_opt);
 	subsector_fields_ref = Lua_CreateFieldTable(L, subsector_opt);

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -34,6 +34,7 @@
 #include "m_menu.h"
 #include "filesrch.h"
 #include "m_misc.h"
+#include "lua_libs.h"
 
 #ifdef _WINDOWS
 #include "win32/win_main.h"
@@ -918,6 +919,22 @@ static void CON_InputDelChar(void)
 // ----
 //
 
+//
+// Same as CON_Responder, but is process before everything else, so it cannot be blocked.
+//
+boolean CON_PreResponder(event_t *ev)
+{
+	if (ev->type == ev_keydown && shiftdown == 1 && ev->key == KEY_ESCAPE)
+	{
+		I_SetTextInputMode(con_destlines == 0 ? true : textinputmodeenabledbylua); // inverse, since this is changed next tic.
+		consoletoggle = true;
+		return true;
+	}
+
+	return false;
+}
+
+//
 // Handles console key input
 //
 boolean CON_Responder(event_t *ev)
@@ -954,7 +971,10 @@ boolean CON_Responder(event_t *ev)
 
 		if ((key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1]) && !shiftdown)
 		{
-			I_SetTextInputMode(con_destlines == 0); // inverse, since this is changed next tic.
+			if (con_destlines == 0 && I_GetTextInputMode())
+				return false; // some other component is holding keyboard input, don't hijack it!
+
+			I_SetTextInputMode(con_destlines == 0 ? true : textinputmodeenabledbylua); // inverse, since this is changed next tic.
 			consoletoggle = true;
 			return true;
 		}
@@ -974,7 +994,7 @@ boolean CON_Responder(event_t *ev)
 		// escape key toggle off console
 		if (key == KEY_ESCAPE)
 		{
-			I_SetTextInputMode(false);
+			I_SetTextInputMode(textinputmodeenabledbylua);
 			consoletoggle = true;
 			return true;
 		}
@@ -1737,6 +1757,8 @@ static void CON_DrawBackpic(void)
 
 	// Cache the patch.
 	con_backpic = W_CachePatchNum(piclump, PU_PATCH);
+	if (con_backpic == NULL)
+		return;
 
 	// Center the backpic, and draw a vertically cropped patch.
 	w = con_backpic->width * vid.dup;

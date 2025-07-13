@@ -95,6 +95,7 @@ typedef struct
 	INT32 remaining;
 	INT32 completednum;
 	UINT32 completedsize;
+	UINT64 totalsize;
 
 	boolean http_failed;
 	boolean http_running;
@@ -140,6 +141,7 @@ boolean CL_SendFileRequest(void);
 void PT_RequestFile(SINT8 node);
 
 boolean CURLPrepareFile(const char* url, int dfilenum);
+void CURLAbortFile(void);
 void CURLGetFile(void);
 HTTP_login * CURLGetLogin (const char *url, HTTP_login ***return_prev_next);
 

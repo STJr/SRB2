@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -256,8 +256,8 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 	}
 
 	// positions of the cx, cy, are between 0 and vid.width/vid.height now, we need them to be between -1 and 1
-	cx = -1 + (cx / (vid.width/2));
-	cy = 1 - (cy / (vid.height/2));
+	cx = -1.0f + (cx / (vid.width / 2.0f));
+	cy = 1.0f - (cy / (vid.height / 2.0f));
 
 	// fwidth and fheight are similar
 	fwidth /= vid.width / 2;
@@ -598,42 +598,75 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 
 // --------------------------------------------------------------------------
 // Fills a box of pixels using a flat texture as a pattern
+// Fixed to properly align like the other draw functions -luigi budd
 // --------------------------------------------------------------------------
-void HWR_DrawFlatFill (INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatlumpnum)
+void HWR_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatlumpnum)
 {
 	FOutVector v[4];
 	const size_t len = W_LumpLength(flatlumpnum);
-	UINT16 flatflag = R_GetFlatSize(len) - 1;
-	double dflatsize = (double)(flatflag + 1);
+	UINT16 flatflag = R_GetFlatSize(len);
+	double dflatsize = (double)(flatflag);
 
+    // compilers are COOL!
+	float dup = (float)vid.dup;
+	float fx = (float)x * dup;
+	float fy = (float)y * dup;
+	float fw = (float)w * dup;
+	float fh = (float)h * dup;
+
+    /*
+	fx *= dup;
+	fy *= dup;
+	fw *= dup;
+	fh *= dup;
+    */
+
+	if (fw <= 0 || fh <= 0)
+		return;	
+	
+	if (fabsf((float)vid.width - (float)BASEVIDWIDTH * vid.dup) > 1.0E-36f)
+	{
+		fx += ((float)vid.width - ((float)BASEVIDWIDTH * vid.dup)) / 2;
+	}
+	if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * vid.dup) > 1.0E-36f)
+	{
+		fy += ((float)vid.height - ((float)BASEVIDHEIGHT * vid.dup)) / 2;
+	}
+
+	if (fx >= vid.width || fy >= vid.height)
+	    return;
+	  
+	fx = -1.0f + (fx / (vid.width / 2.0f));
+	fy = 1.0f - (fy / (vid.height / 2.0f));
+	fw /= vid.width / 2;
+	fh /= vid.height / 2;
+	
 //  3--2
 //  | /|
 //  |/ |
 //  0--1
+	
+    // position vertices
+	v[0].x = v[3].x = fx;
+	v[2].x = v[1].x = fx + fw;
 
-	v[0].x = v[3].x = (x - 160.0f)/160.0f;
-	v[2].x = v[1].x = ((x+w) - 160.0f)/160.0f;
-	v[0].y = v[1].y = -(y - 100.0f)/100.0f;
-	v[2].y = v[3].y = -((y+h) - 100.0f)/100.0f;
+	v[0].y = v[1].y = fy;
+	v[2].y = v[3].y = fy - fh;
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
-	v[0].s = v[3].s = (float)((x & flatflag)/dflatsize);
-	v[2].s = v[1].s = (float)(v[0].s + w/dflatsize);
-	v[0].t = v[1].t = (float)((y & flatflag)/dflatsize);
-	v[2].t = v[3].t = (float)(v[0].t + h/dflatsize);
+    // sides
+	v[0].s = v[3].s = (float)(flatflag/dflatsize) * 2;
+	v[2].s = v[1].s = (float)(v[0].s + w/dflatsize) * 2;
 
+    // top/bottom
+	v[0].t = v[1].t = (float)(flatflag/dflatsize) * 2;
+	v[2].t = v[3].t = (float)(v[0].t + h/dflatsize) * 2;
+
+    // needed to texture the poly
 	HWR_GetRawFlat(flatlumpnum);
-
-	//Hurdler: Boris, the same comment as above... but maybe for pics
-	// it not a problem since they don't have any transparent pixel
-	// if I'm right !?
-	// BTW, I see we put 0 for PFs, and If I'm right, that
-	// means we take the previous PFs as default
-	// how can we be sure they are ok?
 	HWD.pfnDrawPolygon(NULL, v, 4, PF_NoDepthTest); //PF_Translucent);
 }
-
 
 // --------------------------------------------------------------------------
 // Fade down the screen so that the menu drawn on top of it looks brighter
@@ -1140,10 +1173,12 @@ void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, UINT32
 void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 {
 	FOutVector v[4];
+	FBITFIELD flags;
 	FSurfaceInfo Surf;
 	float fx, fy, fw, fh;
 	RGBA_t *palette = HWR_GetTexturePalette();
 	UINT8 alphalevel = ((color & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT8 blendmode = ((color & V_BLENDMASK) >> V_BLENDSHIFT);
 
 	UINT8 perplayershuffle = 0;
 
@@ -1308,6 +1343,8 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 
 	Surf.PolyColor = palette[color&0xFF];
 
+	flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest|PF_NoTexture|PF_Modulated;
+
 	if (alphalevel)
 	{
 		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
@@ -1317,7 +1354,198 @@ void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color)
 	}
 
 	HWD.pfnDrawPolygon(&Surf, v, 4,
-		PF_Modulated|PF_NoTexture|PF_NoDepthTest|PF_Translucent);
+		flags);
+}
+
+// -----------------+
+// HWR_DrawFixedFill: draw flat coloured rectangle, with no texture (with fixed point values !!)
+// -----------------+
+void HWR_DrawFixedFill(fixed_t x, fixed_t y, fixed_t w, fixed_t h, INT32 color)
+{
+	FOutVector v[4];
+	FSurfaceInfo Surf;
+	FBITFIELD flags;
+	float fx = FIXED_TO_FLOAT(x);
+	float fy = FIXED_TO_FLOAT(y);
+	float fw = FIXED_TO_FLOAT(w);
+	float fh = FIXED_TO_FLOAT(h);
+	RGBA_t *palette = HWR_GetTexturePalette();
+	UINT8 alphalevel = ((color & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT8 blendmode = ((color & V_BLENDMASK) >> V_BLENDSHIFT);
+
+	UINT8 perplayershuffle = 0;
+
+//  3--2
+//  | /|
+//  |/ |
+//  0--1
+
+	if (splitscreen && (color & V_PERPLAYER))
+	{
+		float adjusty = ((color & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)/2.0f;
+		fh /= 1;
+		fy /= 2;
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			float adjustx = ((color & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)/2.0f;
+			fw /= 2;
+			fx /= 2;
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(color & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(color & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				color &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
+			}
+			else if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(color & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(color & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				fx += adjustx;
+				color &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
+			}
+			else if (stplyr == &players[thirddisplayplayer])
+			{
+				if (!(color & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(color & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				fy += adjusty;
+				color &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
+			}
+			else //if (stplyr == &players[fourthdisplayplayer])
+			{
+				if (!(color & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(color & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				fx += adjustx;
+				fy += adjusty;
+				color &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
+			}
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(color & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				color &= ~V_SNAPTOBOTTOM;
+			}
+			else //if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(color & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				fy += adjusty;
+				color &= ~V_SNAPTOTOP;
+			}
+		}
+	}
+
+	if (!(color & V_NOSCALESTART))
+	{
+		/*
+		if (x == 0 && y == 0 && w == BASEVIDWIDTH && h == BASEVIDHEIGHT)
+		{
+			RGBA_t rgbaColour = palette[color&0xFF];
+			FRGBAFloat clearColour;
+			clearColour.red = (float)rgbaColour.s.red / 255;
+			clearColour.green = (float)rgbaColour.s.green / 255;
+			clearColour.blue = (float)rgbaColour.s.blue / 255;
+			clearColour.alpha = 1;
+			HWD.pfnClearBuffer(true, false, &clearColour);
+			return;
+		}
+		*/
+		
+		fx *= vid.dup;
+		fy *= vid.dup;
+		fw *= vid.dup;
+		fh *= vid.dup;
+
+		if (fabsf((float)vid.width - (float)BASEVIDWIDTH * vid.dup) > 1.0E-36f)
+		{
+			if (color & V_SNAPTORIGHT)
+				fx += ((float)vid.width - ((float)BASEVIDWIDTH * vid.dup));
+			else if (!(color & V_SNAPTOLEFT))
+				fx += ((float)vid.width - ((float)BASEVIDWIDTH * vid.dup)) / 2;
+			if (perplayershuffle & 4)
+				fx -= ((float)vid.width - ((float)BASEVIDWIDTH * vid.dup)) / 4;
+			else if (perplayershuffle & 8)
+				fx += ((float)vid.width - ((float)BASEVIDWIDTH * vid.dup)) / 4;
+		}
+		if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * vid.dup) > 1.0E-36f)
+		{
+			// same thing here
+			if (color & V_SNAPTOBOTTOM)
+				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * vid.dup));
+			else if (!(color & V_SNAPTOTOP))
+				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * vid.dup)) / 2;
+			if (perplayershuffle & 1)
+				fy -= ((float)vid.height - ((float)BASEVIDHEIGHT * vid.dup)) / 4;
+			else if (perplayershuffle & 2)
+				fy += ((float)vid.height - ((float)BASEVIDHEIGHT * vid.dup)) / 4;
+		}
+	}
+
+	if (fx >= vid.width || fy >= vid.height)
+		return;
+	if (fx < 0)
+	{
+		fw += fx;
+		fx = 0;
+	}
+	if (fy < 0)
+	{
+		fh += fy;
+		fy = 0;
+	}
+
+	if (fw <= 0 || fh <= 0)
+		return;
+	if (fx + fw > vid.width)
+		fw = (float)vid.width - fx;
+	if (fy + fh > vid.height)
+		fh = (float)vid.height - fy;
+
+	fx = -1.0f + (fx / (vid.width / 2.0f));
+	fy = 1.0f - (fy / (vid.height / 2.0f));
+	fw = fw / (vid.width / 2);
+	fh = fh / (vid.height / 2);
+
+	v[0].x = v[3].x = fx;
+	v[2].x = v[1].x = fx + fw;
+	
+	v[0].y = v[1].y = fy;
+	v[2].y = v[3].y = fy - fh;
+
+	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
+
+	v[0].s = v[3].s = 0.0f;
+	v[2].s = v[1].s = 1.0f;
+	v[0].t = v[1].t = 0.0f;
+	v[2].t = v[3].t = 1.0f;
+
+	Surf.PolyColor = palette[color&0xFF];
+
+	flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest|PF_NoTexture|PF_Modulated;
+
+	if (alphalevel)
+	{
+		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
+		else if (alphalevel == 11) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency]; // V_HUDTRANS
+		else if (alphalevel == 12) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency]; // V_HUDTRANSDOUBLE
+		else Surf.PolyColor.s.alpha = softwaretranstogl[10-alphalevel];
+	}
+
+	HWD.pfnDrawPolygon(&Surf, v, 4,
+		flags);
 }
 
 #ifdef HAVE_PNG

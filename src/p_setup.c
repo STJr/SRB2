@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -10,6 +10,9 @@
 //-----------------------------------------------------------------------------
 /// \file  p_setup.c
 /// \brief Do all the WAD I/O, get map description, set up initial state and misc. LUTs
+
+
+#include <errno.h>
 
 #include "doomdef.h"
 #include "d_main.h"
@@ -530,7 +533,7 @@ UINT32 P_GetScoreForGradeOverall(INT16 map, UINT8 grade)
 void P_AddNiGHTSTimes(INT16 i, char *gtext)
 {
 	char *spos = gtext;
-	
+
 	for (UINT8 n = 0; n < 8; n++)
 	{
 		if (spos != NULL)
@@ -609,15 +612,15 @@ Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 	levelflat->type = LEVELFLAT_TEXTURE;
 
 	// Look for a flat
-	int texturenum = R_CheckFlatNumForName(levelflat->name);
+	int texturenum = R_CheckTextureNumForName(levelflat->name, TEXTURETYPE_FLAT);
 	if (texturenum < 0)
 	{
 		// If we can't find a flat, try looking for a texture!
-		texturenum = R_CheckTextureNumForName(levelflat->name);
+		texturenum = R_CheckTextureNumForName(levelflat->name, TEXTURETYPE_TEXTURE);
 		if (texturenum < 0)
 		{
 			// Use "not found" texture
-			texturenum = R_CheckTextureNumForName("REDWALL");
+			texturenum = R_CheckTextureNumForName("REDWALL", TEXTURETYPE_TEXTURE);
 
 			// Give up?
 			if (texturenum < 0)
@@ -692,7 +695,7 @@ void P_ReloadRings(void)
 	// scan the thinkers to find rings/spheres/hoops to unset
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo = (mobj_t *)th;
@@ -750,7 +753,7 @@ void P_SwitchSpheresBonusMode(boolean bonustime)
 	// scan the thinkers to find spheres to switch
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo = (mobj_t *)th;
@@ -1077,6 +1080,7 @@ static void P_LoadSectors(UINT8 *data)
 		ss->triggerer = TO_PLAYER;
 
 		ss->friction = ORIG_FRICTION;
+		ss->customargs = NULL;
 
 		P_InitializeSector(ss);
 	}
@@ -1198,6 +1202,8 @@ static void P_LoadLinedefs(UINT8 *data)
 			ld->sidenum[0] = NO_SIDEDEF;
 		if (ld->sidenum[1] == 0xffff)
 			ld->sidenum[1] = NO_SIDEDEF;
+
+		ld->customargs = NULL;
 
 		P_InitializeLinedef(ld);
 	}
@@ -1369,6 +1375,8 @@ static void P_LoadSidedefs(UINT8 *data)
 
 		sd->light = sd->light_top = sd->light_mid = sd->light_bottom = 0;
 		sd->lightabsolute = sd->lightabsolute_top = sd->lightabsolute_mid = sd->lightabsolute_bottom = false;
+
+		sd->customargs = NULL;
 
 		P_SetSidedefSector(i, (UINT16)SHORT(msd->sector));
 
@@ -1553,6 +1561,7 @@ static void P_LoadThings(UINT8 *data)
 			mt->z = mt->options >> ZSHIFT;
 
 		mt->mobj = NULL;
+		mt->customargs = NULL;
 	}
 }
 
@@ -1657,6 +1666,89 @@ static boolean TextmapCount(size_t size)
 	return true;
 }
 
+static void ParseTextmapCustomFields(const char* param, const char* val, customargs_t** headptr)
+{
+	if (val[0] == '\0')
+		return;
+
+	//
+	// GET latest node
+	//
+
+	customargs_t* newnode = Z_Malloc(sizeof(customargs_t), PU_LEVEL, NULL);
+
+	if (!newnode)
+		return;
+
+	newnode->next = NULL;
+
+	if (*headptr == NULL) {
+		*headptr = newnode;
+	}
+	else {
+		customargs_t* curr = *headptr;
+
+		while (curr->next != NULL) {
+			curr = curr->next;
+		}
+
+		curr->next = newnode;
+
+	}
+
+	//
+	// Setup
+	//
+
+	newnode->name = Z_Malloc(strlen(param + 5) + 1, PU_LEVEL, NULL);
+	M_Memcpy(newnode->name, param + 5, strlen(param + 5) + 1);
+
+	if (fastcmp(val, "true"))
+	{
+		newnode->type = UDMF_TYPE_BOOLEAN;
+		newnode->value.vbool = true;
+	}
+	else if (fastcmp(val, "false"))
+	{
+		newnode->type = UDMF_TYPE_BOOLEAN;
+		newnode->value.vbool = false;
+	}
+	else
+	{
+		char* endptr;
+		long lval;
+		float fval;
+
+		// Eval integer
+
+		errno = 0;
+		lval = strtol(val, &endptr, 10);
+
+		if (*endptr == '\0' && endptr != val && errno == 0) {
+			newnode->type = UDMF_TYPE_NUMERIC;
+			newnode->value.vint = lval;
+			return;
+		}
+
+		// Eval float
+
+		errno = 0;
+		fval = strtof(val, &endptr);
+
+		if (*endptr == '\0' && endptr != val && errno == 0) {
+			newnode->type = UDMF_TYPE_FIXED;
+			newnode->value.vfloat = FLOAT_TO_FIXED(fval);
+			return;
+		}
+
+		// Just string
+
+		newnode->type = UDMF_TYPE_STRING;
+		newnode->value.vstring = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
+		M_Memcpy(newnode->value.vstring, val, strlen(val) + 1);
+	}
+}
+
 static void ParseTextmapVertexParameter(UINT32 i, const char *param, const char *val)
 {
 	if (fastcmp(param, "x"))
@@ -1756,6 +1848,8 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 		sectors[i].floorangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 	else if (fastcmp(param, "rotationceiling"))
 		sectors[i].ceilingangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 5)
+		ParseTextmapCustomFields(param, val, &sectors[i].customargs);
 	else if (fastcmp(param, "floorplane_a"))
 	{
 		textmap_planefloor.defined |= PD_A;
@@ -1996,6 +2090,8 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 		sides[i].lightabsolute_mid = true;
 	else if (fastcmp(param, "lightabsolute_bottom") && fastcmp("true", val))
 		sides[i].lightabsolute_bottom = true;
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 5)
+		ParseTextmapCustomFields(param, val, &sides[i].customargs);
 }
 
 static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char *val)
@@ -2090,6 +2186,9 @@ static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char
 		lines[i].flags |= ML_BOUNCY;
 	else if (fastcmp(param, "transfer") && fastcmp("true", val))
 		lines[i].flags |= ML_TFERLINE;
+
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 5)
+		ParseTextmapCustomFields(param, val, &lines[i].customargs);
 }
 
 static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *val)
@@ -2149,6 +2248,8 @@ static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *
 			return;
 		mapthings[i].args[argnum] = atol(val);
 	}
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 5)
+		ParseTextmapCustomFields(param, val, &mapthings[i].customargs);
 }
 
 /** From a given position table, run a specified parser function through a {}-encapsuled text.
@@ -2995,7 +3096,7 @@ static void P_LoadTextmap(void)
 	side_t     *sd;
 	mapthing_t *mt;
 
-	CONS_Alert(CONS_NOTICE, "UDMF support is still a work-in-progress; its specs and features are prone to change until it is fully implemented.\n");
+	//CONS_Alert(CONS_NOTICE, "UDMF support is still a work-in-progress; its specs and features are prone to change until it is fully implemented.\n");
 
 	/// Given the UDMF specs, some fields are given a default value.
 	/// If an element's field has a default value set, it is omitted
@@ -3053,6 +3154,7 @@ static void P_LoadTextmap(void)
 		sc->triggerer = TO_PLAYER;
 
 		sc->friction = ORIG_FRICTION;
+		sc->customargs = NULL;
 
 		textmap_colormap.used = false;
 		textmap_colormap.lightcolor = 0;
@@ -3075,7 +3177,7 @@ static void P_LoadTextmap(void)
 			// TODO: remove this limitation in a backwards-compatible way (UDMF versioning?)
 			UINT8 lightalpha = (textmap_colormap.lightalpha * 102) / 10;
 			UINT8 fadealpha = (textmap_colormap.fadealpha * 102) / 10;
-			
+
 			INT32 rgba = P_ColorToRGBA(textmap_colormap.lightcolor, lightalpha);
 			INT32 fadergba = P_ColorToRGBA(textmap_colormap.fadecolor, fadealpha);
 			sc->extra_colormap = sc->spawn_extra_colormap = R_CreateColormap(rgba, fadergba, textmap_colormap.fadestart, textmap_colormap.fadeend, textmap_colormap.flags);
@@ -3114,6 +3216,7 @@ static void P_LoadTextmap(void)
 		ld->executordelay = 0;
 		ld->sidenum[0] = NO_SIDEDEF;
 		ld->sidenum[1] = NO_SIDEDEF;
+		ld->customargs = NULL;
 
 		TextmapParse(linedefBlocks.pos[i], i, ParseTextmapLinedefParameter);
 
@@ -3143,6 +3246,7 @@ static void P_LoadTextmap(void)
 		sd->repeatcnt = 0;
 		sd->light = sd->light_top = sd->light_mid = sd->light_bottom = 0;
 		sd->lightabsolute = sd->lightabsolute_top = sd->lightabsolute_mid = sd->lightabsolute_bottom = false;
+		sd->customargs = NULL;
 
 		TextmapParse(sidedefBlocks.pos[i], i, ParseTextmapSidedefParameter);
 
@@ -3167,6 +3271,7 @@ static void P_LoadTextmap(void)
 		memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 		memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 		mt->mobj = NULL;
+		mt->customargs = NULL;
 
 		TextmapParse(mapthingBlocks.pos[i], i, ParseTextmapThingParameter);
 	}
@@ -7333,7 +7438,7 @@ void P_RespawnThings(void)
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
-		if (think->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (think->removing)
 			continue;
 		P_RemoveMobj((mobj_t *)think);
 	}
@@ -7369,11 +7474,11 @@ static void P_RunLevelScript(const char *scriptname)
 			return;
 		}
 
-		COM_BufInsertText(W_CacheLumpNum(lumpnum, PU_CACHE));
+		COM_BufInsertTextEx(W_CacheLumpNum(lumpnum, PU_CACHE), COM_LUA);
 	}
 	else
 	{
-		COM_BufAddText(va("exec %s\n", scriptname));
+		COM_ExecFile(scriptname, COM_LUA, false);
 	}
 	COM_BufExecute(); // Run it!
 }
@@ -7645,20 +7750,20 @@ static void P_InitCamera(void)
 			CV_SetValue(&cv_analog[1], 0);
 
 		displayplayer = consoleplayer; // Start with your OWN view, please!
-	}
 
-	if (twodlevel)
-	{
-		CV_SetValue(&cv_analog[0], false);
-		CV_SetValue(&cv_analog[1], false);
-	}
-	else
-	{
-		if (cv_useranalog[0].value)
-			CV_SetValue(&cv_analog[0], true);
+		if (twodlevel)
+		{
+			CV_SetValue(&cv_analog[0], false);
+			CV_SetValue(&cv_analog[1], false);
+		}
+		else
+		{
+			if (cv_useranalog[0].value)
+				CV_SetValue(&cv_analog[0], true);
 
-		if ((splitscreen && cv_useranalog[1].value) || botingame)
-			CV_SetValue(&cv_analog[1], true);
+			if ((splitscreen && cv_useranalog[1].value) || botingame)
+				CV_SetValue(&cv_analog[1], true);
+		}
 	}
 }
 
@@ -7853,6 +7958,10 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	maptol = mapheaderinfo[gamemap-1]->typeoflevel;
 	gametyperules = gametypedefaultrules[gametype];
 
+	// clear the target on map change, since the object will be invalidated
+	P_SetTarget(&ticcmd_ztargetfocus[0], NULL);
+	P_SetTarget(&ticcmd_ztargetfocus[1], NULL);
+
 	CON_Drawer(); // let the user know what we are going to do
 	I_FinishUpdate(); // page flip or blit buffer
 
@@ -8002,6 +8111,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// Free GPU textures before freeing patches.
 	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 		HWR_ClearAllTextures();
+
+	// Delete light table textures
+	HWR_ClearLightTables();
 #endif
 
 	Patch_FreeTag(PU_PATCH_LOWPRIORITY);

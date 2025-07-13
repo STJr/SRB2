@@ -7,23 +7,24 @@ Debian stable:arm64:
 
   artifacts:
     paths:
-      - "bin/"
-      - "src/comptime.h"
+      - "build.cmake/bin/"
+      - "build.cmake/src/config.h"
     expose_as: "Debian arm64"
     name: "$CI_PROJECT_PATH_SLUG-$CI_COMMIT_REF_SLUG-$CI_COMMIT_SHORT_SHA-aarch64"
 
   variables:
     CC: aarch64-linux-gnu-gcc
-    LDFLAGS: -Wl,-fuse-ld=gold
+    CXX: aarch64-linux-gnu-g++
     OBJCOPY: aarch64-linux-gnu-objcopy
     OBJDUMP: aarch64-linux-gnu-objdump
+    LD: aarch64-linux-gnu-ld
     PKG_CONFIG_PATH: /usr/lib/aarch64-linux-gnu/pkgconfig
 
   script:
     - - |
           # apt_toolchain
           echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
-      - apt-get install gcc-aarch64-linux-gnu || apt-get install gcc
+      - apt-get install g++-aarch64-linux-gnu || apt-get install g++
       - |
           # apt_toolchain
           echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"
@@ -37,9 +38,25 @@ Debian stable:arm64:
           echo -e "\e[0Ksection_end:`date +%s`:apt_development\r\e[0K"
 
     - - |
+          # cmake
+          echo -e "\e[0Ksection_start:`date +%s`:cmake[collapsed=false]\r\e[0KBuilding Makefiles"
+      - |
+          cmake \
+            -B build.cmake \
+            -G "Unix Makefiles" \
+            -DCMAKE_COLOR_DIAGNOSTICS=OFF \
+            -DSRB2_CONFIG_ENABLE_WEBM_MOVIES=OFF \
+            -DSRB2_CONFIG_ERRORMODE=ON \
+            -DSRB2_CONFIG_FORCE_NO_MS_BITFIELDS=ON \
+            -DSRB2_CONFIG_USE_GME:BOOL=ON
+      - |
+          # cmake
+          echo -e "\e[0Ksection_end:`date +%s`:cmake\r\e[0K"
+
+    - - |
           # make
           echo -e "\e[0Ksection_start:`date +%s`:make[collapsed=false]\r\e[0KCompiling SRB2"
-      - make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 ERRORMODE=1 NONX86=1 ARM64=1 || make --directory=src --keep-going CCACHE=1 ERRORMODE=1 LINUX64=1 NONX86=1 ARM64=1
+      - cmake --build build.cmake --parallel 1 -- --keep-going
       - |
           # make
           echo -e "\e[0Ksection_end:`date +%s`:make\r\e[0K"

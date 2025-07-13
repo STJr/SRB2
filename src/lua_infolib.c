@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1158,6 +1158,7 @@ enum mobjinfo_e
 	mobjinfo_activesound,
 	mobjinfo_flags,
 	mobjinfo_raisestate,
+	mobjinfo_name,
 };
 
 const char *const mobjinfo_opt[] = {
@@ -1185,6 +1186,7 @@ const char *const mobjinfo_opt[] = {
 	"activesound",
 	"flags",
 	"raisestate",
+	"name",
 	NULL,
 };
 
@@ -1198,6 +1200,8 @@ static int mobjinfo_get(lua_State *L)
 
 	I_Assert(info != NULL);
 	I_Assert(info >= mobjinfo);
+
+	mobjtype_t id = info-mobjinfo;
 
 	switch (field)
 	{
@@ -1273,6 +1277,21 @@ static int mobjinfo_get(lua_State *L)
 	case mobjinfo_raisestate:
 		lua_pushinteger(L, info->raisestate);
 		break;
+	case mobjinfo_name:
+		if (id < MT_FIRSTFREESLOT)
+		{
+			lua_pushstring(L, MOBJTYPE_LIST[id]+3);
+			return 1;
+		}
+
+		id -= MT_FIRSTFREESLOT;
+		if (id < NUMMOBJFREESLOTS && FREE_MOBJS[id])
+		{
+			lua_pushstring(L, FREE_MOBJS[id]);
+			return 1;
+		}
+
+		return 0;
 	default:
 		lua_getfield(L, LUA_REGISTRYINDEX, LREG_EXTVARS);
 		I_Assert(lua_istable(L, -1));

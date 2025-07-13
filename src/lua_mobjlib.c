@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -198,12 +198,12 @@ static int mobj_get(lua_State *L)
 	enum mobj_e field = Lua_optoption(L, 2, -1, mobj_fields_ref);
 	lua_settop(L, 2);
 
-	if (!mo || !ISINLEVEL) {
+	if (P_MobjWasRemoved(mo) || !ISINLEVEL) {
 		if (field == mobj_valid) {
 			lua_pushboolean(L, 0);
 			return 1;
 		}
-		if (!mo) {
+		if (P_MobjWasRemoved(mo)) {
 			return LUA_ErrInvalid(L, "mobj_t");
 		} else
 			return luaL_error(L, "Do not access an mobj_t field outside a level!");
@@ -973,6 +973,7 @@ enum mapthing_e {
 	mapthing_taglist,
 	mapthing_args,
 	mapthing_stringargs,
+	mapthing_customargs,
 	mapthing_mobj,
 };
 
@@ -994,6 +995,7 @@ const char *const mapthing_opt[] = {
 	"taglist",
 	"args",
 	"stringargs",
+	"customargs",
 	"mobj",
 	NULL,
 };
@@ -1071,6 +1073,9 @@ static int mapthing_get(lua_State *L)
 			break;
 		case mapthing_stringargs:
 			LUA_PushUserdata(L, mt->stringargs, META_THINGSTRINGARGS);
+			break;
+		case mapthing_customargs:
+			LUA_PushUserdata(L, mt->customargs, META_THINGCUSTOMARGS);
 			break;
 		case mapthing_mobj:
 			LUA_PushUserdata(L, mt->mobj, META_MOBJ);

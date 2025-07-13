@@ -698,7 +698,7 @@ static void initdirpath(char *dirpath, size_t *dirpathindex, int depthleft)
 		dirpathindex[depthleft]--;
 }
 
-//sortdir by name? 
+//sortdir by name?
 static int lumpnamecompare(const void *A, const void *B)
 {
 	const lumpinfo_t *pA = A;

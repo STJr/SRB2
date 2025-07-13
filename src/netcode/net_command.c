@@ -269,10 +269,10 @@ void PT_TextCmd(SINT8 node, INT32 netconsole)
 		}
 
 		// check if tic that we are making isn't too large else we cannot send it :(
-		// doomcom->numslots+1 "+1" since doomcom->numslots can change within this time and sent time
+		// numslots+1 "+1" since numslots can change within this time and sent time
 		j = software_MAXPACKETLENGTH
 			- (netbuffer->u.textcmd[0]+2+BASESERVERTICSSIZE
-			+ (doomcom->numslots+1)*sizeof(ticcmd_t));
+			+ (numslots+1)*sizeof(ticcmd_t));
 
 		// search a tic that have enougth space in the ticcmd
 		while ((textcmd = D_GetExistingTextcmd(tic, netconsole)),

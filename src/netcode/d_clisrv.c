@@ -113,9 +113,11 @@ consvar_t cv_blamecfail = CVAR_INIT ("blamecfail", "Off", CV_SAVE|CV_NETVAR, CV_
 static CV_PossibleValue_t playbackspeed_cons_t[] = {{1, "MIN"}, {10, "MAX"}, {0, NULL}};
 consvar_t cv_playbackspeed = CVAR_INIT ("playbackspeed", "1", 0, playbackspeed_cons_t, NULL);
 
-consvar_t cv_idletime = CVAR_INIT ("idletime", "0", CV_SAVE, CV_Unsigned, NULL);
-consvar_t cv_idlespectate = CVAR_INIT ("idlespectate", "On", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_dedicatedidletime = CVAR_INIT ("dedicatedidletime", "10", CV_SAVE, CV_Unsigned, NULL);
+consvar_t cv_dedicatedidletime = CVAR_INIT ("dedicatedidletime", "10", CV_SAVE|CV_NETVAR, CV_Unsigned, NULL);
+
+static CV_PossibleValue_t idleaction_cons_t[] = {{1, "Kick"}, {2, "Spectate"}, {0, NULL}};
+consvar_t cv_idleaction = CVAR_INIT ("idleaction", "Spectate", CV_SAVE|CV_NETVAR, idleaction_cons_t, NULL);
+consvar_t cv_idletime = CVAR_INIT ("idletime", "3", CV_SAVE|CV_NETVAR, CV_Unsigned, NULL);
 
 consvar_t cv_httpsource = CVAR_INIT ("http_source", "", CV_SAVE, NULL, NULL);
 
@@ -147,8 +149,8 @@ void CL_Reset(void)
 	multiplayer = false;
 	servernode = 0;
 	server = true;
-	doomcom->numnodes = 1;
-	doomcom->numslots = 1;
+	numnetnodes = 1;
+	numslots = 1;
 	SV_StopServer();
 	SV_ResetServer();
 
@@ -213,8 +215,8 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			CL_ClearPlayer(newplayernum);
 		playeringame[newplayernum] = true;
 		G_AddPlayer(newplayernum);
-		if (newplayernum+1 > doomcom->numslots)
-			doomcom->numslots = (INT16)(newplayernum+1);
+		if (newplayernum+1 > numslots)
+			numslots = (INT16)(newplayernum+1);
 
 		if (server && I_GetNodeAddress)
 		{
@@ -610,8 +612,8 @@ void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 
 	// remove avatar of player
 	playeringame[playernum] = false;
-	while (!playeringame[doomcom->numslots-1] && doomcom->numslots > 1)
-		doomcom->numslots--;
+	while (!playeringame[numslots-1] && numslots > 1)
+		numslots--;
 
 	// Reset the name
 	sprintf(player_names[playernum], "Player %d", playernum+1);
@@ -639,6 +641,7 @@ void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 void D_QuitNetGame(void)
 {
 	mousegrabbedbylua = true;
+	textinputmodeenabledbylua = false;
 	I_UpdateMouseGrab();
 
 	if (!netgame || !netbuffer)
@@ -661,7 +664,7 @@ void D_QuitNetGame(void)
 			if (netnodes[i].ingame)
 				HSendPacket(i, true, 0, 0);
 #ifdef MASTERSERVER
-		if (serverrunning && ms_RoomId > 0)
+		if (serverrunning && cv_masterserver_room_id.value > 0)
 			UnregisterServer();
 #endif
 	}
@@ -671,6 +674,7 @@ void D_QuitNetGame(void)
 		HSendPacket(servernode, true, 0, 0);
 	}
 
+	seenplayer = NULL;
 	D_CloseConnection();
 	ClearAdminPlayers();
 
@@ -751,7 +755,7 @@ void SV_ResetServer(void)
 	if (server)
 		servernode = 0;
 
-	doomcom->numslots = 0;
+	numslots = 0;
 
 	// clear server_context
 	memset(server_context, '-', 8);
@@ -795,7 +799,7 @@ void SV_SpawnServer(void)
 		{
 			I_NetOpenSocket();
 #ifdef MASTERSERVER
-			if (ms_RoomId > 0)
+			if (cv_masterserver_room_id.value > 0)
 				RegisterServer();
 #endif
 		}
@@ -803,7 +807,9 @@ void SV_SpawnServer(void)
 		// non dedicated server just connect to itself
 		if (!dedicated)
 			CL_ConnectToServer();
-		else doomcom->numslots = 1;
+		else numslots = 1;
+
+		LUA_HookVoid(HOOK(GameStart));
 	}
 }
 
@@ -1373,7 +1379,7 @@ static void IdleUpdate(void)
 			if (cv_idletime.value && !IsPlayerAdmin(i) && i != serverplayer && !(players[i].pflags & PF_FINISHED) && players[i].lastinputtime > (tic_t)cv_idletime.value * TICRATE * 60)
 			{
 				players[i].lastinputtime = 0;
-				if (cv_idlespectate.value && G_GametypeHasSpectators())
+				if (cv_idleaction.value == 2 && G_GametypeHasSpectators())
 				{
 					changeteam_union NetPacket;
 					UINT16 usvalue;
@@ -1384,7 +1390,7 @@ static void IdleUpdate(void)
 					usvalue = SHORT(NetPacket.value.l|NetPacket.value.b);
 					SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
 				}
-				else
+				else if (cv_idleaction.value == 1)
 				{
 					SendKick(i, KICK_MSG_IDLE | KICK_MSG_KEEP_BODY);
 				}
@@ -1412,6 +1418,83 @@ static void IdleUpdate(void)
 			}
 		}
 	}
+}
+
+static void DedicatedIdleUpdate(INT32 *realtics)
+{
+	const tic_t dedicatedidletime = cv_dedicatedidletime.value * TICRATE;
+	static tic_t dedicatedidletimeprev = 0;
+	static tic_t dedicatedidle = 0;
+
+	if (!server || !dedicated || gamestate != GS_LEVEL)
+		return;
+
+	if (dedicatedidletime > 0)
+	{
+		INT32 i;
+
+		boolean empty = true;
+		for (i = 0; i < MAXPLAYERS; i++)
+			if (playeringame[i])
+			{
+				empty = false;
+				break;
+			}
+
+		if (empty)
+		{
+			if (leveltime == 2)
+			{
+				// On next tick...
+				dedicatedidle = dedicatedidletime - 1;
+			}
+			else if (dedicatedidle >= dedicatedidletime)
+			{
+				if (D_GetExistingTextcmd(gametic, 0) || D_GetExistingTextcmd(gametic + 1, 0))
+				{
+					CONS_Printf("DEDICATED: Awakening from idle (Netxcmd detected...)\n");
+					dedicatedidle = 0;
+				}
+				else
+				{
+					(*realtics) = 0;
+				}
+			}
+			else
+			{
+				dedicatedidle += (*realtics);
+
+				if (dedicatedidle >= dedicatedidletime)
+				{
+					const char *idlereason = "at round start";
+					if (leveltime > 3)
+						idlereason = va("for %d seconds", dedicatedidle / TICRATE);
+
+					CONS_Printf("DEDICATED: No players %s, idling...\n", idlereason);
+					(*realtics) = 0;
+					dedicatedidle = dedicatedidletime;
+				}
+			}
+		}
+		else
+		{
+			if (dedicatedidle >= dedicatedidletime)
+			{
+				CONS_Printf("DEDICATED: Awakening from idle (Player detected...)\n");
+			}
+			dedicatedidle = 0;
+		}
+	}
+	else
+	{
+		if (dedicatedidletimeprev > 0 && dedicatedidle >= dedicatedidletimeprev)
+		{
+			CONS_Printf("DEDICATED: Awakening from idle (Idle disabled...)\n");
+		}
+		dedicatedidle = 0;
+	}
+
+	dedicatedidletimeprev = dedicatedidletime;
 }
 
 // Handle timeouts to prevent definitive freezes from happenning
@@ -1490,69 +1573,7 @@ void NetUpdate(void)
 			realtics = 5;
 	}
 
-	if (server && dedicated && gamestate == GS_LEVEL)
- 	{
-		const tic_t dedicatedidletime = cv_dedicatedidletime.value * TICRATE;
-		static tic_t dedicatedidletimeprev = 0;
-		static tic_t dedicatedidle = 0;
-
-		if (dedicatedidletime > 0)
-		{
-			INT32 i;
-
-			for (i = 1; i < MAXNETNODES; ++i)
-				if (netnodes[i].ingame)
-				{
-					if (dedicatedidle >= dedicatedidletime)
-					{
-						CONS_Printf("DEDICATED: Awakening from idle (Node %d detected...)\n", i);
-						dedicatedidle = 0;
-					}
-					break;
-				}
-
-			if (i == MAXNETNODES)
-			{
-				if (leveltime == 2)
-				{
-					// On next tick...
-					dedicatedidle = dedicatedidletime-1;
-				}
-				else if (dedicatedidle >= dedicatedidletime)
-				{
-					if (D_GetExistingTextcmd(gametic, 0) || D_GetExistingTextcmd(gametic+1, 0))
-					{
-						CONS_Printf("DEDICATED: Awakening from idle (Netxcmd detected...)\n");
-						dedicatedidle = 0;
-					}
-					else
-					{
-						realtics = 0;
-					}
-				}
-				else if ((dedicatedidle += realtics) >= dedicatedidletime)
-				{
-					const char *idlereason = "at round start";
-					if (leveltime > 3)
-						idlereason = va("for %d seconds", dedicatedidle/TICRATE);
-
-					CONS_Printf("DEDICATED: No nodes %s, idling...\n", idlereason);
-					realtics = 0;
-					dedicatedidle = dedicatedidletime;
-				}
-			}
-		}
-		else
-		{
-			if (dedicatedidletimeprev > 0 && dedicatedidle >= dedicatedidletimeprev)
-			{
-				CONS_Printf("DEDICATED: Awakening from idle (Idle disabled...)\n");
-			}
-			dedicatedidle = 0;
-		}
-
-		dedicatedidletimeprev = dedicatedidletime;
- 	}
+	DedicatedIdleUpdate(&realtics);
 
 	gametime = nowtime;
 
@@ -1799,7 +1820,7 @@ INT16 Consistancy(void)
 	{
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo = (mobj_t *)th;

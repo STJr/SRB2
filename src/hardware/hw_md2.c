@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1062,15 +1062,11 @@ static boolean HWR_AllowModel(mobj_t *mobj)
 
 static boolean HWR_CanInterpolateModel(mobj_t *mobj, model_t *model)
 {
-	if (cv_glmodelinterpolation.value == 2) // Always interpolate
-		return true;
 	return model->interpolate[(mobj->frame & FF_FRAMEMASK)];
 }
 
 static boolean HWR_CanInterpolateSprite2(modelspr2frames_t *spr2frame)
 {
-	if (cv_glmodelinterpolation.value == 2) // Always interpolate
-		return true;
 	return spr2frame->interpolate;
 }
 
@@ -1193,6 +1189,90 @@ static void adjustTextureCoords(model_t *model, patch_t *patch)
 	model->max_t = gpatch->max_t;
 }
 
+static INT32 GetAnimDuration(mobj_t *mobj) //part of p_mobj's setplayermobjstate logic, used to make sure that anim durations are actually correct when the speed gets adjusted on players
+{
+	player_t *player = mobj->player;
+	INT32 tics = mobj->state->tics;
+
+	if (!(mobj->frame & FF_ANIMATE) && mobj->anim_duration) //set manually by something through lua
+		return mobj->anim_duration;
+
+	if (!player && mobj->type == MT_TAILSOVERLAY && mobj->tracer) //so tails overlays interpolate properly
+		player = mobj->tracer->player;
+	if (player)
+	{
+		if (player->panim == PA_EDGE && (player->charflags & SF_FASTEDGE))
+			tics = 2;
+		else if (player->powers[pw_tailsfly] && (!(player->mo->eflags & MFE_UNDERWATER) || (mobj->type == MT_PLAYER))) //tailsoverlay does not get adjusted from these rules when underwater
+		{
+			if (player->fly1 > 0)
+				tics = 1;
+			else if (!(player->mo->eflags & MFE_UNDERWATER))
+				tics = 2;
+			else
+				tics = 4;
+		}
+		else if (!(disableSpeedAdjust || player->charflags & SF_NOSPEEDADJUST))
+		{
+			fixed_t speed;// = FixedDiv(player->speed, FixedMul(mobj->scale, player->mo->movefactor));
+			if (player->panim == PA_FALL)
+			{
+				speed = FixedDiv(abs(mobj->momz), mobj->scale);
+				if (speed < 10<<FRACBITS)
+					tics = 4;
+				else if (speed < 20<<FRACBITS)
+					tics = 3;
+				else if (speed < 30<<FRACBITS)
+					tics = 2;
+				else
+					tics = 1;
+			}
+			else if (player->panim == PA_ABILITY2 && player->charability2 == CA2_SPINDASH)
+			{
+				fixed_t step = (player->maxdash - player->mindash)/4;
+				speed = (player->dashspeed - player->mindash);
+				if (speed > 3*step)
+					tics = 1;
+				else if (speed > step)
+					tics = 2;
+				else
+					tics = 3;
+			}
+			else
+			{
+				speed = FixedDiv(player->speed, FixedMul(mobj->scale, player->mo->movefactor));
+				if (player->panim == PA_ROLL || player->panim == PA_JUMP)
+				{
+					if (speed > 16<<FRACBITS)
+						tics = 1;
+					else
+						tics = 2;
+				}
+				else if (P_IsObjectOnGround(mobj) || ((player->charability == CA_FLOAT || player->charability == CA_SLOWFALL) && player->secondjump == 1) || player->powers[pw_super]) // Only if on the ground or superflying.
+				{
+					if (player->panim == PA_WALK)
+					{
+						if (speed > 12<<FRACBITS)
+							tics = 2;
+						else if (speed > 6<<FRACBITS)
+							tics = 3;
+						else
+							tics = 4;
+					}
+					else if ((player->panim == PA_RUN) || (player->panim == PA_DASH))
+					{
+						if (speed > 52<<FRACBITS)
+							tics = 1;
+						else
+							tics = 2;
+					}
+				}
+			}
+		}
+	}
+	return tics;
+}
+
 //
 // HWR_DrawModel
 //
@@ -1266,7 +1346,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 	{
 		patch_t *gpatch, *blendgpatch;
 		GLPatch_t *hwrPatch = NULL, *hwrBlendPatch = NULL;
-		float durs = (float)spr->mobj->state->tics;
+		float durs = GetAnimDuration(spr->mobj);
 		float tics = (float)spr->mobj->tics;
 		const boolean papersprite = (R_ThingIsPaperSprite(spr->mobj) && !R_ThingIsFloorSprite(spr->mobj));
 		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !R_ThingVerticallyFlipped(spr->mobj));
@@ -1287,9 +1367,9 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		}
 
 		// Apparently people don't like jump frames like that, so back it goes
-		//if (tics > durs)
-			//durs = tics;
-		
+		if (tics > durs)
+			durs = tics;
+
 		// Make linkdraw objects use their tracer's alpha value
 		fixed_t newalpha = spr->mobj->alpha;
 		if ((spr->mobj->flags2 & MF2_LINKDRAW) && spr->mobj->tracer)
@@ -1308,7 +1388,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			Surf.PolyColor.s.alpha = (spr->mobj->flags2 & MF2_SHADOW) ? 0x40 : 0xff;
 			Surf.PolyFlags = HWR_GetBlendModeFlag(blendmode);
 		}
-		
+
 		Surf.PolyColor.s.alpha = FixedMul(newalpha, Surf.PolyColor.s.alpha);
 
 		// don't forget to enable the depth test because we can't do this
@@ -1607,7 +1687,6 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, md2->scale * xs, md2->scale * ys, flip, hflip, &Surf);
 		}
 	}
-
 	return true;
 }
 
