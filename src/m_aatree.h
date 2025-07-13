@@ -22,11 +22,12 @@
 typedef struct aatree_s aatree_t;
 typedef void (*aatree_iter_t)(void* key, void *value);
 typedef INT32 (*aatree_comp_t)(void* key, void *value);
+typedef void (*aatree_dealloc_t)(void * key);
 
 aatree_t *M_AATreeAlloc(UINT32 flags);
 void M_AATreeFree(aatree_t *aatree);
-void M_AATreeSet(aatree_t *aatree, void* key, void* value, aatree_comp_t callback);
-void *M_AATreeGet(aatree_t *aatree, void* key, aatree_comp_t callback);
+void M_AATreeSet(aatree_t *aatree, void* key, void* value, aatree_comp_t callback, aatree_dealloc_t deallocator);
+void *M_AATreeGet(aatree_t *aatree, void* key, aatree_comp_t callback, aatree_dealloc_t deallocator);
 void M_AATreeIterate(aatree_t *aatree, aatree_iter_t callback);
 
 #endif
