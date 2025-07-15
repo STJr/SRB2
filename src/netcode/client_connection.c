@@ -1379,6 +1379,8 @@ void CL_ConnectToServer(void)
 			CONS_Printf(M_GetText("Contacting the server...\n"));
 	}
 
+	if (gamestate == GS_TITLESCREEN)
+		menuactive = false; // close the menu if we are connecting from the title screen
 	if (gamestate == GS_INTERMISSION)
 		Y_EndIntermission(); // clean up intermission graphics etc
 
