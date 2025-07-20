@@ -1371,15 +1371,15 @@ void D_SRB2Main(void)
 
 	P_SetRandSeed(M_RandomizedSeed());
 
-	if (M_CheckParm("-password") && M_IsNextParm())
-		D_SetPassword(M_GetNextParm());
-
 	// player setup menu colors must be initialized before
 	// any wad file is added, as they may contain colors themselves
 	M_InitPlayerSetupColors();
 
 	CONS_Printf("Z_Init(): Init zone memory allocation daemon. \n");
 	Z_Init();
+
+	if (M_CheckParm("-password") && M_IsNextParm())
+		D_SetPassword(M_GetNextParm());
 
 	clientGamedata = M_NewGameDataStruct();
 	serverGamedata = M_NewGameDataStruct();
