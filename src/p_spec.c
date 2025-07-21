@@ -1972,23 +1972,23 @@ static void P_PlaySFX(INT32 sfxnum, mobj_t *mo, sector_t *callsec, INT16 tag, te
 	{
 		case TMSS_TRIGGERMOBJ: // play the sound from mobj that triggered it
 			if (mo)
-				S_StartSound(mo, sfxnum);
+				S_StartSoundFromMobj(mo, sfxnum);
 			break;
 		case TMSS_TRIGGERSECTOR: // play the sound from calling sector's soundorg
 			if (callsec)
-				S_StartSound(&callsec->soundorg, sfxnum);
+				S_StartSoundFromSector(callsec, sfxnum);
 			else if (mo)
-				S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
+				S_StartSoundFromSector(mo->subsector->sector, sfxnum);
 			break;
 		case TMSS_NOWHERE: // play the sound from nowhere
-			S_StartSound(NULL, sfxnum);
+			S_StartSoundFromEverywhere(sfxnum);
 			break;
 		case TMSS_TAGGEDSECTOR: // play the sound from tagged sectors' soundorgs
 		{
 			INT32 secnum;
 
 			TAG_ITER_SECTORS(tag, secnum)
-				S_StartSound(&sectors[secnum].soundorg, sfxnum);
+				S_StartSoundFromSector(&sectors[secnum], sfxnum);
 			break;
 		}
 		default:
@@ -2448,7 +2448,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						P_Teleport(bot, dest->x, dest->y, dest->z, angle, !silent, keepmomentum);
 					P_Teleport(mo, dest->x, dest->y, dest->z, angle, !silent, keepmomentum);
 					if (!silent)
-						S_StartSound(dest, sfx_mixup); // Play the 'bowrwoosh!' sound
+						S_StartSoundFromMobj(dest, sfx_mixup); // Play the 'bowrwoosh!' sound
 				}
 			}
 			break;
@@ -2893,7 +2893,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 					if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
 					{
-						S_StartSound(NULL, sfx_s3k68);
+						S_StartSoundFromEverywhere(sfx_s3k68);
 						G_SaveGameData(clientGamedata); // only save if unlocked something
 					}
 				}
@@ -3844,7 +3844,7 @@ void P_SetupSignExit(player_t *player)
 		P_SetObjectMomZ(thing, 12*FRACUNIT, false);
 		P_SetMobjState(thing, S_SIGNSPIN1);
 		if (thing->info->seesound)
-			S_StartSound(thing, thing->info->seesound);
+			S_StartSoundFromMobj(thing, thing->info->seesound);
 
 		++numfound;
 	}
@@ -3875,7 +3875,7 @@ void P_SetupSignExit(player_t *player)
 		P_SetObjectMomZ(thing, 12*FRACUNIT, false);
 		P_SetMobjState(thing, S_SIGNSPIN1);
 		if (thing->info->seesound)
-			S_StartSound(thing, thing->info->seesound);
+			S_StartSoundFromMobj(thing, thing->info->seesound);
 
 		++numfound;
 	}
@@ -4511,7 +4511,7 @@ static void P_ProcessSpeedPad(player_t *player, sector_t *sector, sector_t *rove
 	if (!sfxnum)
 		sfxnum = sfx_spdpad;
 
-	S_StartSound(player->mo, sfxnum);
+	S_StartSoundFromMobj(player->mo, sfxnum);
 }
 
 static void P_ProcessSpecialStagePit(player_t* player)
@@ -4603,9 +4603,9 @@ static void P_ProcessTeamBase(player_t *player, boolean redteam)
 	HU_DoCEcho(va(M_GetText("%s%s\200\\CAPTURED THE %s%s FLAG\200.\\\\\\\\"), redteam ? "\205" : "\204", player_names[player-players], redteam ? "\204" : "\205", redteam ? "BLUE" : "RED"));
 
 	if (splitscreen || players[consoleplayer].ctfteam == (redteam ? 1 : 2))
-		S_StartSound(NULL, sfx_flgcap);
+		S_StartSoundFromEverywhere(sfx_flgcap);
 	else if (players[consoleplayer].ctfteam == (redteam ? 2 : 1))
-		S_StartSound(NULL, sfx_lose);
+		S_StartSoundFromEverywhere(sfx_lose);
 
 	mo = P_SpawnMobj(player->mo->x,player->mo->y,player->mo->z, redteam ? MT_BLUEFLAG : MT_REDFLAG);
 	player->gotflag &= ~(redteam ? GF_BLUEFLAG : GF_REDFLAG);
@@ -4680,7 +4680,7 @@ static void P_ProcessZoomTube(player_t *player, mtag_t sectag, boolean end)
 	if (!P_IsPlayerInState(player, S_PLAY_ROLL))
 	{
 		P_SetMobjState(player->mo, S_PLAY_ROLL);
-		S_StartSound(player->mo, sfx_spin);
+		S_StartSoundFromMobj(player->mo, sfx_spin);
 	}
 }
 
@@ -4712,13 +4712,13 @@ static void P_ProcessFinishLine(player_t *player)
 		P_ResetStarposts();
 
 		// Play the starpost sound for 'consistency'
-		S_StartSound(player->mo, sfx_strpst);
+		S_StartSoundFromMobj(player->mo, sfx_strpst);
 	}
 	else if (player->starpostnum)
 	{
 		// blatant reuse of a variable that's normally unused in circuit
 		if (!player->tossdelay)
-			S_StartSound(player->mo, sfx_lose);
+			S_StartSoundFromMobj(player->mo, sfx_lose);
 		player->tossdelay = 3;
 	}
 
@@ -4888,7 +4888,7 @@ static void P_ProcessRopeHang(player_t *player, mtag_t sectag)
 	player->powers[pw_carry] = CR_ROPEHANG;
 	player->speed = speed;
 
-	S_StartSound(player->mo, sfx_s3k4a);
+	S_StartSoundFromMobj(player->mo, sfx_s3k4a);
 
 	player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
 	player->climbing = 0;
@@ -5073,7 +5073,7 @@ static void P_EvaluateOldSectorSpecial(player_t *player, sector_t *sector, secto
 			if (leveltime % (TICRATE/2) == 0 && player->rings > 0)
 			{
 				player->rings--;
-				S_StartSound(player->mo, sfx_antiri);
+				S_StartSoundFromMobj(player->mo, sfx_antiri);
 			}
 			break;
 	}
@@ -5940,7 +5940,7 @@ void T_LaserFlash(laserthink_t *flash)
 			top    = P_GetFFloorTopZAt   (fflr, sector->soundorg.x, sector->soundorg.y);
 			bottom = P_GetFFloorBottomZAt(fflr, sector->soundorg.x, sector->soundorg.y);
 			sector->soundorg.z = (top + bottom)/2;
-			S_StartSound(&sector->soundorg, sfx_laser);
+			S_StartSoundFromSector(sector, sfx_laser);
 
 			// Seek out objects to DESTROY! MUAHAHHAHAHAA!!!*cough*
 			for (node = sector->touching_thinglist; node && node->m_thing; node = node->m_thinglist_next)
@@ -7952,7 +7952,7 @@ void T_Disappear(disappear_t *d)
 					if (!(lines[d->sourceline].args[5]))
 					{
 						sectors[s].soundorg.z = P_GetFFloorTopZAt(rover, sectors[s].soundorg.x, sectors[s].soundorg.y);
-						S_StartSound(&sectors[s].soundorg, sfx_appear);
+						S_StartSoundFromSector(&sectors[s], sfx_appear);
 					}
 				}
 			}

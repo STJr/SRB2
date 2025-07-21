@@ -2671,7 +2671,7 @@ fixed_t *hwbbox;
 
 static void HWR_RenderBSPNode(INT32 bspnum)
 {
-	node_t *bsp;
+	bspnode_t *bsp;
 	INT32 side;
 
 	ps_numbspcalls.value.i++;

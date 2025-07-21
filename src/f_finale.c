@@ -1644,7 +1644,7 @@ void F_GameEvaluationTicker(void)
 			|| finalecount == (7*TICRATE)/2
 			|| finalecount == ((7*TICRATE)/2)+5)
 		{
-			S_StartSound(NULL, sfx_s3k5c);
+			S_StartSoundFromEverywhere(sfx_s3k5c);
 			sparklloop = 10;
 		}
 	}
@@ -1683,7 +1683,7 @@ void F_GameEvaluationTicker(void)
 		M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
 
 		if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
-			S_StartSound(NULL, sfx_s3k68);
+			S_StartSoundFromEverywhere(sfx_s3k68);
 
 		G_SaveGameData(clientGamedata);
 	}
@@ -3819,7 +3819,7 @@ void F_ContinueTicker(void)
 			cont_spr2[1][2] = 0;
 
 		if (continuetime == (3*TICRATE)-10)
-			S_StartSound(NULL, sfx_cdfm56); // or 31
+			S_StartSoundFromEverywhere(sfx_cdfm56); // or 31
 		else if (continuetime == 5)
 		{
 			cont_spr2[0][0] = P_GetSkinSprite2(contskins[0], SPR2_CNT2, NULL);
@@ -3893,7 +3893,7 @@ boolean F_ContinueResponder(event_t *event)
 
 	keypressed = true;
 	imcontinuing = true;
-	S_StartSound(NULL, sfx_kc6b);
+	S_StartSoundFromEverywhere(sfx_kc6b);
 	I_FadeSong(0, MUSICRATE, &S_StopMusic);
 
 	return true;
@@ -4693,7 +4693,7 @@ void F_TextPromptTicker(void)
 					{
 						F_AdvanceToNextPage();
 						if (promptactive)
-							S_StartSound(NULL, sfx_menu1);
+							S_StartSoundFromEverywhere(sfx_menu1);
 					}
 					keypressed = true; // prevent repeat events
 				}

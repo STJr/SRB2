@@ -75,7 +75,7 @@ static UINT8 cheatf_warp(void)
 	if (menuactive && currentMenu != &MainDef)
 		return 0; // Only on the main menu!
 
-	S_StartSound(0, sfx_itemup);
+	S_StartSoundFromEverywhere(sfx_itemup);
 
 	// Temporarily unlock stuff.
 	G_SetUsedCheats(false);
@@ -97,7 +97,7 @@ static UINT8 cheatf_devmode(void)
 	if (menuactive && currentMenu != &MainDef)
 		return 0; // Only on the main menu!
 
-	S_StartSound(0, sfx_itemup);
+	S_StartSoundFromEverywhere(sfx_itemup);
 
 	// Just unlock all the things and turn on -debug and console devmode.
 	G_SetUsedCheats(false);
@@ -472,7 +472,7 @@ void Command_RTeleport_f(void)
 	if (!P_SetOrigin(p->mo, p->mo->x+intx*FRACUNIT, p->mo->y+inty*FRACUNIT, intz))
 		CONS_Alert(CONS_WARNING, M_GetText("Unable to teleport to that spot!\n"));
 	else
-		S_StartSound(p->mo, sfx_mixup);
+		S_StartSoundFromMobj(p->mo, sfx_mixup);
 	P_MapEnd();
 }
 
@@ -693,7 +693,7 @@ void Command_Teleport_f(void)
 	if (!P_SetOrigin(p->mo, intx, inty, intz))
 		CONS_Alert(CONS_WARNING, M_GetText("Unable to teleport to that spot!\n"));
 	else
-		S_StartSound(p->mo, sfx_mixup);
+		S_StartSoundFromMobj(p->mo, sfx_mixup);
 	P_MapEnd();
 }
 

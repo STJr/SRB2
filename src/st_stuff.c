@@ -696,7 +696,7 @@ static void ST_drawRaceNum(INT32 time)
 	{
 		height -= (2 - bounce);
 		if (!(P_AutoPause() || paused) && !bounce)
-				S_StartSound(0, ((racenum == racego) ? sfx_s3kad : sfx_s3ka7));
+				S_StartSoundFromEverywhere(((racenum == racego) ? sfx_s3kad : sfx_s3ka7));
 	}
 	V_DrawScaledPatch(((BASEVIDWIDTH - racenum->width)/2), height, V_PERPLAYER, racenum);
 }
@@ -2608,7 +2608,7 @@ static void ST_doHuntIconsAndSound(void)
 	}
 
 	if (!(P_AutoPause() || paused) && interval > 0 && leveltime && leveltime % interval == 0 && renderisnewtic)
-		S_StartSound(NULL, sfx_emfind);
+		S_StartSoundFromEverywhere(sfx_emfind);
 }
 
 static boolean ST_doItemFinderIconsAndSound(void)
@@ -2685,7 +2685,7 @@ static boolean ST_doItemFinderIconsAndSound(void)
 	}
 
 	if (!(P_AutoPause() || paused) && interval > 0 && leveltime && leveltime % interval == 0 && renderisnewtic)
-		S_StartSound(NULL, sfx_emfind);
+		S_StartSoundFromEverywhere(sfx_emfind);
 
 	return true;
 }

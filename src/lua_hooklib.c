@@ -1238,6 +1238,47 @@ int LUA_HookMusicChange(const char *oldname, struct MusicChange *param)
 	return hook.status;
 }
 
+static void res_soundplay(Hook_State* hook)
+{
+    if (!lua_isnil(gL, -1))
+    {
+        UINT32 sfx_id = lua_tonumber(gL, -1);
+        if (lua_isboolean(gL, -1) && lua_toboolean(gL, -1))
+            hook->status = 0; //sfx_None if returning True
+
+        //Make sure number is in range
+        else if (!lua_isboolean(gL, -1)
+            && (sfx_id < NUMSFX))
+            hook->status = sfx_id;
+
+        if (sfx_id >= NUMSFX)
+			CONS_Alert(CONS_WARNING, "sfx %d out of range (0 - %d)\n", sfx_id, NUMSFX-1);
+    }
+}
+
+int LUA_HookSoundPlay(sfxenum_t sfx_id, void *origin, const int origintype)
+{
+    Hook_State hook;
+
+    if (prepare_hook(&hook, sfx_id, HOOK(SoundPlay)))
+    {
+        lua_pushinteger(gL, sfx_id);
+        if (origin != NULL)
+        {
+			if (origintype == 0)
+				LUA_PushUserdata(gL, (mobj_t*)origin, META_MOBJ);
+			else if (origintype == 1)
+				LUA_PushUserdata(gL, (sector_t*)origin, META_SECTOR);
+			lua_pushinteger(gL, origintype);
+        }
+
+        hud_running = true; // local hook
+        call_hooks(&hook, 1, res_soundplay);
+        hud_running = false;
+    }
+    return hook.status;
+}
+
 static void res_playerheight(Hook_State *hook)
 {
 	if (!lua_isnil(gL, -1))
