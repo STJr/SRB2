@@ -187,6 +187,7 @@ static tic_t keydown = 0;
 
 // Lua
 static huddrawlist_h luahuddrawlist_playersetup;
+static huddrawlist_h luahuddrawlist_infoscreen;
 
 //
 // PROTOTYPES
@@ -394,6 +395,7 @@ static void M_DrawColorRamp(INT32 x, INT32 y, INT32 w, INT32 h, skincolor_t colo
 // Handling functions
 static boolean M_ExitPandorasBox(void);
 static boolean M_QuitMultiPlayerMenu(void);
+static boolean M_QuitPauseMenu(void);
 static void M_HandleAddons(INT32 choice);
 static void M_HandleLevelPlatter(INT32 choice);
 static void M_HandleSoundTest(INT32 choice);
@@ -3768,6 +3770,14 @@ void M_StartControlPanel(void)
 	CON_ToggleOff(); // move away console
 }
 
+static boolean M_QuitPauseMenu(void)
+{
+	LUA_HUD_DestroyDrawList(luahuddrawlist_infoscreen);
+	luahuddrawlist_infoscreen = NULL;
+
+	return true;
+}
+
 void M_EndModeAttackRun(void)
 {
 	G_ClearModeAttackRetryFlag();
@@ -4721,8 +4731,32 @@ static void M_DrawPauseMenu(void)
 		emblem_t *emblem_detail[3] = {NULL, NULL, NULL};
 		char emblem_text[3][20];
 		INT32 i;
+		INT16 xbox = 27;
+		INT16 ybox = 16;
+		INT16 widthbox = 32;
+		INT16 heightbox = 6;
 
-		M_DrawTextBox(27, 16, 32, 6);
+		M_DrawTextBox(xbox, ybox, widthbox, heightbox);
+
+		if (!LUA_HUD_IsDrawListValid(luahuddrawlist_infoscreen))
+		{
+			LUA_HUD_DestroyDrawList(luahuddrawlist_infoscreen);
+			luahuddrawlist_infoscreen = LUA_HUD_CreateDrawList();
+		}
+		LUA_HUD_ClearDrawList(luahuddrawlist_infoscreen);
+		
+		boolean esc_override = LUA_HookEscapePanel(
+			HUD_HOOK(escpanel),
+			luahuddrawlist_infoscreen,
+			xbox+5, ybox+5, widthbox*8+6, heightbox*8+6);
+
+		LUA_HUD_DrawList(luahuddrawlist_infoscreen);
+
+		if (esc_override)
+		{
+			M_DrawGenericMenu();
+			return;
+		}
 
 		// Draw any and all emblems at the top.
 		M_DrawMapEmblems(gamemap, 272, 28, true);
@@ -4854,8 +4888,6 @@ static void M_DrawPauseMenu(void)
 			V_DrawRightAlignedString(284, 44 + (i*8), V_MONOSPACE, emblem_text[i]);
 		}
 	}
-
-	M_DrawGenericMenu();
 }
 
 static void M_DrawCenteredMenu(void)

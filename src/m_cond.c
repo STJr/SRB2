@@ -155,6 +155,8 @@ void M_ClearSecrets(gamedata_t *data)
 		data->unlocked[i] = false;
 	for (i = 0; i < MAXCONDITIONSETS; ++i)
 		data->achieved[i] = false;
+	for (i = 0; i < MAXLUACONDITIONS; ++i)
+		data->lua[i] = false;
 
 	data->timesBeaten = data->timesBeatenWithEmeralds = data->timesBeatenUltimate = 0;
 
@@ -214,6 +216,8 @@ static UINT8 M_CheckCondition(condition_t *cn, gamedata_t *data)
 			return data->collected[cn->requirement-1];
 		case UC_EXTRAEMBLEM: // Requires extra emblem x to be obtained
 			return data->extraCollected[cn->requirement-1];
+		case UC_LUA:
+			return data->lua[cn->requirement-1];
 		case UC_CONDITIONSET: // requires condition set x to already be achieved
 			return M_Achieved(cn->requirement-1, data);
 	}
