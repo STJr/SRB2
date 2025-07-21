@@ -430,6 +430,15 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word, "token")) {
 		lua_pushinteger(L, token);
 		return 1;
+	} else if (fastcmp(word, "emblems")) {
+		lua_pushinteger(L, M_CountEmblems(clientGamedata));
+		return 1;
+	} else if (fastcmp(word, "numemblems")) {
+		lua_pushinteger(L, numemblems);
+		return 1;
+	} else if (fastcmp(word, "numextraemblems")) {
+		lua_pushinteger(L, numextraemblems);
+		return 1;		
 	} else if (fastcmp(word, "nummaprings")) {
 		lua_pushinteger(L, nummaprings);
 		return 1;

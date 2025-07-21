@@ -90,6 +90,7 @@ automatically.
 	X (scores),/* emblems/multiplayer list */\
 	X (title),/* titlescreen */\
 	X (titlecard),\
+	X (escpanel) /* rings/time/score/emblem panel in pause menu */,\
 	X (intermission),\
 	X (continue),\
 	X (playersetup),\
@@ -130,6 +131,10 @@ int LUA_HookCharacterHUD
 	fixed_t x, fixed_t y, fixed_t scale,
 	INT32 skinIndex, UINT8 sprite2, UINT8 frame, UINT8 rotation, skincolornum_t color,
 	INT32 ticker, boolean mode
+);
+boolean LUA_HookEscapePanel(
+	int hook, huddrawlist_h drawlist,
+	int x, int y, int width, int height
 );
 
 int  LUA_HookMobj(mobj_t *, int hook);

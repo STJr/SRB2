@@ -738,6 +738,22 @@ int LUA_HookCharacterHUD
 	return hook.status;
 }
 
+boolean LUA_HookEscapePanel(int hook, huddrawlist_h drawlist, int x, int y, int width, int height)
+{
+	Hook_State hookstate;
+	if (prepare_hud_hook(&hookstate, false, hook))
+	{
+		LUA_SetHudHook(hook, drawlist);
+		lua_pushinteger(gL, x);
+		lua_pushinteger(gL, y);
+		lua_pushinteger(gL, width);
+		lua_pushinteger(gL, height);
+		call_hud_hooks(&hookstate, 1, res_true);
+	}
+	return hookstate.status;
+}
+
+
 /* =========================================================================
                                SPECIALIZED HOOKS
    ========================================================================= */

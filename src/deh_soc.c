@@ -3490,6 +3490,18 @@ static void readcondition(UINT8 set, UINT32 id, char *word2)
 			return;
 		}
 	}
+	else if (fastcmp(params[0], "LUA"))
+	{
+		PARAMCHECK(1);
+		ty = UC_LUA;
+		re = atoi(params[1]);
+
+		if (re <= 0 || re > MAXLUACONDITIONS)
+		{
+			deh_warning("Lua condition %d out of range (1 - %d)", re, MAXLUACONDITIONS);
+			return;
+		}
+	}
 	else if (fastcmp(params[0], "CONDITIONSET"))
 	{
 		PARAMCHECK(1);

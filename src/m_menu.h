@@ -524,7 +524,7 @@ void M_FreePlayerSetupColors(void);
 	M_DrawPauseMenu,\
 	x, y,\
 	0,\
-	NULL\
+	M_QuitPauseMenu\
 }
 
 #define CENTERMENUSTYLE(id, header, source, prev, y)\
