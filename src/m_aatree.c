@@ -42,8 +42,10 @@ aatree_t *M_AATreeAlloc(UINT32 flags)
 
 static void M_AATreeFree_Node(aatree_node_t *node)
 {
-	if (node->left) M_AATreeFree_Node(node->left);
-	if (node->right) M_AATreeFree_Node(node->right);
+	if (node->left)
+		M_AATreeFree_Node(node->left);
+	if (node->right)
+		M_AATreeFree_Node(node->right);
 	Z_Free(node);
 }
 
@@ -110,8 +112,10 @@ static aatree_node_t *M_AATreeSet_Node(aatree_node_t *node, UINT32 flags, void* 
 		// Nothing here, so just add where we are
 		node = Z_Malloc(sizeof (aatree_node_t), PU_STATIC, NULL);
 		node->key = key;
-		if (value && (flags & AATREE_ZUSER)) Z_SetUser(value, &node->value);
-		else node->value = value;
+		if (value && (flags & AATREE_ZUSER))
+			Z_SetUser(value, &node->value);
+		else
+			node->value = value;
 		node->left = node->right = NULL;
 	}
 	else
@@ -122,9 +126,13 @@ static aatree_node_t *M_AATreeSet_Node(aatree_node_t *node, UINT32 flags, void* 
 			node->right = M_AATreeSet_Node(node->right, flags, key, value, callback, deallocator);
 		else
 		{
-			if (value && (flags & AATREE_ZUSER)) Z_SetUser(value, &node->value);
-			else node->value = value;
-			if (deallocator) deallocator(key);
+			if (value && (flags & AATREE_ZUSER))
+				Z_SetUser(value, &node->value);
+			else
+				node->value = value;
+
+			if (deallocator)
+				deallocator(key);
 		}
 
 		node = M_AATreeRebalance(node);
@@ -147,7 +155,8 @@ static void *M_AATreeGet_Node(aatree_node_t *node, void* key, aatree_comp_t call
 	{
 		if (callback(key, node->key) == 0)
 		{
-			if (deallocator) deallocator(key);
+			if (deallocator)
+				deallocator(key);
 			return node->value;
 		}
 		else if(callback(node->key, key) < 0)
@@ -156,7 +165,8 @@ static void *M_AATreeGet_Node(aatree_node_t *node, void* key, aatree_comp_t call
 			return M_AATreeGet_Node(node->left, key, callback, deallocator);
 	}
 
-	if (deallocator) deallocator(key);
+	if (deallocator)
+		deallocator(key);
 	return NULL;
 }
 
@@ -168,9 +178,11 @@ void *M_AATreeGet(aatree_t *aatree, void* key, aatree_comp_t callback, aatree_de
 
 static void M_AATreeIterate_Node(aatree_node_t *node, aatree_iter_t callback)
 {
-	if (node->left) M_AATreeIterate_Node(node->left, callback);
+	if (node->left)
+		M_AATreeIterate_Node(node->left, callback);
 	callback(node->key, node->value);
-	if (node->right) M_AATreeIterate_Node(node->right, callback);
+	if (node->right)
+		M_AATreeIterate_Node(node->right, callback);
 }
 
 void M_AATreeIterate(aatree_t *aatree, aatree_iter_t callback)

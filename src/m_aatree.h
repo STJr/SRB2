@@ -22,7 +22,7 @@
 typedef struct aatree_s aatree_t;
 typedef void (*aatree_iter_t)(void* key, void *value);
 typedef INT32 (*aatree_comp_t)(void* key, void *value);
-typedef void (*aatree_dealloc_t)(void * key);
+typedef void (*aatree_dealloc_t)(void* key);
 
 aatree_t *M_AATreeAlloc(UINT32 flags);
 void M_AATreeFree(aatree_t *aatree);
