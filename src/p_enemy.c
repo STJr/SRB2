@@ -985,13 +985,13 @@ void A_FaceStabRev(mobj_t *actor)
 	if (!actor->reactiontime)
 	{
 		actor->reactiontime = locvar1;
-		S_StartSound(actor, actor->info->activesound);
+		S_StartSoundFromMobj(actor, actor->info->activesound);
 	}
 	else
 	{
 		if ((--actor->reactiontime) == 0)
 		{
-			S_StartSound(actor, actor->info->attacksound);
+			S_StartSoundFromMobj(actor, actor->info->attacksound);
 			P_SetMobjState(actor, locvar2);
 		}
 		else
@@ -1132,7 +1132,7 @@ void A_FaceStabMiss(mobj_t *actor)
 	{
 		actor->extravalue2 -= 2;
 		actor->extravalue1 = 0;
-		S_StartSound(actor, sfx_s3k47);
+		S_StartSoundFromMobj(actor, sfx_s3k47);
 		P_SharpDust(actor, MT_SPINDUST, actor->angle);
 	}
 
@@ -1177,9 +1177,9 @@ void A_StatueBurst(mobj_t *actor)
 		P_SetMobjState(new, (statenum_t)locvar2);
 	if (P_MobjWasRemoved(new))
 		return;
-	S_StartSound(new, new->info->attacksound);
+	S_StartSoundFromMobj(new, new->info->attacksound);
 	S_StopSound(actor);
-	S_StartSound(actor, sfx_s3k96);
+	S_StartSoundFromMobj(actor, sfx_s3k96);
 
 	{
 		fixed_t a, b;
@@ -1494,7 +1494,7 @@ void A_HoodThink(mobj_t *actor)
 	// Target dangerously close to robohood, retreat then.
 	if ((dm < 256<<FRACBITS) && (abs(dz) < 128<<FRACBITS) && !(actor->flags2 & MF2_AMBUSH))
 	{
-		S_StartSound(actor, actor->info->attacksound);
+		S_StartSoundFromMobj(actor, actor->info->attacksound);
 		P_SetMobjState(actor, actor->info->raisestate);
 		return;
 	}
@@ -1701,7 +1701,7 @@ void A_SharpChase(mobj_t *actor)
 		actor->threshold = actor->info->painchance;
 		P_SetMobjState(actor, actor->info->missilestate);
 		if (!P_MobjWasRemoved(actor))
-			S_StartSound(actor, actor->info->attacksound);
+			S_StartSoundFromMobj(actor, actor->info->attacksound);
 	}
 }
 
@@ -1731,7 +1731,7 @@ void A_SharpSpin(mobj_t *actor)
 			actor->angle = ang;
 		actor->threshold--;
 		if (leveltime & 1)
-			S_StartSound(actor, actor->info->painsound);
+			S_StartSoundFromMobj(actor, actor->info->painsound);
 	}
 	else
 	{
@@ -1822,7 +1822,7 @@ void A_CrushstaceanPunch(mobj_t *actor)
 	actor->tracer->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
 	P_SetMobjState(actor->tracer, actor->tracer->info->missilestate);
 	actor->tracer->extravalue1 = actor->tracer->extravalue2 = 0;
-	S_StartSound(actor, actor->info->attacksound);
+	S_StartSoundFromMobj(actor, actor->info->attacksound);
 }
 
 // Function: A_CrushclawAim
@@ -1917,7 +1917,7 @@ void A_CrushclawLaunch(mobj_t *actor)
 
 	if (!actor->extravalue1)
 	{
-		S_StartSound(actor, actor->info->activesound);
+		S_StartSoundFromMobj(actor, actor->info->activesound);
 		actor->extravalue1 = ((locvar1) ? -1 : 32);
 	}
 	else if (actor->extravalue1 != 1)
@@ -1976,7 +1976,7 @@ void A_CrushclawLaunch(mobj_t *actor)
 		actor->extravalue2 = FixedHypot(actor->x - actor->target->x, actor->y - actor->target->y)>>FRACBITS;
 		P_SetMobjState(actor, locvar2);
 		S_StopSound(actor);
-		S_StartSound(actor, sfx_s3k49);
+		S_StartSoundFromMobj(actor, sfx_s3k49);
 	}
 	else
 	{
@@ -2004,7 +2004,7 @@ void A_CrushclawLaunch(mobj_t *actor)
 			P_SetMobjState(actor, locvar2);
 			S_StopSound(actor);
 			if (!locvar1)
-				S_StartSound(actor, sfx_s3k64);
+				S_StartSoundFromMobj(actor, sfx_s3k64);
 		}
 	}
 
@@ -2061,7 +2061,7 @@ void A_VultureVtol(mobj_t *actor)
 		// Attack!
 		actor->momz = 0;
 		P_SetMobjState(actor, actor->info->missilestate);
-		S_StartSound(actor, actor->info->activesound);
+		S_StartSoundFromMobj(actor, actor->info->activesound);
 	}
 }
 
@@ -2201,7 +2201,7 @@ void A_VultureBlast(mobj_t *actor)
 	if (LUA_CallAction(A_VULTUREBLAST, actor))
 		return;
 
-	S_StartSound(actor, actor->info->attacksound);
+	S_StartSoundFromMobj(actor, actor->info->attacksound);
 
 	faa = (actor->angle >> ANGLETOFINESHIFT) & FINEMASK;
 	faacos = FINECOSINE(faa);
@@ -2255,7 +2255,7 @@ void A_VultureFly(mobj_t *actor)
 	dxy = FixedHypot(dx, dy);
 
 	if (leveltime % 4 == 0)
-		S_StartSound(actor, actor->info->activesound);
+		S_StartSoundFromMobj(actor, actor->info->activesound);
 
 	if (angledif > ANGLE_180)
 		angledif = InvAngle(angledif);
@@ -2308,7 +2308,7 @@ void A_VultureFly(mobj_t *actor)
 		actor->flags &= ~MF_NOGRAVITY;
 		P_SetMobjState(actor, actor->info->painstate);
 		S_StopSound(actor);
-		S_StartSound(actor, actor->info->painsound);
+		S_StartSoundFromMobj(actor, actor->info->painsound);
 		return;
 	}
 	actor->extravalue1 = momm;
@@ -2536,7 +2536,7 @@ void A_LobShot(mobj_t *actor)
 */
 
 	if (shot->info->seesound)
-		S_StartSound(shot, shot->info->seesound);
+		S_StartSoundFromMobj(shot, shot->info->seesound);
 
 	if (!(actor->flags & MF_BOSS))
 	{
@@ -2748,7 +2748,7 @@ void A_Boss7FireMissiles(mobj_t *actor)
 	if (P_MobjWasRemoved(actor))
 		return;
 
-	S_StartSound(NULL, locvar2);
+	S_StartSoundFromEverywhere(locvar2);
 
 	// set dummymo's coordinates
 	dummymo.x = actor->target->x;
@@ -2871,7 +2871,7 @@ void A_Boss1Laser(mobj_t *actor)
 	{
 		actor->angle = R_PointToAngle2(x, y, actor->target->x, actor->target->y);
 		if (mobjinfo[locvar1].seesound)
-			S_StartSound(actor, mobjinfo[locvar1].seesound);
+			S_StartSoundFromMobj(actor, mobjinfo[locvar1].seesound);
 
 		point = P_SpawnMobj(x + P_ReturnThrustX(actor, actor->angle, actor->radius), y + P_ReturnThrustY(actor, actor->angle, actor->radius), actor->z - actor->height / 2, MT_EGGMOBILE_TARGET);
 		if (!P_MobjWasRemoved(point))
@@ -2956,7 +2956,7 @@ void A_Boss1Laser(mobj_t *actor)
 					P_SetObjectMomZ(steam, FRACUNIT + 2*P_RandomFixed(), true);
 					P_InstaThrust(steam, FixedAngle(P_RandomKey(360)*FRACUNIT), 2*P_RandomFixed());
 					if (point->info->painsound)
-						S_StartSound(steam, point->info->painsound);
+						S_StartSoundFromMobj(steam, point->info->painsound);
 				}
 			}
 			else
@@ -2968,7 +2968,7 @@ void A_Boss1Laser(mobj_t *actor)
 					&& P_TryMove(point, point->x + distx, point->y + disty, false))
 				{
 					if (point->info->seesound)
-						S_StartSound(point, point->info->seesound);
+						S_StartSoundFromMobj(point, point->info->seesound);
 				}
 				else
 					P_RemoveMobj(point);
@@ -3057,7 +3057,7 @@ void A_Boss4Reverse(mobj_t *actor)
 	actor->reactiontime = 0;
 	if (actor->movedir < 3)
 	{
-		S_StartSound(NULL, locvar1);
+		S_StartSoundFromEverywhere(locvar1);
 		if (actor->movedir == 1)
 			actor->movedir = 2;
 		else
@@ -3065,7 +3065,7 @@ void A_Boss4Reverse(mobj_t *actor)
 	}
 	else
 	{
-		S_StartSound(NULL, locvar2);
+		S_StartSoundFromEverywhere(locvar2);
 		if (actor->movedir == 4)
 			actor->movedir = 5;
 		else
@@ -3089,7 +3089,7 @@ void A_Boss4SpeedUp(mobj_t *actor)
 	if (LUA_CallAction(A_BOSS4SPEEDUP, actor))
 		return;
 
-	S_StartSound(NULL, locvar1);
+	S_StartSoundFromEverywhere(locvar1);
 	actor->reactiontime = 2;
 }
 
@@ -3107,7 +3107,7 @@ void A_Boss4Raise(mobj_t *actor)
 	if (LUA_CallAction(A_BOSS4RAISE, actor))
 		return;
 
-	S_StartSound(NULL, locvar1);
+	S_StartSoundFromEverywhere(locvar1);
 	actor->reactiontime = 1;
 }
 
@@ -3146,7 +3146,7 @@ void A_SkullAttack(mobj_t *actor)
 	dest = actor->target;
 	actor->flags2 |= MF2_SKULLFLY;
 	if (actor->info->activesound)
-		S_StartSound(actor, actor->info->activesound);
+		S_StartSoundFromMobj(actor, actor->info->activesound);
 	A_FaceTarget(actor);
 	if (P_MobjWasRemoved(actor))
 		return;
@@ -3327,7 +3327,7 @@ void A_BossScream(mobj_t *actor)
 		mo->flags2 |= MF2_OBJECTFLIP;
 	P_SetScale(mo, actor->scale, true);
 	if (actor->info->deathsound)
-		S_StartSound(mo, actor->info->deathsound);
+		S_StartSoundFromMobj(mo, actor->info->deathsound);
 }
 
 // Function: A_Scream
@@ -3359,7 +3359,7 @@ void A_Pain(mobj_t *actor)
 		return;
 
 	if (actor->info->painsound)
-		S_StartSound(actor, actor->info->painsound);
+		S_StartSoundFromMobj(actor, actor->info->painsound);
 
 	actor->flags2 &= ~MF2_FIRING;
 	actor->flags2 &= ~MF2_SUPERFIRE;
@@ -3482,7 +3482,7 @@ void A_MonitorPop(mobj_t *actor)
 
 	// Spawn the "pop" explosion.
 	if (actor->info->deathsound)
-		S_StartSound(actor, actor->info->deathsound);
+		S_StartSoundFromMobj(actor, actor->info->deathsound);
 	P_SpawnMobjFromMobj(actor, 0, 0, actor->height/4, MT_EXPLODE);
 
 	// We're dead now. De-solidify.
@@ -3573,7 +3573,7 @@ void A_GoldMonitorPop(mobj_t *actor)
 
 	// Don't spawn the "pop" explosion, because the monitor isn't broken.
 	if (actor->info->deathsound)
-		S_StartSound(actor, actor->info->deathsound);
+		S_StartSoundFromMobj(actor, actor->info->deathsound);
 	//P_SpawnMobjFromMobj(actor, 0, 0, actor.height/4, MT_EXPLODE);
 
 	// Remove our flags for a bit.
@@ -3886,11 +3886,11 @@ static void P_DoCybrakdemonDeath(mobj_t *mo)
 	mo->flags |= MF_NOCLIP;
 	mo->flags &= ~(MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT);
 
-	S_StartSound(NULL, sfx_bedie2);
+	S_StartSoundFromEverywhere(sfx_bedie2);
 	P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_CYBRAKDEMON_VILE_EXPLOSION);
 	mo->z += P_MobjFlip(mo);
 	P_SetObjectMomZ(mo, 12*FRACUNIT, false);
-	S_StartSound(mo, sfx_bgxpld);
+	S_StartSoundFromMobj(mo, sfx_bgxpld);
 	if (mo->spawnpoint && !(mo->spawnpoint->args[6] & TMB_NODEATHFLING))
 		P_InstaThrust(mo, R_PointToAngle2(0, 0, mo->x, mo->y), 14*FRACUNIT);
 }
@@ -4052,7 +4052,7 @@ void A_BossDeath(mobj_t *mo)
 			mo->flags |= MF_NOCLIP;
 			mo->flags &= ~MF_SPECIAL;
 
-			S_StartSound(NULL, sfx_befall);
+			S_StartSoundFromEverywhere(sfx_befall);
 			break;
 		case MT_CYBRAKDEMON:
 			P_DoCybrakdemonDeath(mo);
@@ -4134,7 +4134,7 @@ void A_CustomPower(mobj_t *actor)
 	P_SetPower(player, locvar1, locvar2);
 
 	if (actor->info->seesound)
-		S_StartSound(player->mo, actor->info->seesound);
+		S_StartSoundFromMobj(player->mo, actor->info->seesound);
 }
 
 // Function: A_GiveWeapon
@@ -4168,7 +4168,7 @@ void A_GiveWeapon(mobj_t *actor)
 
 	player->ringweapons |= locvar1;
 	if (actor->info->seesound)
-		S_StartSound(player->mo, actor->info->seesound);
+		S_StartSoundFromMobj(player->mo, actor->info->seesound);
 }
 
 // Function: A_RingBox
@@ -4195,7 +4195,7 @@ void A_RingBox(mobj_t *actor)
 
 	P_GivePlayerRings(player, actor->info->reactiontime);
 	if (actor->info->seesound)
-		S_StartSound(player->mo, actor->info->seesound);
+		S_StartSoundFromMobj(player->mo, actor->info->seesound);
 }
 
 // Function: A_Invincibility
@@ -4290,7 +4290,7 @@ void A_AwardScore(mobj_t *actor)
 
 	P_AddPlayerScore(player, actor->info->reactiontime);
 	if (actor->info->seesound)
-		S_StartSound(player->mo, actor->info->seesound);
+		S_StartSoundFromMobj(player->mo, actor->info->seesound);
 }
 
 // Function: A_ExtraLife
@@ -4323,7 +4323,7 @@ void A_ExtraLife(mobj_t *actor)
 
 	if (ultimatemode) //I don't THINK so!
 	{
-		S_StartSound(player->mo, sfx_lose);
+		S_StartSoundFromMobj(player->mo, sfx_lose);
 		return;
 	}
 
@@ -4354,7 +4354,7 @@ void A_GiveShield(mobj_t *actor)
 	player = actor->target->player;
 
 	P_SwitchShield(player, locvar1);
-	S_StartSound(player->mo, actor->info->seesound);
+	S_StartSoundFromMobj(player->mo, actor->info->seesound);
 }
 
 // Function: A_GravityBox
@@ -4379,7 +4379,7 @@ void A_GravityBox(mobj_t *actor)
 
 	player = actor->target->player;
 
-	S_StartSound(player, actor->info->activesound);
+	S_StartSoundFromMobj(player->mo, actor->info->activesound);
 
 	player->powers[pw_gravityboots] = (UINT16)(actor->info->reactiontime + 1);
 }
@@ -4694,7 +4694,7 @@ void A_DropMine(mobj_t *actor)
 		mine->momz = actor->momz + actor->pmomz;
 	}
 
-	S_StartSound(actor, actor->info->attacksound);
+	S_StartSoundFromMobj(actor, actor->info->attacksound);
 }
 
 // Function: A_FishJump
@@ -4796,7 +4796,7 @@ void A_ThrownRing(mobj_t *actor)
 
 	// A_GrenadeRing beeping lives once moooooore -SH
 	if (actor->type == MT_THROWNGRENADE && actor->fuse % TICRATE == 0)
-		S_StartSound(actor, actor->info->attacksound);
+		S_StartSoundFromMobj(actor, actor->info->attacksound);
 
 	// decrement bounce ring time
 	if (actor->flags2 & MF2_BOUNCERING)
@@ -4931,12 +4931,12 @@ void A_SetSolidSteam(mobj_t *actor)
 		if (P_RandomChance(FRACUNIT/8))
 		{
 			if (actor->info->deathsound)
-				S_StartSound(actor, actor->info->deathsound); // Hiss!
+				S_StartSoundFromMobj(actor, actor->info->deathsound); // Hiss!
 		}
 		else
 		{
 			if (actor->info->painsound)
-				S_StartSound(actor, actor->info->painsound);
+				S_StartSoundFromMobj(actor, actor->info->painsound);
 		}
 	}
 
@@ -4979,7 +4979,7 @@ void A_SignSpin(mobj_t *actor)
 	{
 		if (actor->flags2 & MF2_BOSSFLEE)
 		{
-			S_StartSound(actor, actor->info->deathsound);
+			S_StartSoundFromMobj(actor, actor->info->deathsound);
 			actor->flags2 &= ~MF2_BOSSFLEE;
 		}
 		if (actor->spawnpoint)
@@ -5006,7 +5006,7 @@ void A_SignSpin(mobj_t *actor)
 	{
 		if (!(actor->flags2 & MF2_BOSSFLEE))
 		{
-			S_StartSound(actor, actor->info->painsound);
+			S_StartSoundFromMobj(actor, actor->info->painsound);
 			actor->flags2 |= MF2_BOSSFLEE;
 		}
 		actor->movedir = rotateangle;
@@ -5371,7 +5371,7 @@ void A_JetbThink(mobj_t *actor)
 				P_SetTarget(&bomb->target, actor);
 				P_SetScale(bomb, actor->scale, true);
 				actor->reactiontime = TICRATE; // one second
-				S_StartSound(actor, actor->info->attacksound);
+				S_StartSoundFromMobj(actor, actor->info->attacksound);
 			}
 		}
 	}
@@ -5437,7 +5437,7 @@ void A_JetgShoot(mobj_t *actor)
 		actor->reactiontime = actor->info->reactiontime*TICRATE*2;
 
 	if (actor->info->attacksound)
-		S_StartSound(actor, actor->info->attacksound);
+		S_StartSoundFromMobj(actor, actor->info->attacksound);
 }
 
 // Function: A_ShootBullet
@@ -5469,7 +5469,7 @@ void A_ShootBullet(mobj_t *actor)
 	P_SpawnMissile(actor, actor->target, (mobjtype_t)actor->info->raisestate);
 
 	if (actor->info->attacksound)
-		S_StartSound(actor, actor->info->attacksound);
+		S_StartSoundFromMobj(actor, actor->info->attacksound);
 }
 
 static mobj_t *minus;
@@ -5540,7 +5540,7 @@ void A_MinusDigging(mobj_t *actor)
 		P_TryMove(actor, actor->target->x, actor->target->y, false);
 		if (P_MobjWasRemoved(actor))
 			return;
-		S_StartSound(actor, actor->info->attacksound);
+		S_StartSoundFromMobj(actor, actor->info->attacksound);
 
 		// Spawn growing dirt pile.
 		par = P_SpawnMobj(actor->x, actor->y, mz, MT_MINUSDIRT);
@@ -5614,7 +5614,7 @@ void A_MinusPopup(mobj_t *actor)
 	else
 		actor->momz = 10*FRACUNIT;
 
-	S_StartSound(actor, sfx_s3k82);
+	S_StartSoundFromMobj(actor, sfx_s3k82);
 	for (i = 1; i <= num; i++)
 	{
 		mobj_t *rock = P_SpawnMobjFromMobj(actor, 0, 0, actor->height/4, MT_ROCKCRUMBLE1);
@@ -5924,7 +5924,7 @@ void A_DetonChase(mobj_t *actor)
 			xyspeed = 1;
 
 		if (leveltime % xyspeed == 0)
-			S_StartSound(actor, sfx_deton);
+			S_StartSoundFromMobj(actor, sfx_deton);
 	}
 }
 
@@ -6293,7 +6293,7 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 	if (!actor->fuse && actor->flags2 & MF2_FRET)
 	{
 		if (actor->info->painsound)
-			S_StartSound(actor, actor->info->painsound);
+			S_StartSoundFromMobj(actor, actor->info->painsound);
 
 		actor->fuse = TICRATE/2;
 		actor->momz = 0;
@@ -6388,7 +6388,7 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 				P_InstaThrust(actor, actor->angle, FixedMul(40*FRACUNIT, actor->scale));
 				actor->threshold = 1;
 				if (actor->info->attacksound)
-					S_StartSound(actor, actor->info->attacksound);
+					S_StartSoundFromMobj(actor, actor->info->attacksound);
 			}
 		}
 		actor->reactiontime = 3*TICRATE + (P_RandomByte()>>2);
@@ -6401,7 +6401,7 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 	if (!hovermode && actor->z <= actor->floorz)
 	{
 		if (actor->info->activesound)
-			S_StartSound(actor, actor->info->activesound);
+			S_StartSoundFromMobj(actor, actor->info->activesound);
 
 		if (dist < FixedMul(256*FRACUNIT, actor->scale))
 		{
@@ -6445,7 +6445,7 @@ void A_RingExplode(mobj_t *actor)
 	for (d = 0; d < 16; d++)
 		P_SpawnParaloop(actor->x, actor->y, actor->z + actor->height, FixedMul(actor->info->painchance, actor->scale), 16, MT_NIGHTSPARKLE, S_NULL, d*(ANGLE_22h), true);
 
-	S_StartSound(actor, sfx_prloop);
+	S_StartSoundFromMobj(actor, sfx_prloop);
 
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
@@ -6576,7 +6576,7 @@ void A_MixUp(mobj_t *actor)
 	// The random factor is okay for other game modes, but in these, it is cripplingly unfair.
 	if (gametype == GT_HIDEANDSEEK || gametype == GT_RACE)
 	{
-		S_StartSound(actor, sfx_lose);
+		S_StartSoundFromMobj(actor, sfx_lose);
 		return;
 	}
 
@@ -6597,7 +6597,7 @@ void A_MixUp(mobj_t *actor)
 
 	if (numplayers <= 1) // Not enough players to mix up.
 	{
-		S_StartSound(actor, sfx_lose);
+		S_StartSoundFromMobj(actor, sfx_lose);
 		return;
 	}
 	else if (numplayers == 2) // Special case -- simple swap
@@ -6817,7 +6817,7 @@ void A_MixUp(mobj_t *actor)
 	}
 
 	// Play the 'bowrwoosh!' sound
-	S_StartSound(NULL, sfx_mixup);
+	S_StartSoundFromEverywhere(sfx_mixup);
 }
 
 // Function: A_RecyclePowers
@@ -6846,7 +6846,7 @@ void A_RecyclePowers(mobj_t *actor)
 
 	if (!multiplayer)
 	{
-		S_StartSound(actor, sfx_lose);
+		S_StartSoundFromMobj(actor, sfx_lose);
 		return;
 	}
 
@@ -6885,7 +6885,7 @@ void A_RecyclePowers(mobj_t *actor)
 
 	if (numplayers <= 1)
 	{
-		S_StartSound(actor, sfx_lose);
+		S_StartSoundFromMobj(actor, sfx_lose);
 		return; //nobody to touch!
 	}
 
@@ -6958,7 +6958,7 @@ void A_RecyclePowers(mobj_t *actor)
 		P_FlashPal(&players[recv_pl], PAL_RECYCLE, 10);
 	}
 
-	S_StartSound(NULL, sfx_gravch); //heh, the sound effect I used is already in
+	S_StartSoundFromEverywhere(sfx_gravch); //heh, the sound effect I used is already in
 }
 
 // Function: A_Boss1Chase
@@ -7311,7 +7311,7 @@ void A_Boss7Chase(mobj_t *actor)
 	if (actor->flags2 & MF2_FRET)
 	{
 		P_SetMobjState(actor, S_BLACKEGG_DESTROYPLAT1);
-		S_StartSound(0, sfx_s3k53);
+		S_StartSoundFromEverywhere(sfx_s3k53);
 		actor->flags2 &= ~MF2_FRET;
 		return;
 	}
@@ -7348,7 +7348,7 @@ void A_Boss7Chase(mobj_t *actor)
 		{
 			// Punch him!
 			P_SetMobjState(actor, actor->info->meleestate);
-			S_StartSound(0, sfx_begrnd); // warning sound
+			S_StartSoundFromEverywhere(sfx_begrnd); // warning sound
 			return;
 		}
 	}
@@ -7402,7 +7402,7 @@ void A_Boss7Chase(mobj_t *actor)
 				if (P_MobjWasRemoved(actor))
 					return;
 				P_SetMobjState(actor, actor->info->missilestate);
-				S_StartSound(0, sfx_beflap);
+				S_StartSoundFromEverywhere(sfx_beflap);
 				break;
 		}
 
@@ -7483,7 +7483,7 @@ void A_Boss2PogoSFX(mobj_t *actor)
 		actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y) + (P_RandomChance(FRACUNIT/2) ? -prandom : +prandom);
 		P_InstaThrust(actor, actor->angle, FixedMul(FixedMul(actor->info->speed,(locvar2)), actor->scale));
 	}
-	if (actor->info->activesound) S_StartSound(actor, actor->info->activesound);
+	if (actor->info->activesound) S_StartSoundFromMobj(actor, actor->info->activesound);
 	actor->momz = FixedMul(locvar1, actor->scale); // Bounce up in air
 	actor->reactiontime = 1;
 }
@@ -7571,7 +7571,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 		P_InstaThrust(actor, actor->angle, FixedMul(FixedMul(actor->info->speed,(locvar2)), actor->scale)); // Move at wandering speed
 	}
 	// Boing!
-	if (actor->info->activesound) S_StartSound(actor, actor->info->activesound);
+	if (actor->info->activesound) S_StartSoundFromMobj(actor, actor->info->activesound);
 
 	if (actor->info->missilestate) // spawn the pogo stick collision box
 	{
@@ -7699,7 +7699,7 @@ void A_TurretStop(mobj_t *actor)
 	actor->flags2 &= ~MF2_SUPERFIRE;
 
 	if (actor->target && actor->info->activesound && !locvar1)
-		S_StartSound(actor, actor->info->activesound);
+		S_StartSoundFromMobj(actor, actor->info->activesound);
 }
 
 // Function: A_SparkFollow
@@ -7830,7 +7830,7 @@ void A_BuzzFly(mobj_t *actor)
 
 	if (locvar1 != sfx_None && !actor->threshold)
 	{
-		S_StartSound(actor, locvar1);
+		S_StartSoundFromMobj(actor, locvar1);
 		actor->threshold = locvar2;
 	}
 }
@@ -8083,7 +8083,7 @@ void A_Boss1Spikeballs(mobj_t *actor)
 	ball->movedir = FixedAngle(FixedMul(FixedDiv(locvar1<<FRACBITS, locvar2<<FRACBITS), 360<<FRACBITS));
 	ball->threshold = ball->radius + actor->radius + ball->info->painchance;
 
-	S_StartSound(ball, ball->info->seesound);
+	S_StartSoundFromMobj(ball, ball->info->seesound);
 	var1 = ball->state->var1, var2 = ball->state->var2;
 	ball->state->action.acp1(ball);
 }
@@ -8333,7 +8333,7 @@ void A_Shockwave(mobj_t *actor)
 		sprev = shock;
 	}
 
-	S_StartSound(actor, shock->info->seesound);
+	S_StartSoundFromMobj(actor, shock->info->seesound);
 }
 
 // Function: A_LinedefExecute
@@ -8444,7 +8444,7 @@ void A_PlayActiveSound(mobj_t *actor)
 		return;
 
 	if (actor->info->activesound)
-		S_StartSound(actor, actor->info->activesound);
+		S_StartSoundFromMobj(actor, actor->info->activesound);
 }
 
 // Function: A_SmokeTrailer
@@ -8729,7 +8729,7 @@ void A_PlaySound(mobj_t *actor)
 	if (leveltime < 2 && (locvar2 >> 16))
 		return;
 
-	S_StartSound((locvar2 & 65535) ? actor : NULL, locvar1);
+	S_StartSoundFromMobj((locvar2 & 65535) ? actor : NULL, locvar1);
 }
 
 // Function: A_FindTarget
@@ -11072,7 +11072,7 @@ void A_TrapShot(mobj_t *actor)
 	P_SetScale(missile, actor->scale, true);
 
 	if (missile->info->seesound)
-		S_StartSound(missile, missile->info->seesound);
+		S_StartSoundFromMobj(missile, missile->info->seesound);
 
 	P_SetTarget(&missile->target, actor);
 	missile->angle = actor->angle;
@@ -11231,7 +11231,7 @@ void A_VileAttack(mobj_t *actor)
 		if (!P_CheckSight(actor, actor->target))
 			return;
 
-		S_StartSound(actor, soundtoplay);
+		S_StartSoundFromMobj(actor, soundtoplay);
 		P_DamageMobj(actor->target, actor, actor, 1, 0);
 		//actor->target->momz = 1000*FRACUNIT/actor->target->info->mass; // How id did it
 		actor->target->momz += FixedMul(10*FRACUNIT, actor->scale)*P_MobjFlip(actor->target); // How we're doing it
@@ -11272,7 +11272,7 @@ void A_VileAttack(mobj_t *actor)
 			if (!P_CheckSight(actor, players[i].mo))
 				continue;
 
-			S_StartSound(actor, soundtoplay);
+			S_StartSoundFromMobj(actor, soundtoplay);
 			P_DamageMobj(players[i].mo, actor, actor, 1, 0);
 			//actor->target->momz = 1000*FRACUNIT/actor->target->info->mass; // How id did it
 			players[i].mo->momz += FixedMul(10*FRACUNIT, actor->scale)*P_MobjFlip(players[i].mo); // How we're doing it
@@ -11354,7 +11354,7 @@ void A_VileFire(mobj_t *actor)
 
 	// Play sound, if one's specified
 	if (locvar1 > 0 && locvar1 < NUMSFX)
-		S_StartSound(actor, (sfxenum_t)locvar1);
+		S_StartSoundFromMobj(actor, (sfxenum_t)locvar1);
 
 	// Now draw the line to the actor's target
 	if (locvar2 & 0xFFFF)
@@ -11429,7 +11429,7 @@ void A_BrakChase(mobj_t *actor)
 	{
 		actor->reactiontime--;
 		if (actor->reactiontime == 0 && actor->type == MT_CYBRAKDEMON)
-			S_StartSound(0, sfx_bewar1 + P_RandomKey(4));
+			S_StartSoundFromEverywhere(sfx_bewar1 + P_RandomKey(4));
 	}
 
 	// modify target threshold
@@ -11511,12 +11511,12 @@ void A_BrakChase(mobj_t *actor)
 
 	// Optionally play a sound effect
 	if (locvar2 > 0 && locvar2 < NUMSFX)
-		S_StartSound(actor, (sfxenum_t)locvar2);
+		S_StartSoundFromMobj(actor, (sfxenum_t)locvar2);
 
 	// make active sound
 	if (actor->type != MT_CYBRAKDEMON && actor->info->activesound && P_RandomChance(3*FRACUNIT/256))
 	{
-		S_StartSound(actor, actor->info->activesound);
+		S_StartSoundFromMobj(actor, actor->info->activesound);
 	}
 }
 
@@ -11669,7 +11669,7 @@ void A_BrakLobShot(mobj_t *actor)
 	if (P_MobjWasRemoved(shot))
 		return;
 	if (shot->info->seesound)
-		S_StartSound(shot, shot->info->seesound);
+		S_StartSoundFromMobj(shot, shot->info->seesound);
 	P_SetTarget(&shot->target, actor); // where it came from
 
 	shot->angle = actor->angle;
@@ -11770,7 +11770,7 @@ void A_SpawnFreshCopy(mobj_t *actor)
 	P_SetTarget(&newObject->tracer, actor->tracer);
 
 	if (newObject->info->seesound)
-		S_StartSound(newObject, newObject->info->seesound);
+		S_StartSoundFromMobj(newObject, newObject->info->seesound);
 }
 
 // Internal Flicky spawning function.
@@ -12564,7 +12564,7 @@ void A_MineExplode(mobj_t *actor)
 #define dist 64
 		UINT8 i;
 		mobjtype_t type = ((actor->eflags & MFE_UNDERWATER) ? MT_UWEXPLODE : MT_SONIC3KBOSSEXPLODE);
-		S_StartSound(actor, ((actor->eflags & MFE_UNDERWATER) ? sfx_s3k57 : sfx_s3k4e));
+		S_StartSoundFromMobj(actor, ((actor->eflags & MFE_UNDERWATER) ? sfx_s3k57 : sfx_s3k4e));
 		P_SpawnMobj(actor->x, actor->y, actor->z, type);
 		for (i = 0; i < 16; i++)
 		{
@@ -12779,7 +12779,7 @@ void A_WhoCaresIfYourSonIsABee(mobj_t *actor)
 		actor->extravalue1--;
 
 	if (actor->info->attacksound)
-		S_StartSound(actor, actor->info->attacksound);
+		S_StartSoundFromMobj(actor, actor->info->attacksound);
 
 	foffsetx = P_ReturnThrustX(actor, actor->angle, FixedMul((locvar2 >> 16)*FRACUNIT, actor->scale));
 	foffsety = P_ReturnThrustY(actor, actor->angle, FixedMul((locvar2 >> 16)*FRACUNIT, actor->scale));
@@ -12810,7 +12810,7 @@ void A_ParentTriesToSleep(mobj_t *actor)
 	if (actor->extravalue1)
 	{
 		if (actor->info->seesound)
-			S_StartSound(actor, actor->info->seesound);
+			S_StartSoundFromMobj(actor, actor->info->seesound);
 		actor->reactiontime = 0;
 		P_SetMobjState(actor, locvar1);
 	}
@@ -12818,7 +12818,7 @@ void A_ParentTriesToSleep(mobj_t *actor)
 	{
 		actor->reactiontime = 1;
 		if (actor->info->activesound) // more like INactivesound doy hoy hoy
-			S_StartSound(actor, actor->info->activesound);
+			S_StartSoundFromMobj(actor, actor->info->activesound);
 	}
 }
 
@@ -13393,7 +13393,7 @@ void A_Boss5MakeJunk(mobj_t *actor)
 		P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_PROJECTORLIGHT);
 		actor->z += P_MobjFlip(actor)*actor->height;
 		actor->flags |= MF_NOGRAVITY;
-		S_StartSound(actor, sfx_vwre);
+		S_StartSoundFromMobj(actor, sfx_vwre);
 		actor->extravalue2 = 49;
 		P_SetMobjState(actor, -locvar1);
 		actor->extravalue2 = curextravalue2;
@@ -13459,7 +13459,7 @@ void A_Boss5MakeJunk(mobj_t *actor)
 		broked = P_SpawnMobjFromMobj(actor, 0, 0, 64<<FRACBITS, MT_GHOST);
 		if (!P_MobjWasRemoved(broked))
 		{
-			S_StartSound(broked, sfx_alart);
+			S_StartSoundFromMobj(broked, sfx_alart);
 			broked->fuse = states[S_FANG_INTRO12].tics+10;
 			P_SetMobjState(broked, S_ALART1);
 		}
@@ -13468,11 +13468,11 @@ void A_Boss5MakeJunk(mobj_t *actor)
 	{
 		if (!P_MobjWasRemoved(broked))
 			broked->z += broked->momz;
-		S_StartSound(actor, sfx_s3kccs);
+		S_StartSoundFromMobj(actor, sfx_s3kccs);
 		actor->flags &= ~MF_NOCLIPTHING;
 	}
 	else
-		S_StartSound(actor, sfx_s3kd3s);
+		S_StartSoundFromMobj(actor, sfx_s3kd3s);
 }
 
 // Function: A_LookForBetter
@@ -13640,7 +13640,7 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 			player->powers[pw_carry] = CR_NONE;
 			player->powers[pw_nocontrol] = 0;
 			P_SetTarget(&thing->tracer, NULL);
-			S_StartSound(thing, sfx_wdjump);
+			S_StartSoundFromMobj(thing, sfx_wdjump);
 			P_SetMobjState(thing, S_PLAY_FALL);
 		}
 
@@ -13730,7 +13730,7 @@ void A_DustDevilThink(mobj_t *actor)
 
 	//Whirlwind sound effect.
 	if (leveltime % 70 == 0)
-		S_StartSound(actor, sfx_s3kcel);
+		S_StartSoundFromMobj(actor, sfx_s3kcel);
 }
 
 // stuff used by A_TNTExplode
@@ -13759,7 +13759,7 @@ static boolean PIT_TNTExplode(mobj_t *nearby)
 		if (nearby->state == &states[nearby->info->spawnstate])
 		{
 			if (barrel->info->attacksound)
-				S_StartSound(nearby, barrel->info->attacksound);
+				S_StartSoundFromMobj(nearby, barrel->info->attacksound);
 			nearby->momx = FixedMul(FixedDiv(dx, dm), explodethrust);
 			nearby->momy = FixedMul(FixedDiv(dy, dm), explodethrust);
 			nearby->momz = FixedMul(FixedDiv(dz, dm), explodethrust);
@@ -13828,7 +13828,7 @@ void A_TNTExplode(mobj_t *actor)
 	P_SetThingPosition(actor);
 	actor->flags2 = MF2_EXPLOSION;
 	if (actor->info->deathsound)
-		S_StartSound(actor, actor->info->deathsound);
+		S_StartSoundFromMobj(actor, actor->info->deathsound);
 
 	explodethrust = 32*FRACUNIT;
 	exploderadius = 256*FRACUNIT;
@@ -14603,7 +14603,7 @@ void A_RolloutRock(mobj_t *actor)
 	actor->friction = FRACUNIT; // turns out riding on solids sucks, so let's just make it easier on ourselves
 
 	if (actor->eflags & MFE_JUSTHITFLOOR)
-		S_StartSound(actor, actor->info->painsound);
+		S_StartSoundFromMobj(actor, actor->info->painsound);
 
 	if (actor->threshold)
 		actor->threshold--;
@@ -14617,9 +14617,9 @@ void A_RolloutRock(mobj_t *actor)
 		if (flip*prevmomz < 0 && flip*actor->momz >= 0 && !actor->threshold)
 		{
 			if (actor->eflags & MFE_UNDERWATER)
-				S_StartSound(actor, sfx_splash);
+				S_StartSoundFromMobj(actor, sfx_splash);
 			else if (!actor->threshold)
-				S_StartSound(actor, sfx_splish);
+				S_StartSoundFromMobj(actor, sfx_splish);
 			actor->threshold = max((topspeed - speed) >> FRACBITS, 8);
 		}
 	}

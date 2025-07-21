@@ -181,9 +181,8 @@ void T_CrushCeiling(ceiling_t *ceiling)
 
 			if (res == pastdest)
 			{
-				mobj_t *mp = (void *)&ceiling->sector->soundorg;
 				ceiling->sector->soundorg.z = ceiling->sector->floorheight;
-				S_StartSound(mp,sfx_pstop);
+				S_StartSoundFromSector(ceiling->sector,sfx_pstop);
 
 				ceiling->direction = 1;
 				ceiling->speed = lines[ceiling->sourceline].args[3] << (FRACBITS - 2);

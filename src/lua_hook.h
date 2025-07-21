@@ -72,6 +72,7 @@ automatically.
 	X (GameEnd),\
 	X (PlayerCmd),/* building the player's ticcmd struct (Ported from SRB2Kart) */\
 	X (MusicChange),\
+	X (SoundPlay),\
 	X (PlayerHeight),/* override player height */\
 	X (PlayerCanEnterSpinGaps),\
 	X (AddonLoaded),\
@@ -163,5 +164,6 @@ int  LUA_HookSeenPlayer(player_t *player, player_t *seenfriend);
 int  LUA_HookShouldJingleContinue(player_t *, const char *musname);
 int  LUA_HookPlayerCmd(player_t *, ticcmd_t *);
 int  LUA_HookMusicChange(const char *oldname, struct MusicChange *);
+int  LUA_HookSoundPlay(sfxenum_t sfx_id, void *origin, const int origintype);
 fixed_t LUA_HookPlayerHeight(player_t *player);
 int  LUA_HookPlayerCanEnterSpinGaps(player_t *player);

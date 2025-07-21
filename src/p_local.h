@@ -220,9 +220,9 @@ void P_DoMetalJetFume(player_t *player, mobj_t *fume);
 void P_DoFollowMobj(player_t *player, mobj_t *followmobj);
 
 void P_PlayLivesJingle(player_t *player);
-#define P_PlayRinglossSound(s)	S_StartSound(s, (mariomode) ? sfx_mario8 : sfx_altow1 + P_RandomKey(4));
-#define P_PlayDeathSound(s)		S_StartSound(s, sfx_altdi1 + P_RandomKey(4));
-#define P_PlayVictorySound(s)	S_StartSound(s, sfx_victr1 + P_RandomKey(4));
+#define P_PlayRinglossSound(s)	S_StartSoundFromMobj(s, (mariomode) ? sfx_mario8 : sfx_altow1 + P_RandomKey(4));
+#define P_PlayDeathSound(s)		S_StartSoundFromMobj(s, sfx_altdi1 + P_RandomKey(4));
+#define P_PlayVictorySound(s)	S_StartSoundFromMobj(s, sfx_victr1 + P_RandomKey(4));
 
 boolean P_GetLives(player_t *player);
 boolean P_SpectatorJoinGame(player_t *player);

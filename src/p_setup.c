@@ -111,7 +111,7 @@ vertex_t *vertexes;
 seg_t *segs;
 sector_t *sectors;
 subsector_t *subsectors;
-node_t *nodes;
+bspnode_t *nodes;
 line_t *lines;
 side_t *sides;
 mapthing_t *mapthings;
@@ -3472,7 +3472,7 @@ static void P_LoadNodes(UINT8 *data)
 {
 	UINT8 j, k;
 	mapnode_t *mn = (mapnode_t*)data;
-	node_t *no = nodes;
+	bspnode_t *no = nodes;
 	size_t i;
 
 	for (i = 0; i < numnodes; i++, no++, mn++)
@@ -3848,7 +3848,7 @@ static UINT16 ShrinkNodeID(UINT32 x) {
 
 static void P_LoadExtendedNodes(UINT8 **data, nodetype_t nodetype)
 {
-	node_t *mn;
+	bspnode_t *mn;
 	size_t i, j, k;
 	boolean xgl3 = (nodetype == NT_XGL3);
 
@@ -7773,7 +7773,7 @@ static void P_RunSpecialStageWipe(void)
 	tic_t endtime = starttime + (3*TICRATE)/2;
 	tic_t nowtime;
 
-	S_StartSound(NULL, sfx_s3kaf);
+	S_StartSoundFromEverywhere(sfx_s3kaf);
 
 	// Fade music! Time it to S3KAF: 0.25 seconds is snappy.
 	if (RESETMUSIC ||
@@ -8066,7 +8066,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		if (ranspecialwipe == 2)
 		{
 			pausedelay = -3; // preticker plus one
-			S_StartSound(NULL, sfx_s3k73);
+			S_StartSoundFromEverywhere(sfx_s3k73);
 		}
 
 		// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."
@@ -8160,7 +8160,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 		if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
 		{
-			S_StartSound(NULL, sfx_s3k68);
+			S_StartSoundFromEverywhere(sfx_s3k68);
 			G_SaveGameData(clientGamedata);
 		}
 		else if (!reloadinggamestate)

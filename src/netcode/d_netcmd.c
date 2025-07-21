@@ -4399,7 +4399,7 @@ static void SoundTest_OnChange(void)
 	}
 
 	S_StopSounds();
-	S_StartSound(NULL, cv_soundtest.value);
+	S_StartSoundFromEverywhere(cv_soundtest.value);
 }
 
 static void AutoBalance_OnChange(void)

@@ -445,7 +445,7 @@ extern INT16 char_on, startchar;
 #define NOSAVESLOT 0 //slot where Play Without Saving appears
 #define MARATHONSLOT 420 // just has to be nonzero, but let's use one that'll show up as an obvious error if something goes wrong while not using our existing saves
 
-#define BwehHehHe() S_StartSound(NULL, sfx_bewar1+M_RandomKey(4)) // Bweh heh he
+#define BwehHehHe() S_StartSoundFromEverywhere(sfx_bewar1+M_RandomKey(4)) // Bweh heh he
 
 void M_TutorialSaveControlResponse(INT32 ch);
 

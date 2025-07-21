@@ -612,7 +612,7 @@ static inline void P_DoSpecialStageStuff(void)
 						if (mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
 						{
 							S_FadeMusic(0, 10*MUSICRATE);
-							S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS.
+							S_StartSoundFromEverywhere(sfx_timeup); // that creepy "out of time" music from NiGHTS.
 						}
 						else
 							S_ChangeMusicInternal("_drown", false);
@@ -625,7 +625,7 @@ static inline void P_DoSpecialStageStuff(void)
 					players[i].pflags &= ~(PF_GLIDING|PF_BOUNCING);
 					players[i].nightstime = 0;
 					if (P_IsLocalPlayer(&players[i]))
-						S_StartSound(NULL, sfx_s3k66);
+						S_StartSoundFromEverywhere(sfx_s3k66);
 				}
 			}
 

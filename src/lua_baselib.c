@@ -3262,7 +3262,7 @@ static int GetValidSoundOrigin(lua_State *L, void **origin)
 			return LUA_ErrInvalid(L, "sector_t");
 
 		*origin = &((sector_t *)(*origin))->soundorg;
-		return 1;
+		return 2;
 	}
 
 	return LUA_ErrInvalid(L, "mobj_t/sector_t");
@@ -3284,15 +3284,23 @@ static int lib_sStartSound(lua_State *L)
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
-	if (!lua_isnil(L, 1))
-		if (!GetValidSoundOrigin(L, &origin))
-			return 0;
-	if (!player || P_IsLocalPlayer(player))
+	if (!((player || P_IsLocalPlayer(player)) || (hud_running || hook_cmd_running)))
 	{
-		if (hud_running || hook_cmd_running)
-			origin = NULL;	// HUD rendering and CMD building startsound shouldn't have an origin, just remove it instead of having a retarded error.
-
-		S_StartSound(origin, sound_id);
+		if (lua_isnil(L, 1))
+			S_StartSoundFromEverywhere(sound_id);
+		else
+		{
+			int origintype = GetValidSoundOrigin(L, &origin);
+			if (origintype == 1)
+				S_StartSoundFromMobj(origin, sound_id);
+			else if (origintype == 2)
+			{
+				origin = *((sector_t**)luaL_checkudata(L, 1, META_SECTOR)); // Restore this (other functions still use soundorg outright)
+				S_StartSoundFromSector(origin, sound_id);
+			}
+			else
+				return LUA_ErrInvalid(L, "mobj_t/sector_t");
+		}
 	}
 	return 0;
 }
@@ -3313,12 +3321,25 @@ static int lib_sStartSoundAtVolume(lua_State *L)
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
-	if (!lua_isnil(L, 1))
-		if (!GetValidSoundOrigin(L, &origin))
-			return LUA_ErrInvalid(L, "mobj_t/sector_t");
-
 	if (!player || P_IsLocalPlayer(player))
-		S_StartSoundAtVolume(origin, sound_id, volume);
+	{
+		if (lua_isnil(L, 1))
+			S_StartSoundFromEverywhereVol(sound_id, volume);
+		else
+		{
+			int origintype = GetValidSoundOrigin(L, &origin);
+			if (origintype == 1)
+				S_StartSoundFromMobjVol(origin, sound_id, volume);
+			else if (origintype == 2)
+			{
+				origin = *((sector_t**)luaL_checkudata(L, 1, META_SECTOR)); // Restore this (other functions still use soundorg outright)
+				S_StartSoundFromSectorVol(origin, sound_id, volume);
+			}
+			else
+				return LUA_ErrInvalid(L, "mobj_t/sector_t");
+		}
+
+	}
 	return 0;
 }
 

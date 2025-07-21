@@ -572,7 +572,7 @@ void Y_IntermissionDrawer(void)
 			{
 				drawsection = 1;
 				if (animatetimer == 32)
-					S_StartSound(NULL, sfx_s3k68);
+					S_StartSoundFromEverywhere(sfx_s3k68);
 			}
 		}
 
@@ -1089,7 +1089,7 @@ void Y_Ticker(void)
 		{
 			tallydonetic = intertic;
 			endtic = intertic + 3*TICRATE; // 3 second pause after end of tally
-			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
+			S_StartSoundFromEverywhere((gottoken ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
 			if (!demoplayback)
@@ -1097,13 +1097,13 @@ void Y_Ticker(void)
 				M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
 
 				if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
-					S_StartSound(NULL, sfx_s3k68);
+					S_StartSoundFromEverywhere(sfx_s3k68);
 
 				G_SaveGameData(clientGamedata);
 			}
 		}
 		else if (!(intertic & 1))
-			S_StartSound(NULL, sfx_ptally); // tally sound effect
+			S_StartSoundFromEverywhere(sfx_ptally); // tally sound effect
 
 		if (data.coop.gotlife > 0 && (skip == true || data.coop.score % 50000 < oldscore % 50000)) // just passed a 50000 point mark
 		{
@@ -1155,7 +1155,7 @@ void Y_Ticker(void)
 					data.spec.emeraldy += (++data.spec.emeraldmomy);
 					if (data.spec.emeraldy > 74)
 					{
-						S_StartSound(NULL, sfx_tink); // tink
+						S_StartSoundFromEverywhere(sfx_tink); // tink
 						data.spec.emeraldbounces++;
 						data.spec.emeraldmomy = -(data.spec.emeraldmomy/2);
 						data.spec.emeraldy = 74;
@@ -1170,7 +1170,7 @@ void Y_Ticker(void)
 				}
 				if (data.spec.emeraldbounces < 1 && data.spec.emeraldy > 74)
 				{
-					S_StartSound(NULL, sfx_shldls); // nope
+					S_StartSoundFromEverywhere(sfx_shldls); // nope
 					data.spec.emeraldbounces++;
 					data.spec.emeraldmomy = -(data.spec.emeraldmomy/2);
 					data.spec.emeraldy = 74;
@@ -1196,7 +1196,7 @@ void Y_Ticker(void)
 			{
 				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
 				if (data.spec.continues & 0x80)
-					S_StartSound(NULL, sfx_s3kac); // bingly-bingly-bing!
+					S_StartSoundFromEverywhere(sfx_s3kac); // bingly-bingly-bing!
 
 			}
 			return;
@@ -1227,7 +1227,7 @@ void Y_Ticker(void)
 			if (!((data.spec.continues & 0x80) || (super && ALL7EMERALDS(emeralds)))) // don't set endtic yet!
 				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
 
-			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
+			S_StartSoundFromEverywhere((gottoken ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
 			if (!demoplayback)
@@ -1235,13 +1235,13 @@ void Y_Ticker(void)
 				M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
 
 				if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
-					S_StartSound(NULL, sfx_s3k68);
+					S_StartSoundFromEverywhere(sfx_s3k68);
 
 				G_SaveGameData(clientGamedata);
 			}
 		}
 		else if (!(intertic & 1))
-			S_StartSound(NULL, sfx_ptally); // tally sound effect
+			S_StartSoundFromEverywhere(sfx_ptally); // tally sound effect
 
 		if (data.spec.gotlife > 0 && (skip == true || data.spec.score % 50000 < oldscore % 50000)) // just passed a 50000 point mark
 		{

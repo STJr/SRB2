@@ -1362,11 +1362,11 @@ static void CON_Print(char *msg)
 		return;
 
 	if (*msg == '\3') // chat text, makes ding sound
-		S_StartSound(NULL, sfx_radio);
+		S_StartSoundFromEverywhere(sfx_radio);
 	else if (*msg == '\4') // chat action, dings and is in yellow
 	{
 		*msg = '\x82'; // yellow
-		S_StartSound(NULL, sfx_radio);
+		S_StartSoundFromEverywhere(sfx_radio);
 	}
 
 	Lock_state();
