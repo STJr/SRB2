@@ -3995,7 +3995,7 @@ static int lib_gUnlockCondition(lua_State* L)
 	clientGamedata->lua[id] = true;
 	if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
 	{
-		S_StartSound(NULL, sfx_s3k68);
+		S_StartSoundFromEverywhere(sfx_s3k68);
 	}
 
 	return 0;
