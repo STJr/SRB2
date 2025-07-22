@@ -4888,6 +4888,8 @@ static void M_DrawPauseMenu(void)
 			V_DrawRightAlignedString(284, 44 + (i*8), V_MONOSPACE, emblem_text[i]);
 		}
 	}
+
+	M_DrawGenericMenu();
 }
 
 static void M_DrawCenteredMenu(void)
