@@ -3265,7 +3265,7 @@ static int GetValidSoundOrigin(lua_State *L, void **origin)
 		return 2;
 	}
 
-	return LUA_ErrInvalid(L, "mobj_t/sector_t");
+	return 0;
 }
 
 static int lib_sStartSound(lua_State *L)
@@ -3284,7 +3284,7 @@ static int lib_sStartSound(lua_State *L)
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
-	if (!((player || P_IsLocalPlayer(player)) || (hud_running || hook_cmd_running)))
+	if (player == NULL || P_IsLocalPlayer(player))
 	{
 		if (lua_isnil(L, 1))
 			S_StartSoundFromEverywhere(sound_id);
@@ -3321,7 +3321,7 @@ static int lib_sStartSoundAtVolume(lua_State *L)
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
-	if (!player || P_IsLocalPlayer(player))
+	if (player == NULL || P_IsLocalPlayer(player))
 	{
 		if (lua_isnil(L, 1))
 			S_StartSoundFromEverywhereVol(sound_id, volume);
