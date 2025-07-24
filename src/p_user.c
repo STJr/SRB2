@@ -9330,13 +9330,13 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction,
 		}
 
 		{
+			fixed_t xydist = P_GetMobjDistance2D(player->mo, mo);
 			fixed_t zdist = (player->mo->z + player->mo->height/2) - (mo->z + mo->height/2);
-			dist = P_GetMobjDistance2D(player->mo, mo);
 
-			if (abs(zdist) > dist)
+			if (abs(zdist) > xydist)
 				continue; // Don't home outside of desired angle!
 
-			dist = GetDistance2D(0, 0, dist, zdist);
+			dist = GetDistance2D(0, 0, xydist, zdist);
 			if (dist > maxdist)
 				continue; // out of range
 		}
