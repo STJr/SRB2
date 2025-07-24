@@ -532,7 +532,7 @@ boolean B_CheckRespawn(player_t *player)
 	}
 
 	// If you can't see Sonic, I guess we should?
-	if (!P_CheckSight(sonic, tails) && P_GetMobjDistance3D(tails, sonic) > FixedMul(1024*FRACUNIT, tails->scale))
+	if (!P_CheckSight(sonic, tails) && P_AreMobjsFar3D(tails, sonic, FixedMul(1024*FRACUNIT, tails->scale)))
 		return true;
 	return false;
 }

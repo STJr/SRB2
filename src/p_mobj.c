@@ -4918,7 +4918,7 @@ static void P_Boss5Thinker(mobj_t *mobj)
 		}
 		if (mobj->state == &states[mobj->info->xdeathstate])
 			mobj->momz -= (2*FRACUNIT)/3;
-		else if (mobj->tracer && P_GetMobjDistance2D(mobj->tracer, mobj) < 2*mobj->radius)
+		else if (mobj->tracer && P_AreMobjsClose2D(mobj->tracer, mobj, 2*mobj->radius))
 			mobj->flags &= ~MF_NOCLIP;
 	}
 	else
@@ -5047,7 +5047,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 			if (players[i].mo->health <= 0)
 				continue;
 
-			if (P_GetMobjDistance2D(players[i].mo, mobj) > (mobj->radius + players[i].mo->radius))
+			if (P_AreMobjsFar2D(players[i].mo, mobj, mobj->radius + players[i].mo->radius))
 				continue;
 
 			if (players[i].mo->z > mobj->z + mobj->height - FRACUNIT
@@ -5269,7 +5269,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 			if (players[i].mo->health <= 0)
 				continue;
 
-			if (P_GetMobjDistance2D(players[i].mo, mobj) > mobj->radius*4)
+			if (P_AreMobjsFar2D(players[i].mo, mobj, mobj->radius*4))
 				continue;
 
 			if (players[i].mo->z > mobj->z + 128*FRACUNIT)
@@ -7026,7 +7026,7 @@ static void P_MaceSceneryThink(mobj_t *mobj)
 		// The below is selected based on CEZ2's first room. I promise you it is a coincidence that it looks like the weed number.
 		for (i = 0; i < MAXPLAYERS; ++i)
 			if (playeringame[i] && players[i].mo
-				&& P_GetMobjDistance3D(mobj, players[i].mo) < (4200 << FRACBITS))
+				&& P_AreMobjsClose3D(mobj, players[i].mo, 4200 << FRACBITS))
 				break; // Stop looking.
 		if (i == MAXPLAYERS)
 		{
@@ -9125,7 +9125,7 @@ static void P_PterabyteThink(mobj_t *mobj)
 		var1 = 2*mobj->info->speed;
 		var2 = 1;
 		A_HomingChase(mobj);
-		if (P_GetMobjDistance2D(mobj, mobj->tracer) <= mobj->info->speed)
+		if (P_AreMobjsClose2D(mobj, mobj->tracer, mobj->info->speed))
 		{
 			mobj->extravalue1 -= 2;
 			mobj->momx = mobj->momy = mobj->momz = 0;
@@ -9386,7 +9386,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		mobj->eflags |= MFE_UNDERWATER; //P_MobjCheckWater(mobj); // solely for MFE_UNDERWATER for A_FlickySpawn
 		{
 			if (mobj->tracer && mobj->tracer->player && mobj->tracer->health > 0
-				&& P_GetMobjDistance3D(mobj->tracer, mobj) <= mobj->radius*16)
+				&& P_AreMobjsClose3D(mobj->tracer, mobj, mobj->radius*16))
 			{
 				var1 = mobj->info->speed;
 				var2 = 1;

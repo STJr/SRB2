@@ -812,7 +812,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 			if (thing->flags & MF_SOLID)
 				S_StartSoundFromMobj(tmthing, thing->info->deathsound);
 			for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
-				if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_GetMobjDistance3D(thing, iter) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
+				if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AreMobjsClose3D(thing, iter, 56*thing->scale)))//FixedMul(56*FRACUNIT, thing->scale))
 					P_KillMobj(iter, tmthing, tmthing, 0);
 		}
 		else
@@ -839,7 +839,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 		if (thing->flags & MF_SOLID)
 			S_StartSoundFromMobj(tmthing, thing->info->deathsound);
 		for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
-			if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_GetMobjDistance3D(thing, iter) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
+			if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AreMobjsClose3D(thing, iter, 56*thing->scale)))//FixedMul(56*FRACUNIT, thing->scale))
 				P_KillMobj(iter, tmthing, tmthing, 0);
 		return CHECKTHING_COLLIDE;
 	}

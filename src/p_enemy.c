@@ -68,15 +68,13 @@ static dirtype_t diags[] =
 boolean P_CheckMeleeRange(mobj_t *actor)
 {
 	mobj_t *pl;
-	fixed_t dist;
 
 	if (!actor->target)
 		return false;
 
 	pl = actor->target;
-	dist = P_GetMobjDistance2D(actor, pl);
 
-	if (dist >= FixedMul(MELEERANGE - 20*FRACUNIT, actor->scale) + pl->radius)
+	if (P_AreMobjsFar2D(actor, pl, FixedMul(MELEERANGE - 20*FRACUNIT, actor->scale) + pl->radius))
 		return false;
 
 	// check height now, so that damn crawlas cant attack
@@ -1871,7 +1869,7 @@ void A_CrushclawAim(mobj_t *actor)
 	if (!crab->target || !crab->info->missilestate || (statenum_t)(crab->state-states) == crab->info->missilestate)
 		return;
 
-	if (((ang + ANG1) < ANG2) || P_GetMobjDistance2D(crab, crab->target) < 333*crab->scale)
+	if (((ang + ANG1) < ANG2) || P_AreMobjsClose2D(crab, crab->target 333*crab->scale))
 		P_SetMobjState(crab, crab->info->missilestate);
 }
 
@@ -3714,9 +3712,7 @@ static mobj_t *P_FindBossFlyPoint(mobj_t *mo, INT32 tag)
 			continue;
 
 		// If this one's further than the last one, don't go for it.
-		if (closest &&
-			P_GetMobjDistance3D(mo2, mo) >
-			P_GetMobjDistance3D(closest, mo))
+		if (closest && P_AreMobjsFar3D(mo2, mo, P_GetMobjDistance3D(closest, mo)))
 			continue;
 
 		closest = mo2;
@@ -4443,7 +4439,7 @@ void A_BubbleSpawn(mobj_t *actor)
 		// Don't spawn bubbles unless a player is relatively close by (var1).
 		for (i = 0; i < MAXPLAYERS; ++i)
 			if (playeringame[i] && players[i].mo
-			 && P_GetMobjDistance2D(actor, players[i].mo) < (locvar1<<FRACBITS))
+			 && P_AreMobjsClose2D(actor, players[i].mo, locvar1<<FRACBITS))
 				break; // Stop looking.
 		if (i == MAXPLAYERS)
 			return; // don't make bubble!
@@ -4488,7 +4484,7 @@ void A_FanBubbleSpawn(mobj_t *actor)
 	// Don't spawn bubbles unless a player is relatively close by (var2).
 		for (i = 0; i < MAXPLAYERS; ++i)
 			if (playeringame[i] && players[i].mo
-			 && P_GetMobjDistance2D(actor, players[i].mo) < (locvar1<<FRACBITS))
+			 && P_AreMobjsClose2D(actor, players[i].mo, locvar1<<FRACBITS))
 				break; // Stop looking.
 		if (i == MAXPLAYERS)
 			return; // don't make bubble!
@@ -4653,7 +4649,6 @@ void A_DropMine(mobj_t *actor)
 
 	if (locvar2 & 65535)
 	{
-		fixed_t dist;
 		mobj_t *target;
 
 		if (locvar2 >> 16)
@@ -4664,9 +4659,7 @@ void A_DropMine(mobj_t *actor)
 		if (!target)
 			return;
 
-		dist = P_GetMobjDistance2D(actor, target)>>FRACBITS;
-
-		if (dist > FixedMul((locvar2 & 65535), actor->scale))
+		if (P_AreMobjsFar2D(actor, target, FixedMul((locvar2 & 65535), actor->scale) << FRACBITS))
 			return;
 	}
 
@@ -4708,7 +4701,7 @@ void A_FishJump(mobj_t *actor)
 		// Don't spawn trail unless a player is nearby.
 		for (i = 0; i < MAXPLAYERS; ++i)
 			if (playeringame[i] && players[i].mo
-				&& P_GetMobjDistance2D(actor, players[i].mo) < (actor->info->speed))
+				&& P_AreMobjsClose2D(actor, players[i].mo, actor->info->speed))
 				break; // Stop looking.
 		if (i < MAXPLAYERS)
 		{
@@ -5289,7 +5282,7 @@ void A_JetChase(mobj_t *actor)
 			return; // got a new target
 
 	// If the player is over 3072 fracunits away, then look for another player
-	if (P_GetMobjDistance3D(actor->target, actor) > FixedMul(3072*FRACUNIT, actor->scale) && P_LookForPlayers(actor, true, false, FixedMul(3072*FRACUNIT, actor->scale)))
+	if (P_AreMobjsFar3D(actor->target, actor, FixedMul(3072*FRACUNIT, actor->scale)) && P_LookForPlayers(actor, true, false, FixedMul(3072*FRACUNIT, actor->scale)))
 	{
 		return; // got a new target
 	}
@@ -5472,7 +5465,7 @@ static boolean PIT_MinusCarry(mobj_t *thing)
 	if (!(thing->flags & (MF_PUSHABLE|MF_ENEMY)))
 		return true;
 
-	if (P_GetMobjDistance2D(minus, thing) >= minus->radius*3)
+	if (P_AreMobjsFar2D(minus, thing, minus->radius*3))
 		return true;
 
 	if (abs(thing->z - minus->z) > minus->height)
@@ -5858,7 +5851,7 @@ void A_DetonChase(mobj_t *actor)
 	}
 
 	// chase towards player
-	if (P_GetMobjDistance3D(actor->tracer, actor) > FixedMul((actor->info->painchance << FRACBITS), actor->scale))
+	if (P_AreMobjsFar3D(actor->tracer, actor, FixedMul((actor->info->painchance << FRACBITS), actor->scale)))
 	{
 		P_SetTarget(&actor->tracer, NULL); // Too far away
 		return;
@@ -6084,7 +6077,7 @@ void A_UnidusBall(mobj_t *actor)
 
 	if (locvar1 == 1 && canthrow)
 	{
-		if (P_GetMobjDistance2D(actor->target->target, actor->target) > FixedMul(MISSILERANGE>>1, actor->scale)
+		if (P_AreMobjsFar2D(actor->target->target, actor->target, FixedMul(MISSILERANGE>>1, actor->scale))
 		|| !P_CheckSight(actor, actor->target->target))
 			return;
 
@@ -7046,7 +7039,7 @@ nomissile:
 	}
 
 	// chase towards player
-	if (P_GetMobjDistance2D(actor->target, actor) > actor->radius+actor->target->radius)
+	if (P_AreMobjsFar2D(actor->target, actor, actor->radius+actor->target->radius))
 	{
 		if (--actor->movecount < 0 || (!P_Move(actor, actor->info->speed) && !P_MobjWasRemoved(actor)))
 			P_NewChaseDir(actor);
@@ -7290,7 +7283,7 @@ void A_Boss7Chase(mobj_t *actor)
 	// Self-adjust if stuck on the edge
 	if (actor->tracer)
 	{
-		if (P_GetMobjDistance2D(actor, actor->tracer) > 128*FRACUNIT - actor->radius)
+		if (P_AreMobjsFar2D(actor, actor->tracer, 128*FRACUNIT - actor->radius))
 			P_InstaThrust(actor, R_PointToAngle2(actor->x, actor->y, actor->tracer->x, actor->tracer->y), FRACUNIT);
 	}
 
@@ -7326,7 +7319,7 @@ void A_Boss7Chase(mobj_t *actor)
 		if (players[i].mo->health <= 0)
 			continue;
 
-		if (P_GetMobjDistance2D(players[i].mo, actor) > actor->radius)
+		if (P_AreMobjsFar2D(players[i].mo, actor, actor->radius))
 			continue;
 
 		if (players[i].mo->z > actor->z + actor->height - 2*FRACUNIT
@@ -7457,7 +7450,7 @@ void A_Boss2PogoSFX(mobj_t *actor)
 	}
 
 	// Boing!
-	if (P_GetMobjDistance2D(actor, actor->target) < FixedMul(256*FRACUNIT, actor->scale))
+	if (P_AreMobjsClose2D(actor, actor->target, FixedMul(256*FRACUNIT, actor->scale)))
 	{
 		actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
 		P_InstaThrust(actor, actor->angle, FixedMul(actor->info->speed, actor->scale));
@@ -7490,7 +7483,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 		return;
 
 	if (!actor->target || !(actor->target->flags & MF_SHOOTABLE) || (actor->target->player && actor->target->player->powers[pw_flashing])
-	|| P_GetMobjDistance2D(actor, actor->target) >= FixedMul(512*FRACUNIT, actor->scale))
+	|| P_AreMobjsFar2D(actor, actor->target, FixedMul(512*FRACUNIT, actor->scale)))
 	{
 		// look for a new target
 		if (P_LookForPlayers(actor, true, false, 512*FRACUNIT))
@@ -7511,7 +7504,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 		P_InstaThrust(actor, actor->angle+ANGLE_180, FixedMul(FixedMul(actor->info->speed,(locvar2)), actor->scale)); // Move at wandering speed
 	}
 	// Try to land on top of the player.
-	else if (P_GetMobjDistance2D(actor, actor->target) < FixedMul(512*FRACUNIT, actor->scale))
+	else if (P_AreMobjsClose2D(actor, actor->target, FixedMul(512*FRACUNIT, actor->scale)))
 	{
 		fixed_t airtime, gravityadd, zoffs, height;
 
@@ -7776,7 +7769,7 @@ void A_BuzzFly(mobj_t *actor)
 	}
 
 	// If the player is over 3072 fracunits away, then look for another player
-	if (P_GetMobjDistance3D(actor->target, actor) > FixedMul(3072*FRACUNIT, actor->scale))
+	if (P_AreMobjsFar3D(actor->target, actor, FixedMul(3072*FRACUNIT, actor->scale)))
 	{
 		if (multiplayer || netgame)
 			P_LookForPlayers(actor, true, false, FixedMul(3072*FRACUNIT, actor->scale)); // maybe get a new target
@@ -10252,20 +10245,15 @@ void A_CheckRange(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	fixed_t dist;
+	mobj_t *target = (locvar1 >> 16) ? actor->tracer : actor->target;
 
 	if (LUA_CallAction(A_CHECKRANGE, actor))
 		return;
 
-	if ((!(locvar1 >> 16) && !actor->target) || ((locvar1 >> 16) && !actor->tracer))
+	if (!target)
 		return;
 
-	if (!(locvar1 >> 16)) //target
-		dist = P_GetMobjDistance2D(actor->target, actor);
-	else //tracer
-		dist = P_GetMobjDistance2D(actor->tracer, actor);
-
-	if (dist <= FixedMul((locvar1 & 65535)*FRACUNIT, actor->scale))
+	if (P_AreMobjsClose2D(target, actor, FixedMul((locvar1 & 65535)*FRACUNIT, actor->scale)))
 		P_SetMobjState(actor, locvar2);
 }
 
@@ -10348,7 +10336,6 @@ void A_CheckThingCount(mobj_t *actor)
 	INT32 count = 0;
 	thinker_t *th;
 	mobj_t *mo2;
-	fixed_t dist = 0;
 
 	if (LUA_CallAction(A_CHECKTHINGCOUNT, actor))
 		return;
@@ -10362,13 +10349,11 @@ void A_CheckThingCount(mobj_t *actor)
 
 		if (mo2->type == (mobjtype_t)loc1up)
 		{
-			dist = P_GetMobjDistance2D(mo2, actor);
-
 			if (loc2up == 0)
 				count++;
 			else
 			{
-				if (dist <= FixedMul(loc2up*FRACUNIT, actor->scale))
+				if (P_AreMobjsClose2D(mo2, actor, FixedMul(loc2up*FRACUNIT, actor->scale)))
 					count++;
 			}
 		}
@@ -12006,7 +11991,7 @@ void A_FlickyAim(mobj_t *actor)
 	if ((actor->momx == actor->momy && actor->momy == 0)
 		|| (actor->target && P_IsFlickyCenter(actor->target->type)
 			&& actor->target->extravalue1 && (actor->target->flags & MF_SLIDEME)
-			&& P_GetMobjDistance2D(actor, actor->target) >= actor->target->extravalue1))
+			&& P_AreMobjsFar2D(actor, actor->target, actor->target->extravalue1)))
 		flickyhitwall = true;
 
 	P_InternalFlickyBubble(actor);
@@ -12702,7 +12687,7 @@ void A_MultiShotDist(mobj_t *actor)
 		// Don't spawn dust unless a player is relatively close by (var1).
 		for (i = 0; i < MAXPLAYERS; ++i)
 			if (playeringame[i] && players[i].mo
-			 && P_GetMobjDistance2D(actor, players[i].mo) < (1600<<FRACBITS))
+			 && P_AreMobjsClose2D(actor, players[i].mo, 1600<<FRACBITS))
 				break; // Stop looking.
 		if (i == MAXPLAYERS)
 			return; // don't make bubble!
@@ -13229,7 +13214,7 @@ void A_Boss5CheckOnGround(mobj_t *actor)
 			P_SetMobjState(actor, locvar1);
 	}
 
-	if (actor->tracer && P_GetMobjDistance2D(actor->tracer, actor) < 2*actor->radius)
+	if (actor->tracer && P_AreMobjsClose2D(actor->tracer, actor, 2*actor->radius))
 	{
 		actor->momx = (4*actor->momx)/5;
 		actor->momy = (4*actor->momy)/5;
@@ -14331,7 +14316,7 @@ void A_LavafallRocks(mobj_t *actor)
 	// Don't spawn rocks unless a player is relatively close by.
 	for (i = 0; i < MAXPLAYERS; ++i)
 		if (playeringame[i] && players[i].mo
-			&& P_GetMobjDistance2D(actor, players[i].mo) < (actor->info->speed >> 1))
+			&& P_AreMobjsClose2D(actor, players[i].mo, actor->info->speed >> 1))
 			break; // Stop looking.
 
 	if (i < MAXPLAYERS)
@@ -14365,7 +14350,7 @@ void A_LavafallLava(mobj_t *actor)
 	// Don't spawn lava unless a player is nearby.
 	for (i = 0; i < MAXPLAYERS; ++i)
 		if (playeringame[i] && players[i].mo
-			&& P_GetMobjDistance2D(actor, players[i].mo) < (actor->info->speed))
+			&& P_AreMobjsClose2D(actor, players[i].mo, actor->info->speed))
 			break; // Stop looking.
 
 	if (i >= MAXPLAYERS)
@@ -14513,7 +14498,7 @@ void A_RolloutSpawn(mobj_t *actor)
 
 	if (!(actor->target)
 		|| P_MobjWasRemoved(actor->target)
-		|| P_GetMobjDistance2D(actor, actor->target) > locvar1)
+		|| P_AreMobjsFar2D(actor, actor->target, locvar1))
 	{
 		P_SetTarget(&actor->target, P_SpawnMobj(actor->x, actor->y, actor->z, locvar2));
 		if (!P_MobjWasRemoved(actor->target))

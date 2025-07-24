@@ -1573,8 +1573,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				fixed_t touchx, touchy, touchspeed;
 				angle_t angle;
 
-				if (P_GetMobjDistance2D(toucher, special) >
-					GetDistance2D(toucher->x - toucher->momx, toucher->y - toucher->momy, special->x, special->y))
+				if (P_AreMobjsFar2D(toucher, special, GetDistance2D(toucher->x - toucher->momx, toucher->y - toucher->momy, special->x, special->y)))
 				{
 					touchx = toucher->x + toucher->momx;
 					touchy = toucher->y + toucher->momy;
@@ -2800,7 +2799,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		case MT_BUGGLE:
 			if (inflictor && inflictor->player // did a player kill you? Spawn relative to the player so they're bound to get it
-			&& P_GetMobjDistance2D(inflictor, target) <= inflictor->radius + target->radius + FixedMul(8*FRACUNIT, inflictor->scale) // close enough?
+			&& P_AreMobjsClose2D(inflictor, target, inflictor->radius + target->radius + FixedMul(8*FRACUNIT, inflictor->scale)) // close enough?
 			&& inflictor->z <= target->z + target->height + FixedMul(8*FRACUNIT, inflictor->scale)
 			&& inflictor->z + inflictor->height >= target->z - FixedMul(8*FRACUNIT, inflictor->scale))
 				mo = P_SpawnMobj(inflictor->x + inflictor->momx, inflictor->y + inflictor->momy, inflictor->z + (inflictor->height / 2) + inflictor->momz, MT_EXTRALARGEBUBBLE);

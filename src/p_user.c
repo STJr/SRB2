@@ -6639,8 +6639,7 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 		//CONS_Debug(DBG_NIGHTS, "Distance from T2: %d\n", P_GetMobjDistance2D(transfer2, player->mo)>>FRACBITS);
 
 		// Transfer1 is closer to the player than transfer2
-		if (P_GetMobjDistance2D(transfer1, player->mo)>>FRACBITS
-			< P_GetMobjDistance2D(transfer2, player->mo)>>FRACBITS)
+		if (P_AreMobjsClose2D(transfer1, player->mo, P_GetMobjDistance2D(transfer2, player->mo)))
 		{
 			//CONS_Debug(DBG_NIGHTS, " must be < 0 to transfer\n");
 
@@ -9201,7 +9200,7 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 		if (abs(inflictor->x - mo->x) > radius || abs(inflictor->y - mo->y) > radius || abs(inflictor->z - mo->z) > radius)
 			continue; // Workaround for possible integer overflow in the below -Red
 
-		if (P_GetMobjDistance3D(inflictor, mo) > radius)
+		if (P_AreMobjsFar3D(inflictor, mo, radius))
 			continue;
 
 		if (mo->type == MT_MINUS && !(mo->flags & (MF_SPECIAL|MF_SHOOTABLE)))
@@ -12963,7 +12962,7 @@ void P_PlayerAfterThink(player_t *player)
 						P_SetPlayerAngle(player, player->mo->angle);
 				}
 
-				if (P_GetMobjDistance2D(player->mo, tails) > tails->radius)
+				if (P_AreMobjsFar2D(player->mo, tails, tails->radius))
 					player->powers[pw_carry] = CR_NONE;
 
 				if (player->powers[pw_carry] == CR_PLAYER)
