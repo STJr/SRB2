@@ -717,7 +717,9 @@ static void BeginDownload(boolean direct)
 	if (!direct)
 	{
 		cl_mode = CL_DOWNLOADHTTPFILES;
-		Snake_Allocate(&snake);
+		// don't alloc snake if already alloced
+		if (!snake)
+			Snake_Allocate(&snake);
 
 		// Discard any paused downloads
 		CL_AbortDownloadResume();

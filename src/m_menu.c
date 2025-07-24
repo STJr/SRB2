@@ -6334,16 +6334,13 @@ static void M_Addons(INT32 choice)
 	recommendedflags = V_GREENMAP;
 	warningflags = V_REDMAP;
 
-#if 1
 	if (cv_addons_option.value == 0)
 		pathname = usehome ? srb2home : srb2path;
 	else if (cv_addons_option.value == 1)
 		pathname = srb2home;
 	else if (cv_addons_option.value == 2)
 		pathname = srb2path;
-	else
-#endif
-	if (cv_addons_option.value == 3 && *cv_addons_folder.string != '\0')
+	else if (cv_addons_option.value == 3 && *cv_addons_folder.string != '\0')
 		pathname = cv_addons_folder.string;
 
 	strlcpy(menupath, pathname, 1024);

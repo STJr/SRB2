@@ -1972,6 +1972,18 @@ filestatus_t findfile(char *filename, const UINT8 *wantedmd5sum, boolean complet
 		badmd5 = true;
 	// if not found at all, just move on without doing anything
 
+	if (cv_addons_option.value == 3 && *cv_addons_folder.string != '\0')
+	{
+		// next, check any custom directory if specified
+		homecheck = filesearch(filename, cv_addons_folder.string, wantedmd5sum, completepath, 10);
+
+		if (homecheck == FS_FOUND) // we found the file, so return that we have :)
+			return FS_FOUND;
+		else if (homecheck == FS_MD5SUMBAD) // file has a bad md5; move on and look for a file with the right md5
+			badmd5 = true;
+		// if not found at all, just move on without doing anything
+	}
+
 	// finally check "." directory
 	homecheck = filesearch(filename, ".", wantedmd5sum, completepath, 10);
 
