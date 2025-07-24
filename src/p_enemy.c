@@ -1869,7 +1869,7 @@ void A_CrushclawAim(mobj_t *actor)
 	if (!crab->target || !crab->info->missilestate || (statenum_t)(crab->state-states) == crab->info->missilestate)
 		return;
 
-	if (((ang + ANG1) < ANG2) || P_AreMobjsClose2D(crab, crab->target 333*crab->scale))
+	if (((ang + ANG1) < ANG2) || P_AreMobjsClose2D(crab, crab->target, 333*crab->scale))
 		P_SetMobjState(crab, crab->info->missilestate);
 }
 
