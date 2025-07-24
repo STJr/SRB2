@@ -2547,7 +2547,7 @@ static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offse
 	INT32 interval, i;
 	if (stplyr->mo == NULL)
 		return 0;  // player just joined after spectating, can happen on custom gamemodes.
-	UINT32 dist = ((UINT32)P_AproxDistance(P_AproxDistance(stplyr->mo->x - hunt->x, stplyr->mo->y - hunt->y), stplyr->mo->z - hunt->z))>>FRACBITS;
+	UINT32 dist = ((UINT32)P_GetMobjDistance3D(stplyr->mo, hunt))>>FRACBITS;
 
 	if (dist < 128)
 	{

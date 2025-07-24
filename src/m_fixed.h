@@ -250,6 +250,9 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FixedRound(fixed_t x)
 	return INT32_MAX;
 }
 
+fixed_t GetDistance2D(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2);
+fixed_t GetDistance3D(fixed_t x1, fixed_t y1, fixed_t z1, fixed_t x2, fixed_t y2, fixed_t z2);
+
 typedef struct
 {
 	fixed_t x;

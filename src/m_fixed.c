@@ -21,6 +21,7 @@
 #endif
 #include "doomdef.h"
 #include "m_fixed.h"
+#include "tables.h"
 
 fixed_t FixedSqrt(fixed_t x)
 {
@@ -76,6 +77,38 @@ fixed_t FixedHypot(fixed_t x, fixed_t y)
 	yx2 = FixedMul(yx, yx); // (x/y)^2
 	yx1 = FixedSqrt(1 * FRACUNIT + yx2); // (1 + (x/y)^2)^1/2
 	return FixedMul(ax, yx1); // |x|*((1 + (x/y)^2)^1/2)
+}
+
+fixed_t GetDistance2D(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2)
+{
+	angle_t angle;
+	ufixed_t dx, dy, dist;
+
+	dx = abs(x2 - x1);
+	dy = abs(y2 - y1);
+
+	if (dy > dx)
+	{
+		fixed_t temp;
+
+		temp = dx;
+		dx = dy;
+		dy = temp;
+	}
+	if (!dy)
+		return dx;
+
+	angle = (tantoangle[FixedDiv(dy, dx)>>DBITS] + ANGLE_90) >> ANGLETOFINESHIFT;
+
+	// use as cosine
+	dist = FixedDiv(dx, FINESINE(angle));
+
+	return dist;
+}
+
+fixed_t GetDistance3D(fixed_t x1, fixed_t y1, fixed_t z1, fixed_t x2, fixed_t y2, fixed_t z2)
+{
+	return GetDistance2D(0, z1, GetDistance2D(x1, y1, x2, y2), z2);
 }
 
 vector2_t *FV2_Load(vector2_t *vec, fixed_t x, fixed_t y)

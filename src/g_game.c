@@ -1460,9 +1460,11 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			P_SetTarget(&newtarget->target, ticcmd_ztargetfocus[forplayer]);
 			newtarget->drawonlyforplayer = player; // Hide it from the other player in splitscreen, and yourself when spectating
 
-			if (player->mo && R_PointToDist2(0, 0,
-				player->mo->x - ticcmd_ztargetfocus[forplayer]->x,
-				player->mo->y - ticcmd_ztargetfocus[forplayer]->y
+			if (player->mo && GetDistance2D(
+				ticcmd_ztargetfocus[forplayer]->x,
+				ticcmd_ztargetfocus[forplayer]->y,
+				player->mo->x,
+				player->mo->y
 			) > 50*player->mo->scale)
 			{
 				INT32 anglediff = R_PointToAngle2(player->mo->x, player->mo->y, ticcmd_ztargetfocus[forplayer]->x, ticcmd_ztargetfocus[forplayer]->y) - *myangle;

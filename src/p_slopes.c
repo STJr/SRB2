@@ -100,7 +100,7 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 				);
 
 		// NOTE: FV3_Magnitude() doesn't work properly in some cases, and chaining FixedHypot() seems to give worse results.
-		m = R_PointToDist2(0, 0, R_PointToDist2(0, 0, slope->normal.x, slope->normal.y), slope->normal.z);
+		m = GetDistance3D(0, 0, 0, slope->normal.x, slope->normal.y, slope->normal.z);
 
 		// Invert normal if it's facing down.
 		if (slope->normal.z < 0)
@@ -109,7 +109,7 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 		FV3_Divide(&slope->normal, m);
 
 		// Get direction vector
-		m = FixedHypot(slope->normal.x, slope->normal.y);
+		m = GetDistance2D(0, 0, slope->normal.x, slope->normal.y);
 		slope->d.x = -FixedDiv(slope->normal.x, m);
 		slope->d.y = -FixedDiv(slope->normal.y, m);
 
@@ -153,7 +153,7 @@ static void ReconfigureViaConstants (pslope_t *slope, const double pa, const dou
 		FV3_Negate(normal);
 
 	// Get direction vector
-	m = FixedHypot(normal->x, normal->y);
+	m = GetDistance2D(0, 0, normal->x, normal->y);
 	slope->d.x = -FixedDiv(normal->x, m);
 	slope->d.y = -FixedDiv(normal->y, m);
 
@@ -330,13 +330,13 @@ static fixed_t GetExtent(sector_t *sector, line_t *line)
 			continue;
 
 		P_ClosestPointOnLine(li->v1->x, li->v1->y, line, &tempv);
-		dist = R_PointToDist2(tempv.x, tempv.y, li->v1->x, li->v1->y);
+		dist = GetDistance2D(tempv.x, tempv.y, li->v1->x, li->v1->y);
 		if(dist > fardist)
 			fardist = dist;
 
 		// Okay, maybe do it for v2 as well?
 		P_ClosestPointOnLine(li->v2->x, li->v2->y, line, &tempv);
-		dist = R_PointToDist2(tempv.x, tempv.y, li->v2->x, li->v2->y);
+		dist = GetDistance2D(tempv.x, tempv.y, li->v2->x, li->v2->y);
 		if(dist > fardist)
 			fardist = dist;
 	}
@@ -400,7 +400,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 	}
 
 	{
-		fixed_t len = R_PointToDist2(0, 0, line->dx, line->dy);
+		fixed_t len = GetDistance2D(0, 0, line->dx, line->dy);
 		nx = FixedDiv(line->dy, len);
 		ny = -FixedDiv(line->dx, len);
 	}
@@ -827,7 +827,7 @@ static void P_UpdateSolidMidtextureSlope(line_t *line, pslope_t *ref)
 	point.z = P_GetSlopeZAt(ref, point.x, point.y);
 
 	// Get length of the line
-	fixed_t extent = R_PointToDist2(0, 0, line->dx, line->dy);
+	fixed_t extent = GetDistance2D(0, 0, line->dx, line->dy);
 
 	// Precalculate variables
 	slope->zdelta = FixedDiv(origin.z - point.z, extent);

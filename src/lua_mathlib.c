@@ -15,7 +15,7 @@
 #include "tables.h"
 #include "p_local.h"
 #include "doomstat.h" // for ALL7EMERALDS
-#include "r_main.h" // for R_PointToDist2
+#include "r_main.h" // for GetDistance2D
 #include "m_easing.h"
 
 #include "lua_script.h"
@@ -144,7 +144,7 @@ static int lib_fixedsqrt(lua_State *L)
 
 static int lib_fixedhypot(lua_State *L)
 {
-	lua_pushfixed(L, R_PointToDist2(0, 0, luaL_checkfixed(L, 1), luaL_checkfixed(L, 2)));
+	lua_pushfixed(L, GetDistance2D(0, 0, luaL_checkfixed(L, 1), luaL_checkfixed(L, 2)));
 	return 1;
 }
 
@@ -169,6 +169,33 @@ static int lib_fixedceil(lua_State *L)
 static int lib_fixedround(lua_State *L)
 {
 	lua_pushfixed(L, FixedRound(luaL_checkfixed(L, 1)));
+	return 1;
+}
+
+// Distance math
+////////////////
+
+static int lib_getdistance2d(lua_State *L)
+{
+	fixed_t x1 = luaL_checkfixed(L, 1);
+	fixed_t y1 = luaL_checkfixed(L, 2);
+	fixed_t x2 = luaL_checkfixed(L, 3);
+	fixed_t y2 = luaL_checkfixed(L, 4);
+	//HUDSAFE
+	lua_pushfixed(L, GetDistance2D(x1, y1, x2, y2));
+	return 1;
+}
+
+static int lib_getdistance3d(lua_State *L)
+{
+	fixed_t x1 = luaL_checkfixed(L, 1);
+	fixed_t y1 = luaL_checkfixed(L, 2);
+	fixed_t z1 = luaL_checkfixed(L, 3);
+	fixed_t x2 = luaL_checkfixed(L, 4);
+	fixed_t y2 = luaL_checkfixed(L, 5);
+	fixed_t z2 = luaL_checkfixed(L, 6);
+	//HUDSAFE
+	lua_pushfixed(L, GetDistance3D(x1, y1, z1, x2, y2, z2));
 	return 1;
 }
 
@@ -233,6 +260,8 @@ static luaL_Reg lib_math[] = {
 	{"fixceil"  , lib_fixedceil},
 	{"FixedRound", lib_fixedround},
 	{"fixround"  , lib_fixedround},
+	{"GetDistance2D", lib_getdistance2d},
+	{"GetDistance3D", lib_getdistance3d},
 	{"GetSecSpecial", lib_getsecspecial},
 	{"All7Emeralds", lib_all7emeralds},
 	{"ColorOpposite", lib_coloropposite},

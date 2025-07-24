@@ -2372,7 +2372,7 @@ boolean P_ZMovement(mobj_t *mo)
 		// float down towards target if too close
 		if (!(mo->flags2 & MF2_SKULLFLY) && !(mo->flags2 & MF2_INFLOAT))
 		{
-			dist = P_AproxDistance(mo->x - mo->target->x, mo->y - mo->target->y);
+			dist = P_GetMobjDistance2D(mo, mo->target);
 
 			delta = (mo->target->z + (mo->height>>1)) - mo->z;
 
@@ -3521,11 +3521,11 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 				P_ResetCamera(player, thiscam);
 			else
 			{
-				fixed_t camspeed = P_AproxDistance(thiscam->momx, thiscam->momy);
+				fixed_t camspeed = GetDistance2D(0, 0, thiscam->momx, thiscam->momy);
 
 				P_SlideCameraMove(thiscam);
 
-				if (!resetcalled && P_AproxDistance(thiscam->momx, thiscam->momy) == camspeed)
+				if (!resetcalled && GetDistance2D(0, 0, thiscam->momx, thiscam->momy) == camspeed)
 				{
 					P_ResetCamera(player, thiscam);
 					resetcalled = true;
@@ -4006,7 +4006,7 @@ boolean P_BossTargetPlayer(mobj_t *actor, boolean closest)
 
 		if (closest)
 		{
-			dist = P_AproxDistance(actor->x - player->mo->x, actor->y - player->mo->y);
+			dist = P_GetMobjDistance2D(actor, player->mo);
 			if (!lastdist || dist < lastdist)
 			{
 				lastdist = dist+1;
@@ -4377,7 +4377,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 		if (mobj->tracer->x == mobj->x && mobj->tracer->y == mobj->y)
 		{
 			// apply ambush for old routing, otherwise whack a mole only
-			dist = P_AproxDistance(P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y), mobj->tracer->z + mobj->movefactor - mobj->z);
+			dist = GetDistance3D(mobj->tracer->x, mobj->tracer->y, mobj->tracer->z + mobj->movefactor, mobj->x, mobj->y, mobj->z);
 
 			if (dist < 1)
 				dist = 1;
@@ -4518,7 +4518,7 @@ static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t dz)
 #else
 	if (mobj->spawnpoint)
 	{
-		rad -= R_PointToDist2(mobj->x, mobj->y,
+		rad -= GetDistance2D(mobj->x, mobj->y,
 			(mobj->spawnpoint->x<<FRACBITS), (mobj->spawnpoint->y<<FRACBITS));
 	}
 #endif
@@ -4918,7 +4918,7 @@ static void P_Boss5Thinker(mobj_t *mobj)
 		}
 		if (mobj->state == &states[mobj->info->xdeathstate])
 			mobj->momz -= (2*FRACUNIT)/3;
-		else if (mobj->tracer && P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y) < 2*mobj->radius)
+		else if (mobj->tracer && P_GetMobjDistance2D(mobj->tracer, mobj) < 2*mobj->radius)
 			mobj->flags &= ~MF_NOCLIP;
 	}
 	else
@@ -5047,7 +5047,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 			if (players[i].mo->health <= 0)
 				continue;
 
-			if (P_AproxDistance(players[i].mo->x - mobj->x, players[i].mo->y - mobj->y) > (mobj->radius + players[i].mo->radius))
+			if (P_GetMobjDistance2D(players[i].mo, mobj) > (mobj->radius + players[i].mo->radius))
 				continue;
 
 			if (players[i].mo->z > mobj->z + mobj->height - FRACUNIT
@@ -5146,7 +5146,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 					if (mobj->health <= mobj->info->damage && !mapthings[j].args[1])
 						continue; // don't jump to center
 
-					dist = P_AproxDistance(players[i].mo->x - mo2->x, players[i].mo->y - mo2->y);
+					dist = P_GetMobjDistance2D(players[i].mo, mo2);
 
 					if (!(closestNum == -1 || dist < closestdist))
 						continue;
@@ -5216,7 +5216,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		an = mobj->angle;
 		an >>= ANGLETOFINESHIFT;
 
-		dist = P_AproxDistance(hitspot->x - mobj->x, hitspot->y - mobj->y);
+		dist = P_GetMobjDistance2D(hitspot, mobj);
 
 		horizontal = dist / airtime;
 		vertical = (gravity*airtime)/2;
@@ -5269,7 +5269,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 			if (players[i].mo->health <= 0)
 				continue;
 
-			if (P_AproxDistance(players[i].mo->x - mobj->x, players[i].mo->y - mobj->y) > mobj->radius*4)
+			if (P_GetMobjDistance2D(players[i].mo, mobj) > mobj->radius*4)
 				continue;
 
 			if (players[i].mo->z > mobj->z + 128*FRACUNIT)
@@ -5533,7 +5533,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			// Spawn energy particles
 			for (spawner = mobj->hnext; spawner; spawner = spawner->hnext)
 			{
-				dist = P_AproxDistance(spawner->x - mobj->x, spawner->y - mobj->y);
+				dist = P_GetMobjDistance2D(spawner, mobj);
 				if (P_RandomRange(1,(dist>>FRACBITS)/16) == 1)
 					break;
 			}
@@ -5542,7 +5542,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				mobj_t *missile = P_SpawnMissile(spawner, mobj, MT_MSGATHER);
 				if (!P_MobjWasRemoved(missile))
 				{
-					missile->fuse = (dist/P_AproxDistance(missile->momx, missile->momy));
+					missile->fuse = (dist / P_GetMobjMomentum2D(missile));
 					if (missile->fuse <= 0) // Prevents a division by zero when calculating missile->scalespeed
 						missile->fuse = 1;
 
@@ -6000,7 +6000,7 @@ nodanger:
 			mobj->flags2 |= MF2_INVERTAIMABLE;
 
 			// Move normally: Approach the player using normal thrust and simulated friction.
-			dist = P_AproxDistance(mobj->x-mobj->target->x, mobj->y-mobj->target->y);
+			dist = P_GetMobjDistance2D(mobj, mobj->target);
 			P_Thrust(mobj, R_PointToAngle2(0, 0, mobj->momx, mobj->momy), -3*FRACUNIT/8);
 			if (dist < 64*FRACUNIT && !(mobj->target->player && mobj->target->player->homing))
 				P_Thrust(mobj, mobj->angle, -4*FRACUNIT);
@@ -6008,7 +6008,7 @@ nodanger:
 				P_Thrust(mobj, mobj->angle, FRACUNIT);
 			else
 				P_Thrust(mobj, mobj->angle + ANGLE_90, FINECOSINE((((angle_t)(leveltime*ANG1))>>ANGLETOFINESHIFT) & FINEMASK)>>1);
-			mobj->momz += P_AproxDistance(mobj->momx, mobj->momy)/12; // Move up higher the faster you're going.
+			mobj->momz += P_GetMobjMomentum2D(mobj)/12; // Move up higher the faster you're going.
 		}
 	}
 }
@@ -6038,11 +6038,11 @@ mobj_t *P_GetClosestAxis(mobj_t *source)
 			if (closestaxis == NULL)
 			{
 				closestaxis = mo2;
-				dist2 = R_PointToDist2(source->x, source->y, mo2->x, mo2->y)-mo2->radius;
+				dist2 = P_GetMobjDistance2D(source, mo2) - mo2->radius;
 			}
 			else
 			{
-				dist1 = R_PointToDist2(source->x, source->y, mo2->x, mo2->y)-mo2->radius;
+				dist1 = P_GetMobjDistance2D(source, mo2) - mo2->radius;
 
 				if (dist1 < dist2)
 				{
@@ -6223,7 +6223,7 @@ void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 numb
 		mobj->angle = R_PointToAngle2(mobj->x, mobj->y, x, y);
 
 		// change slope
-		dist = P_AproxDistance(P_AproxDistance(x - mobj->x, y - mobj->y), z - mobj->z);
+		dist = GetDistance3D(x, y, z, mobj->x, mobj->y, mobj->z);
 
 		if (dist < 1)
 			dist = 1;
@@ -6289,7 +6289,7 @@ void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on y
 	fixed_t tx = dest->x;
 	fixed_t ty = dest->y;
 	fixed_t tz = dest->z + (dest->height/2); // Aim for center
-	fixed_t xydist = P_AproxDistance(tx - source->x, ty - source->y);
+	fixed_t xydist = GetDistance2D(source->x, source->y, tx, ty);
 
 	if (!dest || dest->health <= 0 || !dest->player || !source->tracer)
 		return;
@@ -6298,7 +6298,7 @@ void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on y
 	source->angle = R_PointToAngle2(source->x, source->y, tx, ty);
 
 	// change slope
-	dist = P_AproxDistance(xydist, tz - source->z);
+	dist = GetDistance3D(source->x, source->y, source->z, tx, ty, tz);
 
 	if (dist < 1)
 		dist = 1;
@@ -6324,9 +6324,9 @@ void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on y
 	else
 	{
 		if (nightsgrab)
-			speedmul = P_AproxDistance(dest->momx, dest->momy) + FixedMul(8*FRACUNIT, source->scale);
+			speedmul = P_GetMobjMomentum2D(dest) + FixedMul(8*FRACUNIT, source->scale);
 		else
-			speedmul = P_AproxDistance(dest->momx, dest->momy) + FixedMul(source->info->speed, source->scale);
+			speedmul = P_GetMobjMomentum2D(dest) + FixedMul(source->info->speed, source->scale);
 
 		source->momx = FixedMul(FixedDiv(tx - source->x, dist), speedmul);
 		source->momy = FixedMul(FixedDiv(ty - source->y, dist), speedmul);
@@ -6334,9 +6334,7 @@ void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on y
 	}
 
 	// Instead of just unsetting NOCLIP like an idiot, let's check the distance to our target.
-	ndist = P_AproxDistance(P_AproxDistance(tx - (source->x+source->momx),
-	                                        ty - (source->y+source->momy)),
-	                                        tz - (source->z+source->momz));
+	ndist = GetDistance3D(tx, ty, tz, source->x + source->momx, source->y + source->momy, source->z + source->momz);
 
 	if (ndist > dist) // gone past our target
 	{
@@ -7028,7 +7026,7 @@ static void P_MaceSceneryThink(mobj_t *mobj)
 		// The below is selected based on CEZ2's first room. I promise you it is a coincidence that it looks like the weed number.
 		for (i = 0; i < MAXPLAYERS; ++i)
 			if (playeringame[i] && players[i].mo
-				&& P_AproxDistance(P_AproxDistance(mobj->x - players[i].mo->x, mobj->y - players[i].mo->y), mobj->z - players[i].mo->z) < (4200 << FRACBITS))
+				&& P_GetMobjDistance3D(mobj, players[i].mo) < (4200 << FRACBITS))
 				break; // Stop looking.
 		if (i == MAXPLAYERS)
 		{
@@ -7287,7 +7285,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 			continue;
 		if (!players[i].mo->health)
 			continue;
-		actualwork = work = FixedHypot(mobj->x - players[i].mo->x, mobj->y - players[i].mo->y);
+		actualwork = work = P_GetMobjDistance2D(mobj, players[i].mo);
 		if (player)
 		{
 			if (players[i].skin == 0 || players[i].skin == 5)
@@ -7359,7 +7357,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 			{
 				fixed_t mom, max;
 				P_Thrust(mobj, angletoplayer, (3*FRACUNIT) >> 1);
-				mom = FixedHypot(mobj->momx, mobj->momy);
+				mom = P_GetMobjMomentum2D(mobj);
 				max = pdist;
 				if ((--mobj->extravalue1) <= 0)
 				{
@@ -8057,7 +8055,7 @@ static boolean P_MobjBossThink(mobj_t *mobj)
 			{
 				if (mobj->target)
 				{
-					mobj->momz = FixedMul(FixedDiv(mobj->target->z - mobj->z, P_AproxDistance(mobj->x - mobj->target->x, mobj->y - mobj->target->y)), mobj->scale << 1);
+					mobj->momz = FixedMul(FixedDiv(mobj->target->z - mobj->z, P_GetMobjDistance2D(mobj, mobj->target)), mobj->scale << 1);
 					mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
 				}
 				else
@@ -8306,7 +8304,7 @@ static void P_ArrowThink(mobj_t *mobj)
 		0------dist(momx,momy)
 		*/
 
-		fixed_t dist = P_AproxDistance(mobj->momx, mobj->momy);
+		fixed_t dist = P_GetMobjMomentum2D(mobj);
 		angle_t angle = R_PointToAngle2(0, 0, dist, mobj->momz);
 
 		if (angle > ANG20 && angle <= ANGLE_180)
@@ -8344,7 +8342,7 @@ static void P_BumbleboreThink(mobj_t *mobj)
 		if (!mobj->target)
 			P_SetMobjState(mobj, mobj->info->spawnstate);
 		else if (P_MobjFlip(mobj)*((mobj->z + (mobj->height >> 1)) - (mobj->target->z + (mobj->target->height >> 1))) > 0
-			&& R_PointToDist2(mobj->x, mobj->y, mobj->target->x, mobj->target->y) <= 32*FRACUNIT)
+			&& P_AreMobjsClose2D(mobj, mobj->target, 32*FRACUNIT))
 		{
 			mobj->momx >>= 1;
 			mobj->momy >>= 1;
@@ -8490,7 +8488,7 @@ static boolean P_JetFume1Think(mobj_t *mobj)
 		mobj->destscale = mobj->target->scale;
 		if (!(dashmod && mobj->target->state == states + S_METALSONIC_BOUNCE))
 		{
-			mobj->destscale = (mobj->destscale + FixedDiv(R_PointToDist2(0, 0, mobj->target->momx, mobj->target->momy), 36*mobj->target->scale))/3;
+			mobj->destscale = (mobj->destscale + FixedDiv(P_GetMobjMomentum2D(mobj->target), 36*mobj->target->scale))/3;
 		}
 		if (mobj->target->eflags & MFE_VERTICALFLIP)
 			mobj->z = mobj->target->z + mobj->target->height/2 + mobj->height/2;
@@ -8594,9 +8592,7 @@ static boolean P_EggRobo1Think(mobj_t *mobj)
 						continue;
 					if (players[i].mo->z + players[i].mo->height < mobj->z - 8*mobj->scale)
 						continue;
-					compdist = P_AproxDistance(
-						players[i].mo->x + players[i].mo->momx - basex,
-						players[i].mo->y + players[i].mo->momy - basey);
+					compdist = GetDistance2D(players[i].mo->x + players[i].mo->momx, players[i].mo->y + players[i].mo->momy, basex, basey);
 					if (compdist >= dist)
 						continue;
 					dist = compdist;
@@ -8609,10 +8605,7 @@ static boolean P_EggRobo1Think(mobj_t *mobj)
 					mobj->frame = 3 + ((leveltime & 2) >> 1);
 					mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
 
-					if (P_AproxDistance(
-						mobj->x - basex,
-						mobj->y - basey)
-						< mobj->scale)
+					if (GetDistance2D(mobj->x, mobj->y, basex, basey) < mobj->scale)
 						S_StartSoundFromMobj(mobj, mobj->info->seesound);
 
 					P_MoveOrigin(mobj,
@@ -8640,7 +8633,7 @@ static boolean P_EggRobo1Think(mobj_t *mobj)
 
 			if (!didmove)
 			{
-				if (P_AproxDistance(mobj->x - basex, mobj->y - basey) < mobj->scale)
+				if (GetDistance2D(mobj->x, mobj->y, basex, basey) < mobj->scale)
 					P_MoveOrigin(mobj, basex, basey, mobj->z);
 				else
 					P_MoveOrigin(mobj,
@@ -9011,7 +9004,7 @@ static void P_PyreFlyThink(mobj_t *mobj)
 		P_PyreFlyBurn(mobj, fireradius*FRACUNIT, 40, MT_PYREFLY_FIRE, 0);
 	}
 
-	hdist = R_PointToDist2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
+	hdist = P_GetMobjDistance2D(mobj, mobj->target);
 
 	if (hdist > 1500*FRACUNIT)
 	{
@@ -9030,7 +9023,7 @@ static void P_PyreFlyThink(mobj_t *mobj)
 	{
 		//Aim for player z position. If too close to floor/ceiling, aim just above/below them.
 		fixed_t destz = min(max(mobj->target->z, mobj->target->floorz + 70*FRACUNIT), mobj->target->ceilingz - 80*FRACUNIT - mobj->height);
-		fixed_t dist = P_AproxDistance(hdist, destz - mobj->z);
+		fixed_t dist = GetDistance3D(mobj->x, mobj->y, mobj->z, destz, mobj->target->x, mobj->target->y);
 		P_InstaThrust(mobj, R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y), 2*FRACUNIT);
 		mobj->momz = FixedMul(FixedDiv(destz - mobj->z, dist), 2*FRACUNIT);
 	}
@@ -9086,7 +9079,7 @@ static void P_PterabyteThink(mobj_t *mobj)
 			return;
 		}
 
-		hdist = R_PointToDist2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
+		hdist = P_GetMobjDistance2D(mobj, mobj->target);
 		if (hdist > 450*FRACUNIT)
 		{
 			P_SetTarget(&mobj->target, NULL);
@@ -9132,7 +9125,7 @@ static void P_PterabyteThink(mobj_t *mobj)
 		var1 = 2*mobj->info->speed;
 		var2 = 1;
 		A_HomingChase(mobj);
-		if (P_AproxDistance(mobj->x - mobj->tracer->x, mobj->y - mobj->tracer->y) <= mobj->info->speed)
+		if (P_GetMobjDistance2D(mobj, mobj->tracer) <= mobj->info->speed)
 		{
 			mobj->extravalue1 -= 2;
 			mobj->momx = mobj->momy = mobj->momz = 0;
@@ -9159,7 +9152,7 @@ static void P_DragonbomberThink(mobj_t *mobj)
 				if (!P_MobjWasRemoved(mine))
 				{
 					mine->angle = segment->angle;
-					P_InstaThrust(mine, mobj->angle, P_AproxDistance(mobj->momx, mobj->momy) >> 1);
+					P_InstaThrust(mine, mobj->angle, P_GetMobjMomentum2D(mobj) >> 1);
 					P_SetObjectMomZ(mine, -2*FRACUNIT, true);
 					S_StartSoundFromMobj(mine, mine->info->seesound);
 				}
@@ -9170,7 +9163,7 @@ static void P_DragonbomberThink(mobj_t *mobj)
 	}
 	if (mobj->target) // Are we chasing a player?
 	{
-		fixed_t dist = P_AproxDistance(mobj->x - mobj->target->x, mobj->y - mobj->target->y);
+		fixed_t dist = P_GetMobjDistance2D(mobj, mobj->target);
 		if (dist > 2000*mobj->scale) // Not anymore!
 			P_SetTarget(&mobj->target, NULL);
 		else
@@ -9245,14 +9238,14 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 		fixed_t radius = pushmobj->spawnpoint->args[0] << FRACBITS;
 
 		if (pushmobj->spawnpoint->args[2] & TMPP_NOZFADE)
-			dist = P_AproxDistance(thing->x - sx, thing->y - sy);
+			dist = GetDistance2D(thing->x, thing->y, sx, sy);
 		else
 		{
 			// Make sure the Z is in range
 			if (thing->z < sz - radius || thing->z > sz + radius)
 				return false;
 
-			dist = P_AproxDistance(P_AproxDistance(thing->x - sx, thing->y - sy), thing->z - sz);
+			dist = GetDistance3D(sx, sy, sz, thing->x, thing->y, thing->z);
 		}
 
 		speed = (abs(pushmobj->spawnpoint->args[1]) - ((dist>>FRACBITS)>>1))<<(FRACBITS - PUSH_FACTOR - 1);
@@ -9393,7 +9386,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		mobj->eflags |= MFE_UNDERWATER; //P_MobjCheckWater(mobj); // solely for MFE_UNDERWATER for A_FlickySpawn
 		{
 			if (mobj->tracer && mobj->tracer->player && mobj->tracer->health > 0
-				&& P_AproxDistance(P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y), mobj->tracer->z - mobj->z) <= mobj->radius*16)
+				&& P_GetMobjDistance3D(mobj->tracer, mobj) <= mobj->radius*16)
 			{
 				var1 = mobj->info->speed;
 				var2 = 1;
@@ -9528,7 +9521,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 				if (playeringame[i] && players[i].mo
 					&& players[i].mare == mobj->threshold && players[i].spheres > 0)
 				{
-					fixed_t dist = P_AproxDistance(players[i].mo->x - mobj->x, players[i].mo->y - mobj->y);
+					fixed_t dist = P_GetMobjDistance2D(players[i].mo, mobj);
 					if (dist < shortest)
 					{
 						P_SetTarget(&mobj->target, players[i].mo);
@@ -9559,7 +9552,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		P_KoopaThinker(mobj);
 		break;
 	case MT_FIREBALL:
-		if (P_AproxDistance(mobj->momx, mobj->momy) <= 16*FRACUNIT) // Once fireballs lose enough speed, kill them
+		if (P_GetMobjMomentum2D(mobj) <= 16*FRACUNIT) // Once fireballs lose enough speed, kill them
 		{
 			P_KillMobj(mobj, NULL, NULL, 0);
 			return false;
@@ -9783,7 +9776,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		}
 
 		momz = abs(mobj->momz);
-		if (R_PointToDist2(0, 0, mobj->momx, mobj->momy) < momz)
+		if (P_GetMobjMomentum2D(mobj) < momz)
 			P_InstaThrust(mobj, R_PointToAngle2(0, 0, mobj->momx, mobj->momy), momz);
 		mobj->flags2 |= MF2_AMBUSH;
 		break;
@@ -10872,7 +10865,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 			}
 			break;
 		case MT_BIGMINE:
-			mobj->extravalue1 = FixedHypot(mobj->x, mobj->y)>>FRACBITS;
+			mobj->extravalue1 = GetDistance2D(0, 0, mobj->x, mobj->y) >> FRACBITS;
 			break;
 		case MT_WAVINGFLAG1:
 		case MT_WAVINGFLAG2:
@@ -11003,7 +10996,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 			}
 			break;
 		case MT_PYREFLY:
-			mobj->extravalue1 = (FixedHypot(mobj->x, mobj->y)/FRACUNIT) % 360;
+			mobj->extravalue1 = (GetDistance2D(0, 0, mobj->x, mobj->y) / FRACUNIT) % 360;
 			mobj->extravalue2 = 0;
 			mobj->fuse = 100;
 			break;
@@ -13958,7 +13951,7 @@ mobj_t *P_SpawnXYZMissile(mobj_t *source, mobj_t *dest, mobjtype_t type,
 	th->momx = FixedMul(speed, FINECOSINE(an));
 	th->momy = FixedMul(speed, FINESINE(an));
 
-	dist = P_AproxDistance(dest->x - x, dest->y - y);
+	dist = GetDistance2D(x, y, dest->x, dest->y);
 	dist = dist / speed;
 
 	if (dist < 1)
@@ -14021,7 +14014,7 @@ mobj_t *P_SpawnAlteredDirectionMissile(mobj_t *source, mobjtype_t type, fixed_t 
 	th->momx = FixedMul(speed, FINECOSINE(an));
 	th->momy = FixedMul(speed, FINESINE(an));
 
-	dist = P_AproxDistance(source->momx*800, source->momy*800);
+	dist = P_GetMobjMomentum2D(source)*800;
 	dist = dist / speed;
 
 	if (dist < 1)
@@ -14087,7 +14080,7 @@ mobj_t *P_SpawnPointMissile(mobj_t *source, fixed_t xa, fixed_t ya, fixed_t za, 
 	th->momx = FixedMul(speed, FINECOSINE(an));
 	th->momy = FixedMul(speed, FINESINE(an));
 
-	dist = P_AproxDistance(xa - x, ya - y);
+	dist = GetDistance2D(x, y, xa, ya);
 	dist = dist / speed;
 
 	if (dist < 1)
@@ -14168,9 +14161,9 @@ mobj_t *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type)
 	th->momy = FixedMul(speed, FINESINE(an));
 
 	if (type == MT_TURRETLASER || type == MT_ENERGYBALL) // More accurate!
-		dist = P_AproxDistance(dest->x+(dest->momx*gsf) - source->x, dest->y+(dest->momy*gsf) - source->y);
+		dist = GetDistance2D(source->x, source->y, dest->x+(dest->momx*gsf), dest->y+(dest->momy*gsf));
 	else
-		dist = P_AproxDistance(dest->x - source->x, dest->y - source->y);
+		dist = P_GetMobjDistance2D(dest, source);
 
 	dist = dist / speed;
 
@@ -14370,4 +14363,44 @@ boolean P_IsMobjInPainState(mobj_t *mobj)
 		return P_IsPlayerInState(mobj->player, S_PLAY_PAIN);
 	else
 		return (mobj->state == &states[mobj->info->painstate]);
+}
+
+fixed_t P_GetMobjDistance2D(mobj_t *mobj1, mobj_t *mobj2)
+{
+	return GetDistance2D(mobj1->x, mobj1->y, mobj2->x, mobj2->y);
+}
+
+fixed_t P_GetMobjDistance3D(mobj_t *mobj1, mobj_t *mobj2)
+{
+	return GetDistance3D(mobj1->x, mobj1->y, mobj1->z, mobj2->x, mobj2->y, mobj2->z);
+}
+
+boolean P_AreMobjsClose2D(mobj_t *mobj1, mobj_t *mobj2, fixed_t maxdist)
+{
+	return GetDistance2D(mobj1->x / 2, mobj1->y / 2, mobj2->x / 2, mobj2->y / 2) < maxdist / 2;
+}
+
+boolean P_AreMobjsClose3D(mobj_t *mobj1, mobj_t *mobj2, fixed_t maxdist)
+{
+	return GetDistance3D(mobj1->x / 2, mobj1->y / 2, mobj1->z / 2, mobj2->x / 2, mobj2->y / 2, mobj2->z / 2) < maxdist / 2;
+}
+
+boolean P_AreMobjsFar2D(mobj_t *mobj1, mobj_t *mobj2, fixed_t mindist)
+{
+	return GetDistance2D(mobj1->x / 2, mobj1->y / 2, mobj2->x / 2, mobj2->y / 2) > mindist / 2;
+}
+
+boolean P_AreMobjsFar3D(mobj_t *mobj1, mobj_t *mobj2, fixed_t mindist)
+{
+	return GetDistance3D(mobj1->x / 2, mobj1->y / 2, mobj1->z / 2, mobj2->x / 2, mobj2->y / 2, mobj2->z / 2) > mindist / 2;
+}
+
+fixed_t P_GetMobjMomentum2D(mobj_t *mobj)
+{
+	return GetDistance2D(0, 0, mobj->momx, mobj->momy);
+}
+
+fixed_t P_GetMobjMomentum3D(mobj_t *mobj)
+{
+	return GetDistance3D(0, 0, 0, mobj->momx, mobj->momy, mobj->momz);
 }
