@@ -781,7 +781,7 @@
     <ClCompile Include="..\lua_inputlib.c">
       <Filter>LUA</Filter>
     </ClCompile>
-	<ClCompile Include="..\lua_interceptlib.c">
+    <ClCompile Include="..\lua_interceptlib.c">
       <Filter>LUA</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_maplib.c">
