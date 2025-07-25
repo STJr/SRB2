@@ -121,24 +121,25 @@ INT32 GetLargeDistance3D(fixed_t x1, fixed_t y1, fixed_t z1, fixed_t x2, fixed_t
 	return GetDistance3D(x1 / 2, y1 / 2, z1 / 2, x2 / 2, y2 / 2, z2 / 2) / (FRACUNIT / 2);
 }
 
+// Divided by 4 so that the largest possible 3D distance between two points can be contained in a signed 32-bit integer
 boolean ArePointsClose2D(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, fixed_t maxdist)
 {
-	return GetDistance2D(x1 / 2, y1 / 2, x2 / 2, y2 / 2) < maxdist / 2;
+	return GetDistance2D(x1 / 4, y1 / 4, x2 / 4, y2 / 4) < maxdist / 4;
 }
 
 boolean ArePointsClose3D(fixed_t x1, fixed_t y1, fixed_t z1, fixed_t x2, fixed_t y2, fixed_t z2, fixed_t maxdist)
 {
-	return GetDistance3D(x1 / 2, y1 / 2, z1 / 2, x2 / 2, y2 / 2, z2 / 2) < maxdist / 2;
+	return GetDistance3D(x1 / 4, y1 / 4, z1 / 4, x2 / 4, y2 / 4, z2 / 4) < maxdist / 4;
 }
 
 boolean ArePointsFar2D(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, fixed_t mindist)
 {
-	return GetDistance2D(x1 / 2, y1 / 2, x2 / 2, y2 / 2) > mindist / 2;
+	return GetDistance2D(x1 / 4, y1 / 4, x2 / 4, y2 / 4) > mindist / 4;
 }
 
 boolean ArePointsFar3D(fixed_t x1, fixed_t y1, fixed_t z1, fixed_t x2, fixed_t y2, fixed_t z2, fixed_t mindist)
 {
-	return GetDistance3D(x1 / 2, y1 / 2, z1 / 2, x2 / 2, y2 / 2, z2 / 2) > mindist / 2;
+	return GetDistance3D(x1 / 4, y1 / 4, z1 / 4, x2 / 4, y2 / 4, z2 / 4) > mindist / 4;
 }
 
 vector2_t *FV2_Load(vector2_t *vec, fixed_t x, fixed_t y)
