@@ -143,7 +143,7 @@ if("${CMAKE_COMPILER_IS_GNUCC}" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
 	endif()
 endif()
 
-target_compile_features(SRB2SDL2 PRIVATE c_std_11 cxx_std_17)
+target_compile_features(SRB2SDL2 PRIVATE c_std_23 cxx_std_17)
 
 ### Configuration
 set(SRB2_CONFIG_DEV_BUILD OFF CACHE BOOL
