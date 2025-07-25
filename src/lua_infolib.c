@@ -82,7 +82,7 @@ static int lib_getSprname(lua_State *L)
 		i = lua_tonumber(L, 1);
 		if (i > NUMSPRITES)
 			return 0;
-		lua_pushlstring(L, sprnames[i], 4);
+		lua_pushstring(L, sprnames[i]);
 		return 1;
 	}
 	else if (lua_isstring(L, 1))
