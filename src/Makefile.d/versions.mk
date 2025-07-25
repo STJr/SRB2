@@ -17,7 +17,7 @@ $(foreach v,$(join $(wordlist 2,$(_n),- $(gcc_versions)),\
 	$(eval $(call _predecessor,$(subst =, ,$(v))))))
 
 # -W -Wno-unused
-WFLAGS:=-Wall -Wno-trigraphs -std=gnu23
+WFLAGS:=-Wall -Wno-trigraphs
 ifndef GCC295
 #WFLAGS+=-Wno-packed
 endif
