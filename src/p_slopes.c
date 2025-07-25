@@ -248,7 +248,7 @@ void T_DynamicSlopeVert (dynvertexplanethink_t* th)
 static inline void P_AddDynLineSlopeThinker (pslope_t* slope, dynplanetype_t type, line_t* sourceline, fixed_t extent)
 {
 	dynlineplanethink_t* th = Z_Calloc(sizeof (*th), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_DynamicSlopeLine;
+	th->thinker.function = (actionf_p1)T_DynamicSlopeLine;
 	th->slope = slope;
 	th->type = type;
 	th->sourceline = sourceline;
@@ -264,7 +264,7 @@ static inline void P_AddDynVertexSlopeThinker (pslope_t* slope, const INT16 tags
 	dynvertexplanethink_t* th = Z_Calloc(sizeof (*th), PU_LEVSPEC, NULL);
 	size_t i;
 	INT32 l;
-	th->thinker.function.acp1 = (actionf_p1)T_DynamicSlopeVert;
+	th->thinker.function = (actionf_p1)T_DynamicSlopeVert;
 	th->slope = slope;
 
 	for (i = 0; i < 3; i++) {

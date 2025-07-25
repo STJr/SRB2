@@ -63,7 +63,7 @@ void P_RunCachedActions(void)
 		var2 = states[ac->statenum].var2;
 		astate = &states[ac->statenum];
 		if (ac->mobj && !P_MobjWasRemoved(ac->mobj)) // just in case...
-			states[ac->statenum].action.acp1(ac->mobj);
+			states[ac->statenum].action(ac->mobj);
 		next = ac->next;
 		Z_Free(ac);
 	}
@@ -472,12 +472,12 @@ static boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		// Modified handling.
 		// Call action functions when the state is set
 
-		if (st->action.acp1)
+		if (st->action)
 		{
 			var1 = st->var1;
 			var2 = st->var2;
 			astate = st;
-			st->action.acp1(mobj);
+			st->action(mobj);
 
 			// woah. a player was removed by an action.
 			// this sounds like a VERY BAD THING, but there's nothing we can do now...
@@ -614,12 +614,12 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 		// Modified handling.
 		// Call action functions when the state is set
 
-		if (st->action.acp1)
+		if (st->action)
 		{
 			var1 = st->var1;
 			var2 = st->var2;
 			astate = st;
-			st->action.acp1(mobj);
+			st->action(mobj);
 			if (P_MobjWasRemoved(mobj))
 				return false;
 		}
@@ -3513,7 +3513,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 		if (!P_TryCameraMove(thiscam->x + thiscam->momx, thiscam->y + thiscam->momy, thiscam)) // Thanks for the greatly improved camera, Lach -- Sev
 		{ // Never fails for 2D mode.
 			mobj_t dummy;
-			dummy.thinker.function.acp1 = (actionf_p1)P_MobjThinker;
+			dummy.thinker.function = (actionf_p1)P_MobjThinker;
 			dummy.subsector = thiscam->subsector;
 			dummy.x = thiscam->x;
 			dummy.y = thiscam->y;
@@ -9881,13 +9881,13 @@ static void P_FiringThink(mobj_t *mobj)
 	if (mobj->health <= 0)
 		return;
 
-	if (mobj->state->action.acp1 == (actionf_p1)A_Boss1Laser)
+	if (mobj->state->action == (actionf_p1)A_Boss1Laser)
 	{
 		if (mobj->state->tics > 1)
 		{
 			var1 = mobj->state->var1;
 			var2 = mobj->state->var2 & 65535;
-			mobj->state->action.acp1(mobj);
+			mobj->state->action(mobj);
 		}
 	}
 	else if (leveltime & 1) // Fire mode
@@ -10648,7 +10648,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 	}
 
 	// this is officially a mobj, declared as soon as possible.
-	mobj->thinker.function.acp1 = (actionf_p1)P_MobjThinker;
+	mobj->thinker.function = (actionf_p1)P_MobjThinker;
 	mobj->type = type;
 	mobj->info = info;
 
@@ -10834,7 +10834,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 					ball->threshold = ball->radius + mobj->radius + FixedMul(ball->info->painchance, ball->scale);
 
 					var1 = ball->state->var1, var2 = ball->state->var2;
-					ball->state->action.acp1(ball);
+					ball->state->action(ball);
 				}
 			}
 			break;
@@ -11056,7 +11056,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 	}
 
 	// Call action functions when the state is set
-	if (st->action.acp1 && (mobj->flags & MF_RUNSPAWNFUNC))
+	if (st->action && (mobj->flags & MF_RUNSPAWNFUNC))
 	{
 		if (levelloading)
 		{
@@ -11071,7 +11071,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 			var1 = st->var1;
 			var2 = st->var2;
 			astate = st;
-			st->action.acp1(mobj);
+			st->action(mobj);
 			// DANGER! This can cause P_SpawnMobj to return NULL!
 			// Avoid using MF_RUNSPAWNFUNC on mobjs whose spawn state expects target or tracer to already be set!
 			if (P_MobjWasRemoved(mobj))
@@ -11119,7 +11119,7 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 	mobj->z = z;
 	mobj->momz = mobjinfo[type].speed;
 
-	mobj->thinker.function.acp1 = (actionf_p1)P_NullPrecipThinker;
+	mobj->thinker.function = (actionf_p1)P_NullPrecipThinker;
 	P_AddThinker(THINK_PRECIP, &mobj->thinker);
 
 	CalculatePrecipFloor(mobj);
@@ -11140,14 +11140,14 @@ static inline precipmobj_t *P_SpawnRainMobj(fixed_t x, fixed_t y, fixed_t z, mob
 {
 	precipmobj_t *mo = P_SpawnPrecipMobj(x,y,z,type);
 	mo->precipflags |= PCF_RAIN;
-	//mo->thinker.function.acp1 = (actionf_p1)P_RainThinker;
+	//mo->thinker.function = (actionf_p1)P_RainThinker;
 	return mo;
 }
 
 static inline precipmobj_t *P_SpawnSnowMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 {
 	precipmobj_t *mo = P_SpawnPrecipMobj(x,y,z,type);
-	//mo->thinker.function.acp1 = (actionf_p1)P_SnowThinker;
+	//mo->thinker.function = (actionf_p1)P_SnowThinker;
 	return mo;
 }
 
@@ -11301,7 +11301,7 @@ void P_RemovePrecipMobj(precipmobj_t *mobj)
 void P_RemoveSavegameMobj(mobj_t *mobj)
 {
 	// unlink from sector and block lists
-	if (((thinker_t *)mobj)->function.acp1 == (actionf_p1)P_NullPrecipThinker)
+	if (((thinker_t *)mobj)->function == (actionf_p1)P_NullPrecipThinker)
 	{
 		P_UnsetPrecipThingPosition((precipmobj_t *)mobj);
 

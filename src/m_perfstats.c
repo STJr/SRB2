@@ -592,7 +592,7 @@ static void PS_CountThinkers(void)
 				ps_mainthcount.value.i++;
 			else if (i == THINK_MOBJ)
 			{
-				if (thinker->function.acp1 == (actionf_p1)P_MobjThinker)
+				if (thinker->function == (actionf_p1)P_MobjThinker)
 				{
 					mobj_t *mobj = (mobj_t*)thinker;
 					ps_mobjcount.value.i++;
