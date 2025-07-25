@@ -8,59 +8,53 @@
       "name": "curl",
       "platform": "!wasm32"
     },
-    "libgme",
     {
-      "name":"libopenmpt",
-      "platform": "!wasm32"
+      "name": "curl",
+      "default-features": false,
+      "features": [
+        "mbedtls"
+      ],
+      "platform": "wasm32",
+      "version>=": "7.74.0#5"
     },
+    "libgme",
+    "libopenmpt",
     "libpng",
     "miniupnpc",
     {
       "name": "sdl2",
+      "platform": "!linux"
+    },
+    {
+      "name": "sdl2",
       "default-features": false,
       "features": [
-        {
-          "name": "wayland",
-          "platform": "linux"
-        },
-        {
-          "name": "x11",
-          "platform": "!windows"
-        }
+        "wayland",
+        "x11"
       ],
-      "platform": "!wasm32",
+      "platform": "linux",
       "version>=": "2.30.6#2"
     },
     {
       "name": "sdl2-mixer-ext",
       "features": [
         {
-          "name":"fluidsynth",
+          "name": "fluidsynth",
           "platform": "!static"
         },
         {
-          "name":"libflac",
-          "platform": "!wasm32"
+          "name": "libflac",
+          "platform": "!emscripten"
         },
         "libgme",
         "libmodplug",
-        {
-          "name":"libvorbis",
-          "platform": "!wasm32"
-        },
+        "libvorbis",
         "libxmp",
-        {
-          "name":"mpg123",
-          "platform": "!wasm32"
-        },
-        {
-          "name":"opusfile",
-          "platform": "!wasm32"
-        },
+        "mpg123",
+        "opusfile",
         "pxtone",
         "timidity"
       ],
-      "platform": "!wasm32",
       "version>=": "2.6.0#0"
     },
     "zlib"

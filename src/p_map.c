@@ -4310,7 +4310,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush, boolean crunch
 				{
 					crumble_t *crumbler;
 
-					if (think->function.acp1 != (actionf_p1)T_StartCrumble)
+					if (think->function != (actionf_p1)T_StartCrumble)
 						continue;
 
 					crumbler = (crumble_t *)think;

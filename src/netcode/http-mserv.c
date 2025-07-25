@@ -70,9 +70,7 @@ static boolean hms_allow_ipv6;
 static boolean hms_allow_ipv4;
 
 static char *hms_api;
-#ifdef HAVE_THREADS
 static I_mutex hms_api_mutex;
-#endif
 
 static char *hms_server_token;
 #ifndef NO_IPV6
@@ -86,7 +84,8 @@ struct HMS_buffer
 	CURL *curl;
 	char *buffer;
 	int   needle;
-	int    end;
+	int   end;
+	char *errbuf;
 };
 
 static void
@@ -160,6 +159,7 @@ HMS_connect (int proto, const char *format, ...)
 	size_t seek;
 	size_t token_length;
 	struct HMS_buffer *buffer;
+	CURLcode cc;
 
 #ifdef NO_IPV6
 	if (proto == PROTO_V6)
@@ -183,7 +183,7 @@ HMS_connect (int proto, const char *format, ...)
 
 	curl = curl_easy_init();
 
-	if (! curl)
+	if (!curl)
 	{
 		Contact_error();
 		Blame("From curl_easy_init.\n");
@@ -201,9 +201,7 @@ HMS_connect (int proto, const char *format, ...)
 		token_length = 0;
 	}
 
-#ifdef HAVE_THREADS
 	I_lock_mutex(&hms_api_mutex);
-#endif
 
 	init_user_agent_once();
 
@@ -215,9 +213,7 @@ HMS_connect (int proto, const char *format, ...)
 
 	sprintf(url, "%s/", hms_api);
 
-#ifdef HAVE_THREADS
 	I_unlock_mutex(hms_api_mutex);
-#endif
 
 	va_start (ap, format);
 	seek += vsprintf(&url[seek], format, ap);
@@ -233,40 +229,65 @@ HMS_connect (int proto, const char *format, ...)
 	buffer->end = DEFAULT_BUFFER_SIZE;
 	buffer->buffer = malloc(buffer->end);
 	buffer->needle = 0;
+	buffer->errbuf = malloc(CURL_ERROR_SIZE);
+	buffer->errbuf[0] = 0x00;
+
+	cc = curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, buffer->errbuf);
 
 	if (cv_masterserver_debug.value)
 	{
-		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-		curl_easy_setopt(curl, CURLOPT_STDERR, logstream);
+		cc = curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
+
+		cc = curl_easy_setopt(curl, CURLOPT_STDERR, logstream);
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
 	}
 
-	curl_easy_setopt(curl, CURLOPT_URL, url);
-	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+	cc = curl_easy_setopt(curl, CURLOPT_URL, url);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
+
+	cc = curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
 
 #ifndef NO_IPV6
 	if (proto == PROTO_V6 || (proto == PROTO_ANY && !hms_allow_ipv4))
 	{
-		curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V6);
+		cc = curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V6);
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
+
 		if (M_CheckParm("-bindaddr6") && M_IsNextParm())
 		{
-			curl_easy_setopt(curl, CURLOPT_INTERFACE, M_GetNextParm());
+			cc = curl_easy_setopt(curl, CURLOPT_INTERFACE, M_GetNextParm());
+			if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
 		}
 	}
 	if (proto == PROTO_V4 || (proto == PROTO_ANY && !hms_allow_ipv6))
 #endif
 	{
-		curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+		cc = curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
+
 		if (M_CheckParm("-bindaddr") && M_IsNextParm())
 		{
-			curl_easy_setopt(curl, CURLOPT_INTERFACE, M_GetNextParm());
+			cc = curl_easy_setopt(curl, CURLOPT_INTERFACE, M_GetNextParm());
+			if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
 		}
 	}
 
-	curl_easy_setopt(curl, CURLOPT_TIMEOUT, cv_masterserver_timeout.value);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HMS_on_read);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, buffer);
+	cc = curl_easy_setopt(curl, CURLOPT_TIMEOUT, cv_masterserver_timeout.value);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
 
-	curl_easy_setopt(curl, CURLOPT_USERAGENT, hms_useragent);
+	cc = curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 30L);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
+
+	cc = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HMS_on_read);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
+
+	cc = curl_easy_setopt(curl, CURLOPT_WRITEDATA, buffer);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
+
+	cc = curl_easy_setopt(curl, CURLOPT_USERAGENT, hms_useragent);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
 
 	curl_free(quack_token);
 	free(url);
@@ -288,15 +309,15 @@ HMS_do (struct HMS_buffer *buffer)
 	{
 		Contact_error();
 		Blame(
-				"From curl_easy_perform: %s\n",
-				curl_easy_strerror(cc)
+				"From curl_easy_perform: %s\n", buffer->errbuf
 		);
 		return 0;
 	}
 
 	buffer->buffer[buffer->needle] = '\0';
 
-	curl_easy_getinfo(buffer->curl, CURLINFO_RESPONSE_CODE, &status);
+	cc = curl_easy_getinfo(buffer->curl, CURLINFO_RESPONSE_CODE, &status);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
 
 	if (status != 200)
 	{
@@ -379,7 +400,6 @@ HMS_fetch_rooms (int joining, int query_id)
 				*/
 				if (joining || id_no != 0)
 				{
-#ifdef HAVE_THREADS
 					I_lock_mutex(&ms_QueryId_mutex);
 					{
 						if (query_id != ms_QueryId)
@@ -389,7 +409,6 @@ HMS_fetch_rooms (int joining, int query_id)
 
 					if (! doing_shit)
 						break;
-#endif
 
 					room_list[i].header.buffer[0] = 1;
 
@@ -413,9 +432,7 @@ HMS_fetch_rooms (int joining, int query_id)
 
 		if (doing_shit)
 		{
-#ifdef HAVE_THREADS
 			I_lock_mutex(&m_menu_mutex);
-#endif
 			{
 				for (i = 0; room_list[i].header.buffer[0]; i++)
 				{
@@ -427,9 +444,7 @@ HMS_fetch_rooms (int joining, int query_id)
 					}
 				}
 			}
-#ifdef HAVE_THREADS
 			I_unlock_mutex(m_menu_mutex);
-#endif
 		}
 	}
 	else
@@ -710,7 +725,6 @@ HMS_fetch_servers (msg_server_t *list, int room_number, int query_id)
 
 				if (address && port && title && version)
 				{
-#ifdef HAVE_THREADS
 					I_lock_mutex(&ms_QueryId_mutex);
 					{
 						if (query_id != ms_QueryId)
@@ -720,7 +734,6 @@ HMS_fetch_servers (msg_server_t *list, int room_number, int query_id)
 
 					if (! doing_shit)
 						break;
-#endif
 
 					if (strcmp(version, local_version) == 0)
 					{
@@ -809,16 +822,12 @@ HMS_compare_mod_version (char *buffer, size_t buffer_size)
 void
 HMS_set_api (char *api)
 {
-#ifdef HAVE_THREADS
 	I_lock_mutex(&hms_api_mutex);
-#endif
 	{
 		free(hms_api);
 		hms_api = api;
 	}
-#ifdef HAVE_THREADS
 	I_unlock_mutex(hms_api_mutex);
-#endif
 }
 
 #endif/*MASTERSERVER*/

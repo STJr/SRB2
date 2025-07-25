@@ -22,9 +22,7 @@ void CON_StopRefresh(void);
 boolean CON_PreResponder(event_t *ev);
 boolean CON_Responder(event_t *ev);
 
-#ifdef HAVE_THREADS
 extern I_mutex con_mutex;
-#endif
 
 // set true when screen size has changed, to adapt console
 extern boolean con_recalc;

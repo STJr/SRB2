@@ -3685,7 +3685,7 @@ static void P_DoClimbing(player_t *player)
 
 			for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
 			{
-				if (think->function.acp1 != (actionf_p1)T_Scroll)
+				if (think->function != (actionf_p1)T_Scroll)
 					continue;
 
 				scroller = (scroll_t *)think;

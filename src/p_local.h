@@ -308,7 +308,7 @@ void P_SceneryThinker(mobj_t *mobj);
 // To test it in Lua, check mobj.valid
 FUNCINLINE static ATTRINLINE boolean P_MobjWasRemoved(mobj_t *mobj)
 {
-	return mobj == NULL || mobj->thinker.function.acp1 != (actionf_p1)P_MobjThinker;
+	return mobj == NULL || mobj->thinker.function != (actionf_p1)P_MobjThinker;
 }
 
 fixed_t P_MobjFloorZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, fixed_t radius, line_t *line, boolean lowest, boolean perfect);

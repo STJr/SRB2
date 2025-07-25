@@ -1044,7 +1044,7 @@ static boolean PolyFade(line_t *line)
 	// Prevent continuous execs from interfering on an existing fade
 	if (!(line->args[3] & TMPF_OVERRIDE)
 		&& po->thinker
-		&& po->thinker->function.acp1 == (actionf_p1)T_PolyObjFade)
+		&& po->thinker->function == (actionf_p1)T_PolyObjFade)
 	{
 		CONS_Debug(DBG_POLYOBJ, "Line type 492 Executor: Fade PolyObject thinker already exists\n");
 		return 0;
@@ -1275,7 +1275,7 @@ static void P_AddExecutorDelay(line_t *line, mobj_t *mobj, sector_t *sector)
 
 	e = Z_Calloc(sizeof (*e), PU_LEVSPEC, NULL);
 
-	e->thinker.function.acp1 = (actionf_p1)T_ExecutorDelay;
+	e->thinker.function = (actionf_p1)T_ExecutorDelay;
 	e->line = line;
 	e->sector = sector;
 	e->timer = delay;
@@ -2035,7 +2035,7 @@ void P_SwitchWeather(INT32 weathernum)
 
 		for (think = thlist[THINK_PRECIP].next; think != &thlist[THINK_PRECIP]; think = think->next)
 		{
-			if (think->function.acp1 != (actionf_p1)P_NullPrecipThinker)
+			if (think->function != (actionf_p1)P_NullPrecipThinker)
 				continue; // not a precipmobj thinker
 
 			precipmobj = (precipmobj_t *)think;
@@ -2051,7 +2051,7 @@ void P_SwitchWeather(INT32 weathernum)
 
 		for (think = thlist[THINK_PRECIP].next; think != &thlist[THINK_PRECIP]; think = think->next)
 		{
-			if (think->function.acp1 != (actionf_p1)P_NullPrecipThinker)
+			if (think->function != (actionf_p1)P_NullPrecipThinker)
 				continue; // not a precipmobj thinker
 			precipmobj = (precipmobj_t *)think;
 
@@ -2068,7 +2068,7 @@ void P_SwitchWeather(INT32 weathernum)
 				precipmobj->precipflags &= ~PCF_INVISIBLE;
 
 				precipmobj->precipflags |= PCF_RAIN;
-				//think->function.acp1 = (actionf_p1)P_RainThinker;
+				//think->function = (actionf_p1)P_RainThinker;
 			}
 			else if (weathernum == PRECIP_SNOW) // Rain To Snow
 			{
@@ -2093,11 +2093,11 @@ void P_SwitchWeather(INT32 weathernum)
 
 				precipmobj->precipflags &= ~(PCF_INVISIBLE|PCF_RAIN);
 
-				//think->function.acp1 = (actionf_p1)P_SnowThinker;
+				//think->function = (actionf_p1)P_SnowThinker;
 			}
 			else // Remove precip, but keep it around for reuse.
 			{
-				//think->function.acp1 = (actionf_p1)P_NullPrecipThinker;
+				//think->function = (actionf_p1)P_NullPrecipThinker;
 
 				precipmobj->precipflags |= PCF_INVISIBLE;
 			}
@@ -2761,7 +2761,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 				{
-					if (th->function.acp1 != (actionf_p1)T_Scroll)
+					if (th->function != (actionf_p1)T_Scroll)
 						continue;
 
 					scroller = (scroll_t *)th;
@@ -5563,7 +5563,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 			break;
 
 		// Should this FOF have friction?
-		if(th->function.acp1 == (actionf_p1)T_Friction)
+		if(th->function == (actionf_p1)T_Friction)
 		{
 			f = (friction_t *)th;
 
@@ -5571,7 +5571,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 				Add_Friction(f->friction, f->movefactor, (INT32)(sec-sectors), f->affectee);
 		}
 		// Should this FOF have wind/current/pusher?
-		else if(th->function.acp1 == (actionf_p1)T_Pusher)
+		else if(th->function == (actionf_p1)T_Pusher)
 		{
 			p = (pusher_t *)th;
 
@@ -5658,7 +5658,7 @@ static void P_AddFloatThinker(sector_t *sec, UINT16 tag, line_t *sourceline)
 	floater = Z_Calloc(sizeof (*floater), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &floater->thinker);
 
-	floater->thinker.function.acp1 = (actionf_p1)T_FloatSector;
+	floater->thinker.function = (actionf_p1)T_FloatSector;
 
 	floater->sector = sec;
 	floater->tag = (INT16)tag;
@@ -5689,7 +5689,7 @@ static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, 
 	displace = Z_Calloc(sizeof (*displace), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &displace->thinker);
 
-	displace->thinker.function.acp1 = (actionf_p1)T_PlaneDisplace;
+	displace->thinker.function = (actionf_p1)T_PlaneDisplace;
 	displace->affectee = affectee;
 	displace->control = control;
 	displace->last_height = sectors[control].floorheight;
@@ -5719,7 +5719,7 @@ static void P_AddBlockThinker(sector_t *sec, line_t *sourceline)
 	block = Z_Calloc(sizeof (*block), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &block->thinker);
 
-	block->thinker.function.acp1 = (actionf_p1)T_MarioBlockChecker;
+	block->thinker.function = (actionf_p1)T_MarioBlockChecker;
 	block->sourceline = sourceline;
 
 	block->sector = sec;
@@ -5744,7 +5744,7 @@ static void P_AddRaiseThinker(sector_t *sec, INT16 tag, fixed_t speed, fixed_t c
 	raise = Z_Calloc(sizeof (*raise), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &raise->thinker);
 
-	raise->thinker.function.acp1 = (actionf_p1)T_RaiseSector;
+	raise->thinker.function = (actionf_p1)T_RaiseSector;
 
 	raise->tag = tag;
 	raise->sector = sec;
@@ -5771,7 +5771,7 @@ static void P_AddAirbob(sector_t *sec, INT16 tag, fixed_t dist, boolean raise, b
 	airbob = Z_Calloc(sizeof (*airbob), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &airbob->thinker);
 
-	airbob->thinker.function.acp1 = (actionf_p1)T_RaiseSector;
+	airbob->thinker.function = (actionf_p1)T_RaiseSector;
 
 	airbob->tag = tag;
 	airbob->sector = sec;
@@ -5813,7 +5813,7 @@ static inline void P_AddThwompThinker(sector_t *sec, line_t *sourceline, fixed_t
 	thwomp = Z_Calloc(sizeof (*thwomp), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &thwomp->thinker);
 
-	thwomp->thinker.function.acp1 = (actionf_p1)T_ThwompSector;
+	thwomp->thinker.function = (actionf_p1)T_ThwompSector;
 
 	// set up the fields according to the type of elevator action
 	thwomp->sourceline = sourceline;
@@ -5852,7 +5852,7 @@ static inline void P_AddNoEnemiesThinker(line_t *sourceline)
 	nobaddies = Z_Calloc(sizeof (*nobaddies), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &nobaddies->thinker);
 
-	nobaddies->thinker.function.acp1 = (actionf_p1)T_NoEnemiesSector;
+	nobaddies->thinker.function = (actionf_p1)T_NoEnemiesSector;
 
 	nobaddies->sourceline = sourceline;
 }
@@ -5872,7 +5872,7 @@ static void P_AddEachTimeThinker(line_t *sourceline, boolean triggerOnExit)
 	eachtime = Z_Calloc(sizeof (*eachtime), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &eachtime->thinker);
 
-	eachtime->thinker.function.acp1 = (actionf_p1)T_EachTimeThinker;
+	eachtime->thinker.function = (actionf_p1)T_EachTimeThinker;
 
 	eachtime->sourceline = sourceline;
 	eachtime->triggerOnExit = triggerOnExit;
@@ -5894,7 +5894,7 @@ static inline void P_AddCameraScanner(sector_t *sourcesec, sector_t *actionsecto
 	elevator = Z_Calloc(sizeof (*elevator), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &elevator->thinker);
 
-	elevator->thinker.function.acp1 = (actionf_p1)T_CameraScanner;
+	elevator->thinker.function = (actionf_p1)T_CameraScanner;
 	elevator->type = elevateBounce;
 
 	// set up the fields according to the type of elevator action
@@ -5978,7 +5978,7 @@ static inline void P_AddLaserThinker(INT16 tag, line_t *line, boolean nobosses)
 
 	P_AddThinker(THINK_MAIN, &flash->thinker);
 
-	flash->thinker.function.acp1 = (actionf_p1)T_LaserFlash;
+	flash->thinker.function = (actionf_p1)T_LaserFlash;
 	flash->tag = tag;
 	flash->sourceline = line;
 	flash->nobosses = nobosses;
@@ -6379,9 +6379,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 	// Firstly, find out how many there are in each sector
 	for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)T_Friction)
+		if (th->function == (actionf_p1)T_Friction)
 			secthinkers[((friction_t *)th)->affectee].count++;
-		else if (th->function.acp1 == (actionf_p1)T_Pusher)
+		else if (th->function == (actionf_p1)T_Pusher)
 			secthinkers[((pusher_t *)th)->affectee].count++;
 	}
 
@@ -6399,9 +6399,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 	{
 		size_t secnum = (size_t)-1;
 
-		if (th->function.acp1 == (actionf_p1)T_Friction)
+		if (th->function == (actionf_p1)T_Friction)
 			secnum = ((friction_t *)th)->affectee;
-		else if (th->function.acp1 == (actionf_p1)T_Pusher)
+		else if (th->function == (actionf_p1)T_Pusher)
 			secnum = ((pusher_t *)th)->affectee;
 
 		if (secnum != (size_t)-1)
@@ -7763,7 +7763,7 @@ static boolean IsSector3DBlock(sector_t* sec)
 static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT32 affectee, INT32 accel, INT32 exclusive)
 {
 	scroll_t *s = Z_Calloc(sizeof *s, PU_LEVSPEC, NULL);
-	s->thinker.function.acp1 = (actionf_p1)T_Scroll;
+	s->thinker.function = (actionf_p1)T_Scroll;
 	s->type = type;
 	s->dx = dx;
 	s->dy = dy;
@@ -7905,7 +7905,7 @@ static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t o
 {
 	disappear_t *d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
 
-	d->thinker.function.acp1 = (actionf_p1)T_Disappear;
+	d->thinker.function = (actionf_p1)T_Disappear;
 	d->appeartime = appeartime;
 	d->disappeartime = disappeartime;
 	d->offset = offset;
@@ -8298,7 +8298,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 
 	d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
 
-	d->thinker.function.acp1 = (actionf_p1)T_Fade;
+	d->thinker.function = (actionf_p1)T_Fade;
 	d->rover = rover;
 	d->sectornum = (UINT32)sectornum;
 	d->ffloornum = (UINT32)ffloornum;
@@ -8450,7 +8450,7 @@ static void Add_ColormapFader(sector_t *sector, extracolormap_t *source_exc, ext
 	}
 
 	d = Z_Malloc(sizeof *d, PU_LEVSPEC, NULL);
-	d->thinker.function.acp1 = (actionf_p1)T_FadeColormap;
+	d->thinker.function = (actionf_p1)T_FadeColormap;
 	d->sector = sector;
 	d->source_exc = source_exc;
 	d->dest_exc = dest_exc;
@@ -8574,7 +8574,7 @@ static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32
 {
 	friction_t *f = Z_Calloc(sizeof *f, PU_LEVSPEC, NULL);
 
-	f->thinker.function.acp1 = (actionf_p1)T_Friction;
+	f->thinker.function = (actionf_p1)T_Friction;
 	f->friction = friction;
 	f->movefactor = movefactor;
 	f->affectee = affectee;
@@ -8712,7 +8712,7 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, fixed_t 
 {
 	pusher_t *p = Z_Calloc(sizeof *p, PU_LEVSPEC, NULL);
 
-	p->thinker.function.acp1 = (actionf_p1)T_Pusher;
+	p->thinker.function = (actionf_p1)T_Pusher;
 	p->type = type;
 	p->x_mag = x_mag;
 	p->y_mag = y_mag;

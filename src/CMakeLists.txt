@@ -144,7 +144,7 @@ if("${CMAKE_COMPILER_IS_GNUCC}" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
 	endif()
 endif()
 
-target_compile_features(SRB2SDL2 PRIVATE c_std_11 cxx_std_17)
+target_compile_features(SRB2SDL2 PRIVATE c_std_23 cxx_std_17)
 
 ### Configuration
 set(SRB2_CONFIG_DEV_BUILD OFF CACHE BOOL
@@ -192,9 +192,6 @@ if("${SRB2_CONFIG_USE_GME}")
 endif()
 
 target_compile_definitions(SRB2SDL2 PRIVATE -D_LARGEFILE64_SOURCE)
-
-set(SRB2_HAVE_THREADS ON)
-target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_THREADS)
 
 if("${SRB2_CONFIG_HWRENDER}")
 	target_compile_definitions(SRB2SDL2 PRIVATE -DHWRENDER)
