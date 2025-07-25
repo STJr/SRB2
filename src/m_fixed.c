@@ -124,21 +124,47 @@ INT32 GetLargeDistance3D(fixed_t x1, fixed_t y1, fixed_t z1, fixed_t x2, fixed_t
 // Divided by 4 so that the largest possible 3D distance between two points can be contained in a signed 32-bit integer
 boolean ArePointsClose2D(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, fixed_t maxdist)
 {
+	if (
+		(UINT64)llabs((INT64)x2 - (INT64)x1) >= (UINT64)maxdist ||
+		(UINT64)llabs((INT64)y2 - (INT64)y1) >= (UINT64)maxdist
+	)
+		return false;
+
 	return GetDistance2D(x1 / 4, y1 / 4, x2 / 4, y2 / 4) < maxdist / 4;
 }
 
 boolean ArePointsClose3D(fixed_t x1, fixed_t y1, fixed_t z1, fixed_t x2, fixed_t y2, fixed_t z2, fixed_t maxdist)
 {
+	if (
+		(UINT64)llabs((INT64)x2 - (INT64)x1) >= (UINT64)maxdist ||
+		(UINT64)llabs((INT64)y2 - (INT64)y1) >= (UINT64)maxdist ||
+		(UINT64)llabs((INT64)z2 - (INT64)z1) >= (UINT64)maxdist
+	)
+		return false;
+
 	return GetDistance3D(x1 / 4, y1 / 4, z1 / 4, x2 / 4, y2 / 4, z2 / 4) < maxdist / 4;
 }
 
 boolean ArePointsFar2D(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, fixed_t mindist)
 {
+	if (
+		(UINT64)llabs((INT64)x2 - (INT64)x1) >= (UINT64)mindist ||
+		(UINT64)llabs((INT64)y2 - (INT64)y1) >= (UINT64)mindist
+	)
+		return true;
+
 	return GetDistance2D(x1 / 4, y1 / 4, x2 / 4, y2 / 4) > mindist / 4;
 }
 
 boolean ArePointsFar3D(fixed_t x1, fixed_t y1, fixed_t z1, fixed_t x2, fixed_t y2, fixed_t z2, fixed_t mindist)
 {
+	if (
+		(UINT64)llabs((INT64)x2 - (INT64)x1) >= (UINT64)mindist ||
+		(UINT64)llabs((INT64)y2 - (INT64)y1) >= (UINT64)mindist ||
+		(UINT64)llabs((INT64)z2 - (INT64)z1) >= (UINT64)mindist
+	)
+		return true;
+
 	return GetDistance3D(x1 / 4, y1 / 4, z1 / 4, x2 / 4, y2 / 4, z2 / 4) > mindist / 4;
 }
 
