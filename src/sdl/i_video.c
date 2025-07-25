@@ -20,6 +20,10 @@
 /// \file
 /// \brief SRB2 graphics stuff for SDL
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #include <stdlib.h>
 
 #include <signal.h>
@@ -475,6 +479,35 @@ static void SurfaceInfo(const SDL_Surface *infoSurface, const char *SurfaceText)
 		CONS_Printf("%s", M_GetText(" Colorkey RLE acceleration blit\n"));
 }
 
+static void TimingInfo(void)
+{
+#ifdef __EMSCRIPTEN__
+	int mode = -1, value = -1;
+	emscripten_get_main_loop_timing(&mode, &value);
+	CONS_Printf("\x82" "Currect Timing Mode\n");
+	if (mode == -1)
+	{
+		CONS_Printf(" Unknown\n");
+	}
+	else if (mode == EM_TIMING_SETTIMEOUT)
+	{
+		CONS_Printf(" everty %d ms\n", value);
+	}
+	else if (mode == EM_TIMING_RAF)
+	{
+		CONS_Printf(" every %d vsync\n", value);
+	}
+	else if (mode == EM_TIMING_SETIMMEDIATE)
+	{
+		CONS_Printf(" Unknown value %d\n", value);
+	}
+	else
+	{
+		CONS_Printf(" Unknown mode %d\n", mode);
+	}
+#endif
+}
+
 static void VID_Command_Info_f (void)
 {
 #if 0
@@ -522,6 +555,7 @@ static void VID_Command_Info_f (void)
 	SurfaceInfo(bufSurface, M_GetText("Current Engine Mode"));
 	SurfaceInfo(vidSurface, M_GetText("Current Video Mode"));
 #endif
+	TimingInfo();
 }
 
 static void VID_Command_ModeList_f(void)
@@ -1832,7 +1866,11 @@ void I_StartupGraphics(void)
 	I_ShutdownTTF();
 #endif
 
+#ifdef __EMSCRIPTEN__
+	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH*2, BASEVIDHEIGHT*2));
+#else
 	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
+#endif
 
 	if (M_CheckParm("-nomousegrab"))
 		mousegrabok = SDL_FALSE;
@@ -1976,3 +2014,79 @@ UINT32 I_GetRefreshRate(void)
 	// trouble querying mode over and over again.
 	return refresh_rate;
 }
+
+#ifdef __EMSCRIPTEN__
+int EMSCRIPTEN_KEEPALIVE change_resolution(int x, int y)
+{
+	int newmode = -1;
+
+	if ( x < BASEVIDWIDTH*1 && y < BASEVIDHEIGHT*1)
+		newmode = VID_GetModeForSize(BASEVIDWIDTH*1, BASEVIDHEIGHT*1);
+	else if (x < BASEVIDWIDTH*2 && y < BASEVIDHEIGHT*2)
+		newmode = VID_GetModeForSize(BASEVIDWIDTH*1, BASEVIDHEIGHT*1);
+	else if (x < BASEVIDWIDTH*3 && y < BASEVIDHEIGHT*3)
+		newmode = VID_GetModeForSize(BASEVIDWIDTH*2, BASEVIDHEIGHT*2);
+#if 0
+	else if (x < BASEVIDWIDTH*4 && y < BASEVIDHEIGHT*4)
+		newmode = VID_GetModeForSize(BASEVIDWIDTH*3, BASEVIDHEIGHT*3);
+	else if (x < BASEVIDWIDTH*5 && y < BASEVIDHEIGHT*5)
+		newmode = VID_GetModeForSize(BASEVIDWIDTH*4, BASEVIDHEIGHT*4);
+	else if (x < BASEVIDWIDTH*6 && y < BASEVIDHEIGHT*6)
+		newmode = VID_GetModeForSize(BASEVIDWIDTH*5, BASEVIDHEIGHT*5);
+	else
+		newmode = VID_GetModeForSize(BASEVIDWIDTH*6, BASEVIDHEIGHT*6);
+#else
+	else
+		newmode = VID_GetModeForSize(BASEVIDWIDTH*2, BASEVIDHEIGHT*2);
+#endif
+
+	if (newmode != -1)
+		setmodeneeded = newmode;
+
+	if (setmodeneeded)
+		return 1;
+
+	return 0;
+}
+
+void EMSCRIPTEN_KEEPALIVE inject_text(const char *text)
+{
+	event_t event;
+	size_t len = 0;
+	event.type = ev_text;
+	{
+		event.key = text[len];
+		D_PostEvent(&event);
+		len++;
+	} while (text[len] != 0x00);
+}
+
+void EMSCRIPTEN_KEEPALIVE inject_keycode(int key, int type)
+{
+	event_t event;
+	if (type == true)
+	{
+		event.type = ev_keyup;
+	}
+	else if (type == false)
+	{
+		event.type = ev_keydown;
+	}
+	else
+	{
+		return;
+	}
+	event.key = key;
+	if (event.key) D_PostEvent(&event);
+}
+
+void EMSCRIPTEN_KEEPALIVE unlock_mouse(void)
+{
+	SDLforceUngrabMouse();
+}
+
+void EMSCRIPTEN_KEEPALIVE lock_mouse(void)
+{
+	SDLdoGrabMouse();
+}
+#endif

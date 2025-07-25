@@ -23,6 +23,10 @@
 /// \file
 /// \brief SRB2 system stuff for SDL
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #include <signal.h>
 
 #ifdef _WIN32
@@ -79,7 +83,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #define HAVE_SDLCPUINFO
 
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
-#if defined (__linux__) || defined (__HAIKU__)
+#if defined (__linux__) || defined (__HAIKU__) || defined (__EMSCRIPTEN__)
 #include <sys/statvfs.h>
 #else
 #include <sys/statvfs.h>
@@ -103,6 +107,10 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 #endif
 
+#ifdef __EMSCRIPTEN__
+#undef HAVE_TERMIOS // do not read on /dev/tty, JavaScript alert() are blocking
+#endif
+
 #if defined(UNIXCOMMON)
 #include <poll.h>
 #endif
@@ -111,7 +119,9 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <errno.h>
 #include <sys/wait.h>
 #ifndef __HAIKU__ // haiku's crash dialog is just objectively better
+#ifndef __EMSCRIPTEN__ // WASM does not have a rell fork()
 #define NEWSIGNALHANDLER
+#endif
 #endif
 #endif
 
@@ -145,11 +155,13 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if !defined (__EMSCRIPTEN__)
 #ifndef NOEXECINFO
 #include <execinfo.h>
 #endif
 #include <time.h>
 #define UNIXBACKTRACE
+#endif
 #endif
 
 // Locations to directly check for srb2.pk3 in
@@ -967,8 +979,13 @@ void I_OutputMsg(const char *fmt, ...)
 	}
 #endif
 
+#ifdef __EMSCRIPTEN__
+	fprintf(stdout, "%s", txt);
+#else
 	if (!framebuffer)
 		fprintf(stderr, "%s", txt);
+#endif
+
 #ifdef HAVE_TERMIOS
 	if (consolevent && txt[len-1] == '\n')
 	{
@@ -2295,6 +2312,12 @@ void I_StartupTimer(void)
 
 void I_Sleep(UINT32 ms)
 {
+#if defined (__EMSCRIPTEN__)
+	if (emscripten_has_asyncify())
+	{
+		return emscripten_sleep(ms);
+	}
+#endif
 	SDL_Delay(ms);
 }
 
@@ -2440,10 +2463,8 @@ INT32 I_StartupSystem(void)
 	SDL_version SDLlinked;
 	SDL_VERSION(&SDLcompiled)
 	SDL_GetVersion(&SDLlinked);
-#ifdef HAVE_THREADS
 	I_start_threads();
 	I_AddExitFunc(I_stop_threads);
-#endif
 	I_StartupConsole();
 #ifdef NEWSIGNALHANDLER
 	// This is useful when debugging. It lets GDB attach to
@@ -2506,6 +2527,10 @@ void I_Quit(void)
 		free(myargv); // Deallocate allocated memory
 death:
 	W_Shutdown();
+#ifdef __EMSCRIPTEN__
+	emscripten_cancel_main_loop();
+	emscripten_force_exit(0);
+#endif
 	exit(0);
 }
 
@@ -3218,7 +3243,13 @@ size_t I_GetFreeMem(size_t *total)
 #else
 	// Guess 48 MB.
 	if (total)
+	{
+#if SDL_VERSION_ATLEAST(2,0,1)
+		*total = SDL_GetSystemRAM();
+#else
 		*total = 48<<20;
+#endif
+	}
 	return 48<<20;
 #endif
 }

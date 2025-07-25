@@ -124,9 +124,7 @@ typedef enum
 	NUM_QUITMESSAGES
 } text_enum;
 
-#ifdef HAVE_THREADS
 I_mutex m_menu_mutex;
-#endif
 
 M_waiting_mode_t m_waiting_mode = M_NOT_WAITING;
 
@@ -3814,29 +3812,32 @@ void M_SetupNextMenu(menu_t *menudef)
 {
 	INT16 i;
 
-#if defined (MASTERSERVER) && defined (HAVE_THREADS)
-	if (currentMenu == &MP_RoomDef || currentMenu == &MP_ConnectDef)
+#if defined (MASTERSERVER)
+	if (I_can_thread())
 	{
-		I_lock_mutex(&ms_QueryId_mutex);
+		if (currentMenu == &MP_RoomDef || currentMenu == &MP_ConnectDef)
 		{
-			ms_QueryId++;
-		}
-		I_unlock_mutex(ms_QueryId_mutex);
-	}
-
-	if (currentMenu == &MP_ConnectDef)
-	{
-		I_lock_mutex(&ms_ServerList_mutex);
-		{
-			if (ms_ServerList)
+			I_lock_mutex(&ms_QueryId_mutex);
 			{
-				free(ms_ServerList);
-				ms_ServerList = NULL;
+				ms_QueryId++;
 			}
+			I_unlock_mutex(ms_QueryId_mutex);
 		}
-		I_unlock_mutex(ms_ServerList_mutex);
+
+		if (currentMenu == &MP_ConnectDef)
+		{
+			I_lock_mutex(&ms_ServerList_mutex);
+			{
+				if (ms_ServerList)
+				{
+					free(ms_ServerList);
+					ms_ServerList = NULL;
+				}
+			}
+			I_unlock_mutex(ms_ServerList_mutex);
+		}
 	}
-#endif/*HAVE_THREADS*/
+#endif/*MASTERSERVER*/
 
 	if (currentMenu->quitroutine)
 	{
@@ -3903,7 +3904,7 @@ void M_Ticker(void)
 	if (currentMenu == &OP_ScreenshotOptionsDef)
 		M_SetupScreenshotMenu();
 
-#if defined (MASTERSERVER) && defined (HAVE_THREADS)
+#if defined (MASTERSERVER)
 	if (!netgame)
 		return;
 
@@ -11388,7 +11389,7 @@ static boolean M_CheckMODVersion(int id)
 }
 #endif/*UPDATE_ALERT*/
 
-#if defined (MASTERSERVER) && defined (HAVE_THREADS)
+#if defined (MASTERSERVER)
 static void
 Check_new_version_thread (int *id)
 {
@@ -11445,7 +11446,7 @@ Check_new_version_thread (int *id)
 
 	free(id);
 }
-#endif/*defined (MASTERSERVER) && defined (HAVE_THREADS)*/
+#endif/*defined (MASTERSERVER)*/
 
 static void M_ConnectMenu(INT32 choice)
 {
@@ -11487,7 +11488,7 @@ UINT32 roomIds[NUM_LIST_ROOMS];
 static void M_RoomMenu(INT32 choice)
 {
 	INT32 i;
-#if defined (MASTERSERVER) && defined (HAVE_THREADS)
+#if defined (MASTERSERVER)
 	int *id;
 #endif
 
@@ -11510,44 +11511,53 @@ static void M_RoomMenu(INT32 choice)
 	M_SetupNextMenu(&MP_RoomDef);
 
 #ifdef MASTERSERVER
-#ifdef HAVE_THREADS
+	if (I_can_thread())
+	{
 #ifdef UPDATE_ALERT
-	m_waiting_mode = M_WAITING_VERSION;
+		m_waiting_mode = M_WAITING_VERSION;
 #else/*UPDATE_ALERT*/
-	m_waiting_mode = M_WAITING_ROOMS;
+		m_waiting_mode = M_WAITING_ROOMS;
 #endif/*UPDATE_ALERT*/
 
-	MP_RoomMenu[0].text = "";
+		MP_RoomMenu[0].text = "";
 
-	id = malloc(sizeof *id);
+		id = malloc(sizeof *id);
 
-	I_lock_mutex(&ms_QueryId_mutex);
-	{
-		*id = ms_QueryId;
+		I_lock_mutex(&ms_QueryId_mutex);
+		{
+			*id = ms_QueryId;
+		}
+		I_unlock_mutex(ms_QueryId_mutex);
+
+		if(!I_spawn_thread("check-new-version",
+				(I_thread_fn)Check_new_version_thread, id))
+		{
+			free(id);
+		}
 	}
-	I_unlock_mutex(ms_QueryId_mutex);
-
-	I_spawn_thread("check-new-version",
-			(I_thread_fn)Check_new_version_thread, id);
-#else/*HAVE_THREADS*/
+	else
+	{
 #ifdef UPDATE_ALERT
-	if (M_CheckMODVersion(0))
+		if (M_CheckMODVersion(0))
 #endif/*UPDATE_ALERT*/
-	{
-		GetRoomsList(currentMenu->prevMenu == &MP_ServerDef, 0);
+		{
+			GetRoomsList(currentMenu->prevMenu == &MP_ServerDef, 0);
+		}
 	}
-#endif/*HAVE_THREADS*/
 #endif/*MASTERSERVER*/
 }
 
 static void M_ChooseRoom(INT32 choice)
 {
-#if defined (MASTERSERVER) && defined (HAVE_THREADS)
-	I_lock_mutex(&ms_QueryId_mutex);
+#if defined (MASTERSERVER)
+	if (I_can_thread())
 	{
-		ms_QueryId++;
+		I_lock_mutex(&ms_QueryId_mutex);
+		{
+			ms_QueryId++;
+		}
+		I_unlock_mutex(ms_QueryId_mutex);
 	}
-	I_unlock_mutex(ms_QueryId_mutex);
 #endif
 
 	if (choice == 0)
