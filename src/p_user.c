@@ -472,9 +472,9 @@ boolean P_TransferToNextMare(player_t *player)
 	thinker_t *th;
 	mobj_t *mo2;
 	mobj_t *closestaxis = NULL;
-	INT32 lowestaxisnum = -1;
+	INT32 lowestaxisnum = INT32_MAX;
 	UINT8 mare = P_FindLowestMare();
-	fixed_t dist1, dist2 = 0;
+	INT32 dist, closestdist = INT32_MAX;
 
 	if (mare == 255)
 		return false;
@@ -500,22 +500,12 @@ boolean P_TransferToNextMare(player_t *player)
 		if (mo2->threshold != mare)
 			continue;
 
-		if (closestaxis == NULL)
+		dist = P_GetMobjLargeDistance2D(player->mo, mo2) - mo2->radius / FRACUNIT;
+		if (mo2->health < lowestaxisnum && dist < closestdist)
 		{
 			closestaxis = mo2;
 			lowestaxisnum = mo2->health;
-			dist2 = P_GetMobjDistance2D(player->mo, mo2) - mo2->radius;
-		}
-		else if (mo2->health < lowestaxisnum)
-		{
-			dist1 = P_GetMobjDistance2D(player->mo, mo2) - mo2->radius;
-
-			if (dist1 < dist2)
-			{
-				closestaxis = mo2;
-				lowestaxisnum = mo2->health;
-				dist2 = dist1;
-			}
+			closestdist = dist;
 		}
 	}
 
@@ -606,7 +596,7 @@ void P_TransferToAxis(player_t *player, INT32 axisnum)
 	mobj_t *mo2;
 	mobj_t *closestaxis;
 	INT32 mare = player->mare;
-	fixed_t dist1, dist2 = 0;
+	INT32 dist, closestdist = INT32_MAX;
 
 	CONS_Debug(DBG_NIGHTS, "Transferring to axis %d\nLeveltime: %u...\n", axisnum, leveltime);
 
@@ -628,20 +618,11 @@ void P_TransferToAxis(player_t *player, INT32 axisnum)
 		if (mo2->threshold != mare)
 			continue;
 
-		if (closestaxis == NULL)
+		dist = P_GetMobjLargeDistance2D(player->mo, mo2) - mo2->radius / FRACUNIT;
+		if (dist < closestdist)
 		{
 			closestaxis = mo2;
-			dist2 = P_GetMobjDistance2D(player->mo, mo2) - mo2->radius;
-		}
-		else
-		{
-			dist1 = P_GetMobjDistance2D(player->mo, mo2) - mo2->radius;
-
-			if (dist1 < dist2)
-			{
-				closestaxis = mo2;
-				dist2 = dist1;
-			}
+			closestdist = dist;
 		}
 	}
 
@@ -7313,7 +7294,7 @@ static void P_NiGHTSMovement(player_t *player)
 
 	if (!player->mo->target)
 	{
-		fixed_t dist1, dist2 = 0;
+		fixed_t dist, closestdist = INT32_MAX;
 
 		// scan the thinkers
 		// to find the closest axis point
@@ -7329,20 +7310,11 @@ static void P_NiGHTSMovement(player_t *player)
 			if (mo2->threshold != player->mare)
 				continue;
 
-			if (closestaxis == NULL)
+			dist = GetDistance2D(newx, newy, mo2->x, mo2->y) - mo2->radius;
+			if (dist < closestdist)
 			{
 				closestaxis = mo2;
-				dist2 = GetDistance2D(newx, newy, mo2->x, mo2->y) - mo2->radius;
-			}
-			else
-			{
-				dist1 = GetDistance2D(newx, newy, mo2->x, mo2->y) - mo2->radius;
-
-				if (dist1 < dist2)
-				{
-					closestaxis = mo2;
-					dist2 = dist1;
-				}
+				closestdist = dist;
 			}
 		}
 		P_SetTarget(&player->mo->target, closestaxis);
@@ -9329,6 +9301,10 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction,
 			continue; // not a valid object
 		}
 
+		// Early check to prevent integer overflow across large distances
+		if (P_AreMobjsFar2D(player->mo, mo, maxdist))
+			continue;
+
 		{
 			fixed_t xydist = P_GetMobjDistance2D(player->mo, mo);
 			fixed_t zdist = (player->mo->z + player->mo->height/2) - (mo->z + mo->height/2);
@@ -9424,6 +9400,10 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet)
 			continue;
 
 		if (!bullet && mo->type == MT_DETON) // Don't be STUPID, Sonic!
+			continue;
+
+		// Early check to prevent integer overflow across large distances
+		if (P_AreMobjsFar2D(player->mo, mo, maxdist))
 			continue;
 
 		{
@@ -10633,7 +10613,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		}
 
 		/* check z distance too for orbital camera */
-		if (GetDistance3D(vx, vy, vz, mo->x, mo->y, mo->z + mo->height / 2) < FixedMul(48*FRACUNIT, mo->scale))
+		if (ArePointsClose3D(vx, vy, vz, mo->x, mo->y, mo->z + mo->height / 2, FixedMul(48*FRACUNIT, mo->scale)))
 			mo->flags2 |= MF2_SHADOW;
 		else
 			mo->flags2 &= ~MF2_SHADOW;
@@ -12119,7 +12099,7 @@ void P_PlayerThink(player_t *player)
 			if (mo2->flags2 & MF2_NIGHTSPULL)
 				continue;
 
-			if (GetDistance3D(x, y, z, mo2->x, mo2->y, mo2->z) > FixedMul(128*FRACUNIT, player->mo->scale))
+			if (ArePointsFar3D(x, y, z, mo2->x, mo2->y, mo2->z, FixedMul(128*FRACUNIT, player->mo->scale)))
 				continue;
 
 			// Yay! The thing's in reach! Pull it in!

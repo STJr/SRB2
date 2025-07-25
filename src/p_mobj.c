@@ -6023,7 +6023,7 @@ mobj_t *P_GetClosestAxis(mobj_t *source)
 	thinker_t *th;
 	mobj_t *mo2;
 	mobj_t *closestaxis = NULL;
-	fixed_t dist1, dist2 = 0;
+	INT32 dist, closestdist = INT32_MAX;
 
 	// scan the thinkers to find the closest axis point
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
@@ -6035,20 +6035,11 @@ mobj_t *P_GetClosestAxis(mobj_t *source)
 
 		if (mo2->type == MT_AXIS)
 		{
-			if (closestaxis == NULL)
+			dist = P_GetMobjLargeDistance2D(source, mo2) - mo2->radius / FRACUNIT;
+			if (dist < closestdist)
 			{
 				closestaxis = mo2;
-				dist2 = P_GetMobjDistance2D(source, mo2) - mo2->radius;
-			}
-			else
-			{
-				dist1 = P_GetMobjDistance2D(source, mo2) - mo2->radius;
-
-				if (dist1 < dist2)
-				{
-					closestaxis = mo2;
-					dist2 = dist1;
-				}
+				closestdist = dist;
 			}
 		}
 	}
@@ -7284,6 +7275,8 @@ static void P_RosySceneryThink(mobj_t *mobj)
 		if (players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN)
 			continue;
 		if (!players[i].mo->health)
+			continue;
+		if (P_AreMobjsFar2D(mobj, players[i].mo, pdist)) // Integer overflow prevention
 			continue;
 		actualwork = work = P_GetMobjDistance2D(mobj, players[i].mo);
 		if (player)
@@ -8573,11 +8566,12 @@ static boolean P_EggRobo1Think(mobj_t *mobj)
 			if (mobj->state == &states[mobj->info->spawnstate])
 			{
 				UINT8 i;
-				fixed_t dist = INT32_MAX;
+				fixed_t dist;
+				INT32 largedist = INT32_MAX;
 
 				for (i = 0; i < MAXPLAYERS; i++)
 				{
-					fixed_t compdist;
+					INT32 compdist;
 					if (!playeringame[i])
 						continue;
 					if (players[i].spectator)
@@ -8592,12 +8586,14 @@ static boolean P_EggRobo1Think(mobj_t *mobj)
 						continue;
 					if (players[i].mo->z + players[i].mo->height < mobj->z - 8*mobj->scale)
 						continue;
-					compdist = GetDistance2D(players[i].mo->x + players[i].mo->momx, players[i].mo->y + players[i].mo->momy, basex, basey);
-					if (compdist >= dist)
+					compdist = GetLargeDistance2D(players[i].mo->x + players[i].mo->momx, players[i].mo->y + players[i].mo->momy, basex, basey);
+					if (compdist >= largedist)
 						continue;
-					dist = compdist;
+					largedist = compdist;
 					P_SetTarget(&mobj->target, players[i].mo);
 				}
+
+				dist = mobj->target ? GetDistance2D(mobj->target->x + mobj->target->momx, mobj->target->y + mobj->target->momy, basex, basey) : INT32_MAX;
 
 				if (dist < (SPECTATORRADIUS << 1))
 				{
@@ -9514,14 +9510,14 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 			// Target nearest player on your mare.
 			// (You can make it float up/down by adding MF_FLOAT,
 			//  but beware level design pitfalls.)
-			fixed_t shortest = 1024*FRACUNIT;
+			INT32 shortest = 1024;
 			INT32 i;
 			P_SetTarget(&mobj->target, NULL);
 			for (i = 0; i < MAXPLAYERS; i++)
 				if (playeringame[i] && players[i].mo
 					&& players[i].mare == mobj->threshold && players[i].spheres > 0)
 				{
-					fixed_t dist = P_GetMobjDistance2D(players[i].mo, mobj);
+					INT32 dist = P_GetMobjLargeDistance2D(players[i].mo, mobj);
 					if (dist < shortest)
 					{
 						P_SetTarget(&mobj->target, players[i].mo);
@@ -13916,6 +13912,7 @@ mobj_t *P_SpawnXYZMissile(mobj_t *source, mobj_t *dest, mobjtype_t type,
 	angle_t an;
 	INT32 dist;
 	fixed_t speed;
+	boolean spawned;
 
 	I_Assert(source != NULL);
 	I_Assert(dest != NULL);
@@ -13960,11 +13957,11 @@ mobj_t *P_SpawnXYZMissile(mobj_t *source, mobj_t *dest, mobjtype_t type,
 	th->momz = (dest->z - z) / dist;
 
 	if (th->flags & MF_MISSILE)
-		dist = P_CheckMissileSpawn(th);
+		spawned = P_CheckMissileSpawn(th);
 	else
-		dist = 1;
+		spawned = 1;
 
-	return dist ? th : NULL;
+	return spawned ? th : NULL;
 }
 
 //
@@ -14375,24 +14372,34 @@ fixed_t P_GetMobjDistance3D(mobj_t *mobj1, mobj_t *mobj2)
 	return GetDistance3D(mobj1->x, mobj1->y, mobj1->z, mobj2->x, mobj2->y, mobj2->z);
 }
 
+INT32 P_GetMobjLargeDistance2D(mobj_t *mobj1, mobj_t *mobj2)
+{
+	return GetLargeDistance2D(mobj1->x, mobj1->y, mobj2->x, mobj2->y);
+}
+
+INT32 P_GetMobjLargeDistance3D(mobj_t *mobj1, mobj_t *mobj2)
+{
+	return GetLargeDistance3D(mobj1->x, mobj1->y, mobj1->z, mobj2->x, mobj2->y, mobj2->z);
+}
+
 boolean P_AreMobjsClose2D(mobj_t *mobj1, mobj_t *mobj2, fixed_t maxdist)
 {
-	return GetDistance2D(mobj1->x / 2, mobj1->y / 2, mobj2->x / 2, mobj2->y / 2) < maxdist / 2;
+	return ArePointsClose2D(mobj1->x, mobj1->y, mobj2->x, mobj2->y, maxdist);
 }
 
 boolean P_AreMobjsClose3D(mobj_t *mobj1, mobj_t *mobj2, fixed_t maxdist)
 {
-	return GetDistance3D(mobj1->x / 2, mobj1->y / 2, mobj1->z / 2, mobj2->x / 2, mobj2->y / 2, mobj2->z / 2) < maxdist / 2;
+	return ArePointsClose3D(mobj1->x, mobj1->y, mobj1->z, mobj2->x, mobj2->y, mobj2->z, maxdist);
 }
 
 boolean P_AreMobjsFar2D(mobj_t *mobj1, mobj_t *mobj2, fixed_t mindist)
 {
-	return GetDistance2D(mobj1->x / 2, mobj1->y / 2, mobj2->x / 2, mobj2->y / 2) > mindist / 2;
+	return ArePointsFar2D(mobj1->x, mobj1->y, mobj2->x, mobj2->y, mindist);
 }
 
 boolean P_AreMobjsFar3D(mobj_t *mobj1, mobj_t *mobj2, fixed_t mindist)
 {
-	return GetDistance3D(mobj1->x / 2, mobj1->y / 2, mobj1->z / 2, mobj2->x / 2, mobj2->y / 2, mobj2->z / 2) > mindist / 2;
+	return ArePointsFar3D(mobj1->x, mobj1->y, mobj1->z, mobj2->x, mobj2->y, mobj2->z, mindist);
 }
 
 fixed_t P_GetMobjMomentum2D(mobj_t *mobj)

@@ -1095,7 +1095,7 @@ void T_ThwompSector(thwomp_t *thwomp)
 				if (players[i].mo->z > thwomp->sector->ceilingheight)
 					continue;
 
-				if (GetDistance2D(thwompx, thwompy, players[i].mo->x, players[i].mo->y) > 96*FRACUNIT)
+				if (ArePointsFar2D(thwompx, thwompy, players[i].mo->x, players[i].mo->y, 96*FRACUNIT))
 					continue;
 
 				thwomp->direction = -1;

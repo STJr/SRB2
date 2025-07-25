@@ -22,8 +22,8 @@
 void B_UpdateBotleader(player_t *player)
 {
 	UINT32 i;
-	fixed_t dist;
-	fixed_t neardist = INT32_MAX;
+	INT32 dist;
+	INT32 neardist = INT32_MAX;
 	player_t *nearplayer = NULL;
 	//Find new botleader
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -41,7 +41,7 @@ void B_UpdateBotleader(player_t *player)
 			return;
 
 		//Update best candidate based on nearest distance
-		dist = GetDistance2D(player->mo->x, player->mo->y, players[i].mo->x, players[i].mo->y);
+		dist = P_GetMobjLargeDistance2D(player->mo, players[i].mo);
 		if (neardist > dist)
 		{
 			neardist = dist;

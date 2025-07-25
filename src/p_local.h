@@ -561,6 +561,8 @@ boolean P_IsMobjInPainState(mobj_t *mobj);
 
 fixed_t P_GetMobjDistance2D(mobj_t *mobj1, mobj_t *mobj2);
 fixed_t P_GetMobjDistance3D(mobj_t *mobj1, mobj_t *mobj2);
+INT32 P_GetMobjLargeDistance2D(mobj_t *mobj1, mobj_t *mobj2);
+INT32 P_GetMobjLargeDistance3D(mobj_t *mobj1, mobj_t *mobj2);
 boolean P_AreMobjsClose2D(mobj_t *mobj1, mobj_t *mobj2, fixed_t maxdist);
 boolean P_AreMobjsClose3D(mobj_t *mobj1, mobj_t *mobj2, fixed_t maxdist);
 boolean P_AreMobjsFar2D(mobj_t *mobj1, mobj_t *mobj2, fixed_t mindist);

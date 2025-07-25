@@ -3392,8 +3392,8 @@ void A_Fall(mobj_t *actor)
 void A_1upThinker(mobj_t *actor)
 {
 	INT32 i;
-	fixed_t dist = INT32_MAX;
-	fixed_t temp;
+	INT32 closestdist = INT32_MAX;
+	INT32 dist;
 	INT32 closestplayer = -1;
 
 	if (LUA_CallAction(A_1UPTHINKER, actor))
@@ -3410,12 +3410,12 @@ void A_1upThinker(mobj_t *actor)
 		if ((netgame || multiplayer) && players[i].playerstate != PST_LIVE)
 			continue;
 
-		temp = P_GetMobjDistance2D(actor, players[i].mo);
+		dist = P_GetMobjLargeDistance2D(actor, players[i].mo);
 
-		if (temp < dist)
+		if (dist < closestdist)
 		{
 			closestplayer = i;
-			dist = temp;
+			closestdist = dist;
 		}
 	}
 
@@ -8723,7 +8723,7 @@ void A_FindTarget(mobj_t *actor)
 	mobj_t *targetedmobj = NULL;
 	thinker_t *th;
 	mobj_t *mo2;
-	fixed_t dist1 = 0, dist2 = 0;
+	INT32 dist = 0, bestdist = 0;
 
 	if (LUA_CallAction(A_FINDTARGET, actor))
 		return;
@@ -8747,16 +8747,16 @@ void A_FindTarget(mobj_t *actor)
 			if (targetedmobj == NULL)
 			{
 				targetedmobj = mo2;
-				dist2 = P_GetMobjDistance2D(actor, mo2);
+				bestdist = P_GetMobjLargeDistance2D(actor, mo2);
 			}
 			else
 			{
-				dist1 = P_GetMobjDistance2D(actor, mo2);
+				dist = P_GetMobjLargeDistance2D(actor, mo2);
 
-				if ((!locvar2 && dist1 < dist2) || (locvar2 && dist1 > dist2))
+				if ((!locvar2 && dist < bestdist) || (locvar2 && dist > bestdist))
 				{
 					targetedmobj = mo2;
-					dist2 = dist1;
+					bestdist = dist;
 				}
 			}
 		}
@@ -8787,7 +8787,7 @@ void A_FindTracer(mobj_t *actor)
 	mobj_t *targetedmobj = NULL;
 	thinker_t *th;
 	mobj_t *mo2;
-	fixed_t dist1 = 0, dist2 = 0;
+	INT32 dist = 0, bestdist = 0;
 
 	if (LUA_CallAction(A_FINDTRACER, actor))
 		return;
@@ -8811,16 +8811,16 @@ void A_FindTracer(mobj_t *actor)
 			if (targetedmobj == NULL)
 			{
 				targetedmobj = mo2;
-				dist2 = P_GetMobjDistance2D(actor, mo2);
+				bestdist = P_GetMobjLargeDistance2D(actor, mo2);
 			}
 			else
 			{
-				dist1 = P_GetMobjDistance2D(actor, mo2);
+				dist = P_GetMobjLargeDistance2D(actor, mo2);
 
-				if ((!locvar2 && dist1 < dist2) || (locvar2 && dist1 > dist2))
+				if ((!locvar2 && dist < bestdist) || (locvar2 && dist > bestdist))
 				{
 					targetedmobj = mo2;
-					dist2 = dist1;
+					bestdist = dist;
 				}
 			}
 		}
@@ -9470,7 +9470,7 @@ void A_RemoteAction(mobj_t *actor)
 		mobj_t *targetedmobj = NULL;
 		thinker_t *th;
 		mobj_t *mo2;
-		fixed_t dist1 = 0, dist2 = 0;
+		INT32 dist = 0, bestdist = 0;
 
 		// scan the thinkers
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
@@ -9485,16 +9485,16 @@ void A_RemoteAction(mobj_t *actor)
 				if (targetedmobj == NULL)
 				{
 					targetedmobj = mo2;
-					dist2 = P_GetMobjDistance2D(actor, mo2);
+					bestdist = P_GetMobjLargeDistance2D(actor, mo2);
 				}
 				else
 				{
-					dist1 = P_GetMobjDistance2D(actor, mo2);
+					dist = P_GetMobjLargeDistance2D(actor, mo2);
 
-					if ((locvar2 && dist1 < dist2) || (!locvar2 && dist1 > dist2))
+					if ((locvar2 && dist < bestdist) || (!locvar2 && dist > bestdist))
 					{
 						targetedmobj = mo2;
-						dist2 = dist1;
+						bestdist = dist;
 					}
 				}
 			}
@@ -14112,7 +14112,7 @@ void A_SnapperThinker(mobj_t *actor)
 
 	// Look for nearby, valid players to chase angrily at.
 	if ((actor->target || P_LookForPlayers(actor, true, false, 1024*FRACUNIT))
-		&& GetDistance2D(xs, ys, actor->target->x, actor->target->y) < 2048*FRACUNIT
+		&& ArePointsClose2D(xs, ys, actor->target->x, actor->target->y, 2048*FRACUNIT)
 		&& abs(actor->target->z - actor->z) < 80*FRACUNIT
 		&& P_CheckSight(actor, actor->target))
 	{

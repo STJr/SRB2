@@ -1190,6 +1190,30 @@ static int lib_pGetMobjDistance3D(lua_State *L)
 	return 1;
 }
 
+static int lib_pGetMobjLargeDistance2D(lua_State *L)
+{
+	mobj_t *mobj1 = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *mobj2 = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	//HUDSAFE
+	INLEVEL
+	if (!(mobj1 && mobj2))
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushinteger(L, P_GetMobjLargeDistance2D(mobj1, mobj2));
+	return 1;
+}
+
+static int lib_pGetMobjLargeDistance3D(lua_State *L)
+{
+	mobj_t *mobj1 = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *mobj2 = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	//HUDSAFE
+	INLEVEL
+	if (!(mobj1 && mobj2))
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushinteger(L, P_GetMobjLargeDistance3D(mobj1, mobj2));
+	return 1;
+}
+
 static int lib_pAreMobjsClose2D(lua_State *L)
 {
 	mobj_t *mobj1 = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -4652,6 +4676,8 @@ static luaL_Reg lib[] = {
 	{"P_PlayerZMovement",lib_pPlayerZMovement},
 	{"P_GetMobjDistance2D",lib_pGetMobjDistance2D},
 	{"P_GetMobjDistance3D",lib_pGetMobjDistance3D},
+	{"P_GetMobjLargeDistance2D",lib_pGetMobjLargeDistance2D},
+	{"P_GetMobjLargeDistance3D",lib_pGetMobjLargeDistance3D},
 	{"P_AreMobjsClose2D",lib_pAreMobjsClose2D},
 	{"P_AreMobjsClose3D",lib_pAreMobjsClose3D},
 	{"P_AreMobjsFar2D",lib_pAreMobjsFar2D},

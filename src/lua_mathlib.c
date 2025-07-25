@@ -199,6 +199,82 @@ static int lib_getdistance3d(lua_State *L)
 	return 1;
 }
 
+static int lib_getlargedistance2d(lua_State *L)
+{
+	fixed_t x1 = luaL_checkfixed(L, 1);
+	fixed_t y1 = luaL_checkfixed(L, 2);
+	fixed_t x2 = luaL_checkfixed(L, 3);
+	fixed_t y2 = luaL_checkfixed(L, 4);
+	//HUDSAFE
+	lua_pushinteger(L, GetLargeDistance2D(x1, y1, x2, y2));
+	return 1;
+}
+
+static int lib_getlargedistance3d(lua_State *L)
+{
+	fixed_t x1 = luaL_checkfixed(L, 1);
+	fixed_t y1 = luaL_checkfixed(L, 2);
+	fixed_t z1 = luaL_checkfixed(L, 3);
+	fixed_t x2 = luaL_checkfixed(L, 4);
+	fixed_t y2 = luaL_checkfixed(L, 5);
+	fixed_t z2 = luaL_checkfixed(L, 6);
+	//HUDSAFE
+	lua_pushinteger(L, GetLargeDistance3D(x1, y1, z1, x2, y2, z2));
+	return 1;
+}
+
+static int lib_arepointsclose2d(lua_State *L)
+{
+	fixed_t x1 = luaL_checkfixed(L, 1);
+	fixed_t y1 = luaL_checkfixed(L, 2);
+	fixed_t x2 = luaL_checkfixed(L, 3);
+	fixed_t y2 = luaL_checkfixed(L, 4);
+	fixed_t maxdist = luaL_checkfixed(L, 5);
+	//HUDSAFE
+	lua_pushboolean(L, ArePointsClose2D(x1, y1, x2, y2, maxdist));
+	return 1;
+}
+
+static int lib_arepointsclose3d(lua_State *L)
+{
+	fixed_t x1 = luaL_checkfixed(L, 1);
+	fixed_t y1 = luaL_checkfixed(L, 2);
+	fixed_t z1 = luaL_checkfixed(L, 3);
+	fixed_t x2 = luaL_checkfixed(L, 4);
+	fixed_t y2 = luaL_checkfixed(L, 5);
+	fixed_t z2 = luaL_checkfixed(L, 6);
+	fixed_t maxdist = luaL_checkfixed(L, 7);
+	//HUDSAFE
+	lua_pushboolean(L, ArePointsClose3D(x1, y1, z1, x2, y2, z2, maxdist));
+	return 1;
+}
+
+static int lib_arepointsfar2d(lua_State *L)
+{
+	fixed_t x1 = luaL_checkfixed(L, 1);
+	fixed_t y1 = luaL_checkfixed(L, 2);
+	fixed_t x2 = luaL_checkfixed(L, 3);
+	fixed_t y2 = luaL_checkfixed(L, 4);
+	fixed_t mindist = luaL_checkfixed(L, 5);
+	//HUDSAFE
+	lua_pushboolean(L, ArePointsFar2D(x1, y1, x2, y2, mindist));
+	return 1;
+}
+
+static int lib_arepointsfar3d(lua_State *L)
+{
+	fixed_t x1 = luaL_checkfixed(L, 1);
+	fixed_t y1 = luaL_checkfixed(L, 2);
+	fixed_t z1 = luaL_checkfixed(L, 3);
+	fixed_t x2 = luaL_checkfixed(L, 4);
+	fixed_t y2 = luaL_checkfixed(L, 5);
+	fixed_t z2 = luaL_checkfixed(L, 6);
+	fixed_t mindist = luaL_checkfixed(L, 7);
+	//HUDSAFE
+	lua_pushboolean(L, ArePointsFar3D(x1, y1, z1, x2, y2, z2, mindist));
+	return 1;
+}
+
 // Misc. math
 // (aka extra little funcs that don't quite fit in baselib)
 //////////////////////////////////////////////////////////////////
@@ -262,6 +338,12 @@ static luaL_Reg lib_math[] = {
 	{"fixround"  , lib_fixedround},
 	{"GetDistance2D", lib_getdistance2d},
 	{"GetDistance3D", lib_getdistance3d},
+	{"GetLargeDistance2D", lib_getlargedistance2d},
+	{"GetLargeDistance3D", lib_getlargedistance3d},
+	{"ArePointsClose2D",lib_arepointsclose2d},
+	{"ArePointsClose3D",lib_arepointsclose3d},
+	{"ArePointsFar2D",lib_arepointsfar2d},
+	{"ArePointsFar3D",lib_arepointsfar3d},
 	{"GetSecSpecial", lib_getsecspecial},
 	{"All7Emeralds", lib_all7emeralds},
 	{"ColorOpposite", lib_coloropposite},

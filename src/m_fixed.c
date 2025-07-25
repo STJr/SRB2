@@ -111,6 +111,36 @@ fixed_t GetDistance3D(fixed_t x1, fixed_t y1, fixed_t z1, fixed_t x2, fixed_t y2
 	return GetDistance2D(0, z1, GetDistance2D(x1, y1, x2, y2), z2);
 }
 
+INT32 GetLargeDistance2D(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2)
+{
+	return GetDistance2D(x1 / 2, y1 / 2, x2 / 2, y2 / 2) / (FRACUNIT / 2);
+}
+
+INT32 GetLargeDistance3D(fixed_t x1, fixed_t y1, fixed_t z1, fixed_t x2, fixed_t y2, fixed_t z2)
+{
+	return GetDistance3D(x1 / 2, y1 / 2, z1 / 2, x2 / 2, y2 / 2, z2 / 2) / (FRACUNIT / 2);
+}
+
+boolean ArePointsClose2D(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, fixed_t maxdist)
+{
+	return GetDistance2D(x1 / 2, y1 / 2, x2 / 2, y2 / 2) < maxdist / 2;
+}
+
+boolean ArePointsClose3D(fixed_t x1, fixed_t y1, fixed_t z1, fixed_t x2, fixed_t y2, fixed_t z2, fixed_t maxdist)
+{
+	return GetDistance3D(x1 / 2, y1 / 2, z1 / 2, x2 / 2, y2 / 2, z2 / 2) < maxdist / 2;
+}
+
+boolean ArePointsFar2D(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, fixed_t mindist)
+{
+	return GetDistance2D(x1 / 2, y1 / 2, x2 / 2, y2 / 2) > mindist / 2;
+}
+
+boolean ArePointsFar3D(fixed_t x1, fixed_t y1, fixed_t z1, fixed_t x2, fixed_t y2, fixed_t z2, fixed_t mindist)
+{
+	return GetDistance3D(x1 / 2, y1 / 2, z1 / 2, x2 / 2, y2 / 2, z2 / 2) > mindist / 2;
+}
+
 vector2_t *FV2_Load(vector2_t *vec, fixed_t x, fixed_t y)
 {
 	vec->x = x;
