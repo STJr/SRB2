@@ -3998,20 +3998,20 @@ static void P_DoBossDefaultDeath(mobj_t *mo)
 // var1 = unused
 // var2 = unused
 //
-void A_BossDeath(mobj_t *mo)
+void A_BossDeath(mobj_t *actor)
 {
 	INT32 i;
 
-	if (LUA_CallAction(A_BOSSDEATH, mo))
+	if (LUA_CallAction(A_BOSSDEATH, actor))
 		return;
 
-	if (mo->spawnpoint && mo->spawnpoint->args[2])
-		P_LinedefExecute(mo->spawnpoint->args[2], mo, NULL);
-	mo->health = 0;
+	if (actor->spawnpoint && actor->spawnpoint->args[2])
+		P_LinedefExecute(actor->spawnpoint->args[2], actor, NULL);
+	actor->health = 0;
 
 	// Boss is dead (but not necessarily fleeing...)
 	// Lua may use this to ignore bosses after they start fleeing
-	mo->flags2 |= MF2_BOSSDEAD;
+	actor->flags2 |= MF2_BOSSDEAD;
 
 	// make sure there is a player alive for victory
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -4022,46 +4022,46 @@ void A_BossDeath(mobj_t *mo)
 	if (i == MAXPLAYERS)
 		return; // no one left alive, so do not end game
 
-	P_DoBossVictory(mo);
+	P_DoBossVictory(actor);
 
-	if (LUA_HookMobj(mo, MOBJ_HOOK(BossDeath)))
+	if (LUA_HookMobj(actor, MOBJ_HOOK(BossDeath)))
 		return;
-	else if (P_MobjWasRemoved(mo))
+	else if (P_MobjWasRemoved(actor))
 		return;
 
 	// Spawn your junk
-	switch (mo->type)
+	switch (actor->type)
 	{
 		default:
 			break;
 		case MT_EGGMOBILE: // twin laser pods
-			P_SpawnBoss1Junk(mo);
+			P_SpawnBoss1Junk(actor);
 			break;
 		case MT_EGGMOBILE2: // twin tanks + spigot
-			P_SpawnBoss2Junk(mo);
+			P_SpawnBoss2Junk(actor);
 			break;
 		case MT_EGGMOBILE3:
-			P_SpawnBoss3Junk(mo);
+			P_SpawnBoss3Junk(actor);
 			break;
 	}
 
 	// now do another switch case for escaping
-	switch (mo->type)
+	switch (actor->type)
 	{
 		case MT_BLACKEGGMAN:
-			mo->flags |= MF_NOCLIP;
-			mo->flags &= ~MF_SPECIAL;
+			actor->flags |= MF_NOCLIP;
+			actor->flags &= ~MF_SPECIAL;
 
 			S_StartSound(NULL, sfx_befall);
 			break;
 		case MT_CYBRAKDEMON:
-			P_DoCybrakdemonDeath(mo);
+			P_DoCybrakdemonDeath(actor);
 			break;
 		case MT_FANG:
-			P_DoBoss5Death(mo);
+			P_DoBoss5Death(actor);
 			break;
 		default: //eggmobiles
-			P_DoBossDefaultDeath(mo);
+			P_DoBossDefaultDeath(actor);
 			break;
 	}
 }
@@ -6477,7 +6477,8 @@ void A_RingExplode(mobj_t *actor)
 // var1 = object # to explode as debris
 // var2 = unused
 //
-void A_OldRingExplode(mobj_t *actor) {
+void A_OldRingExplode(mobj_t *actor)
+{
 	UINT8 i;
 	mobj_t *mo;
 	const fixed_t ns = FixedMul(20 * FRACUNIT, actor->scale);
@@ -6909,7 +6910,8 @@ void A_RecyclePowers(mobj_t *actor)
 
 #ifdef WEIGHTEDRECYCLER
 	//the joys of qsort...
-	if (beneficiary != 255) {
+	if (beneficiary != 255)
+	{
 		qsort(playerslist, numplayers, sizeof(UINT8), P_RecycleCompare);
 
 		// now, make sure the benificiary is in the best slot
@@ -9166,7 +9168,8 @@ void A_SetObjectFlags(mobj_t *actor)
 	if ((UINT32)(locvar1 & (MF_NOBLOCKMAP|MF_NOSECTOR)) != (actor->flags & (MF_NOBLOCKMAP|MF_NOSECTOR))) // Blockmap/sector status has changed, so reset the links
 		unlinkthings = true;
 
-	if (unlinkthings) {
+	if (unlinkthings)
+	{
 		P_UnsetThingPosition(actor);
 		if (sector_list)
 		{
@@ -9563,7 +9566,7 @@ void A_RemoteAction(mobj_t *actor)
 // var1 = unused
 // var2 = unused
 //
-void A_ToggleFlameJet(mobj_t* actor)
+void A_ToggleFlameJet(mobj_t *actor)
 {
 	if (LUA_CallAction(A_TOGGLEFLAMEJET, actor))
 		return;
@@ -9606,7 +9609,7 @@ void A_ToggleFlameJet(mobj_t* actor)
 //        Bits 1-10: X factor
 //        Bits 11-20: Y factor
 //        Bits 21-30: Z factor
-void A_OrbitNights(mobj_t* actor)
+void A_OrbitNights(mobj_t *actor)
 {
 	INT32 ofs = (var2 & 0x3FF);
 	boolean ishelper = (var2 & 0x10000);
@@ -11227,7 +11230,8 @@ void A_VileAttack(mobj_t *actor)
 		explosionType = (mobjtype_t)(locvar2 & 0xFFFF);
 	}
 
-	if (!(locvar2 & 0xFFFF0000)) {
+	if (!(locvar2 & 0xFFFF0000))
+	{
 		if (!P_CheckSight(actor, actor->target))
 			return;
 
@@ -11368,7 +11372,8 @@ void A_VileFire(mobj_t *actor)
 
 		lineMobj = (mobjtype_t)(locvar2 & 0xFFFF);
 		numLineMobjs = (UINT16)(locvar2 >> 16);
-		if (numLineMobjs == 0) {
+		if (numLineMobjs == 0)
+		{
 			numLineMobjs = 8;
 		}
 
@@ -13593,7 +13598,8 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 	if (abs(thing->x - dustdevil->x) > dustdevil->radius || abs(thing->y - dustdevil->y) > dustdevil->radius)
 		return true;
 
-	if (thing->z + thing->height >= dustdevil->z && dustdevil->z + dustdevil->height >= thing->z) {
+	if (thing->z + thing->height >= dustdevil->z && dustdevil->z + dustdevil->height >= thing->z)
+	{
 		fixed_t pos = thing->z - dustdevil->z;
 		fixed_t thrust = max(FixedDiv(pos, dustdevil->height) * 20, 8 * FRACUNIT);
 		angle_t fa = R_PointToAngle2(thing->x, thing->y, dustdevil->x, dustdevil->y) >> ANGLETOFINESHIFT;
@@ -13668,7 +13674,8 @@ void A_DustDevilThink(mobj_t *actor)
 		return;
 
 	//Chained thinker for the spiralling dust column.
-	while (layer && !P_MobjWasRemoved(layer)) {
+	while (layer && !P_MobjWasRemoved(layer))
+	{
 		angle_t fa = layer->angle >> ANGLETOFINESHIFT;
 		P_MoveOrigin(layer, layer->x + 5 * FixedMul(scale, FINECOSINE(fa)), layer->y + 5 * FixedMul(scale, FINESINE(fa)), layer->z);
 		P_SetScale(layer, scale, true);
@@ -13680,7 +13687,8 @@ void A_DustDevilThink(mobj_t *actor)
 	}
 
 	//Spawn random dust around the column on the base.
-	if (P_IsObjectOnGround(actor)) {
+	if (P_IsObjectOnGround(actor))
+	{
 		angle_t dustang = ((P_RandomRange(0, 7)*ANGLE_45)>>ANGLETOFINESHIFT) & FINEMASK;
 		mobj_t *dust = P_SpawnMobj(actor->x + 96 * FixedMul(scale, FINECOSINE(dustang)), actor->y + 96 * FixedMul(scale, FINESINE(dustang)), actor->z, MT_ARIDDUST);
 		if (!P_MobjWasRemoved(dust))
@@ -13691,12 +13699,14 @@ void A_DustDevilThink(mobj_t *actor)
 	}
 
 	actor->extravalue1++;
-	if (actor->extravalue1 == 12) {
+	if (actor->extravalue1 == 12)
+	{
 		size_t i = 0;
 		actor->extravalue1 = 0;
 
 		//Create a set of items for the rising dust column
-		for (; i <= 3; i++) {
+		for (; i <= 3; i++)
+		{
 			fixed_t fa = (ANGLE_90*i) >> ANGLETOFINESHIFT;
 			fixed_t px = actor->x + 70 * FixedMul(scale, FINECOSINE(fa));
 			fixed_t py = actor->y + 70 * FixedMul(scale, FINESINE(fa));
