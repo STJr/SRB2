@@ -975,7 +975,7 @@ static pflags_t op_oldpflags = 0;
 static mobjflag_t op_oldflags1 = 0;
 static mobjflag2_t op_oldflags2 = 0;
 static UINT32 op_oldeflags = 0;
-static fixed_t op_oldmomx = 0, op_oldmomy = 0, op_oldmomz = 0, op_oldheight = 0;
+static fixed_t op_oldmomx = 0, op_oldmomy = 0, op_oldmomz = 0, op_oldheight = 0, op_oldgravity = 0;
 static statenum_t op_oldstate = 0;
 static UINT16 op_oldcolor = 0;
 
@@ -1498,6 +1498,7 @@ void Command_ObjectPlace_f(void)
 			op_oldheight = players[0].mo->height;
 			op_oldstate = S_PLAY_STND;
 			op_oldcolor = players[0].mo->color; // save color too in case of super/fireflower
+			op_oldgravity = players[0].mo->gravity;
 
 			// Remove ALL flags and motion.
 			P_UnsetThingPosition(players[0].mo);
@@ -1570,6 +1571,7 @@ void Command_ObjectPlace_f(void)
 		players[0].mo->momy = op_oldmomy;
 		players[0].mo->momz = op_oldmomz;
 		players[0].mo->height = op_oldheight;
+		players[0].mo->gravity = op_oldgravity;
 		P_SetThingPosition(players[0].mo);
 
 		// Return their color to normal.
