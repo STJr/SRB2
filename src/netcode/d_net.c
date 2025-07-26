@@ -1062,11 +1062,11 @@ void Command_Ping_f(void)
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
 		const size_t plen = strlen(player_names[i]);
+		if (players[i].ingame && players[i].bot != BOT_NONE)
+			maxlen -= 2; // do not include the color codes inside [BOT]
 		if (players[i].ingame && plen > maxlen)
 		{
 			maxlen = plen;
-			if (players[i].bot != BOT_NONE)
-				maxlen -= 2; // do not include the color codes inside [BOT]
 		}
 	}
 
