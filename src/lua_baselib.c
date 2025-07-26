@@ -4622,7 +4622,7 @@ static luaL_Reg lib[] = {
 	{"P_RandomChance",lib_pRandomChance}, // MACRO
 
 	// p_maputil
-	{"P_AproxDistance",lib_pAproxDistance},
+	{"P_AproxDistance",lib_pAproxDistance}, // TODO: 2.3: Delete
 	{"P_ClosestPointOnLine",lib_pClosestPointOnLine},
 	{"P_PointOnLineSide",lib_pPointOnLineSide},
 
