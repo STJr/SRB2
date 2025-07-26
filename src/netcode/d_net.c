@@ -1048,20 +1048,6 @@ boolean D_CheckNetGame(void)
 	return ret;
 }
 
-struct pingcell
-{
-	INT32 num;
-	INT32 ms;
-};
-
-static int pingcellcmp(const void *va, const void *vb)
-{
-	const struct pingcell *a, *b;
-	a = va;
-	b = vb;
-	return ( a->ms - b->ms );
-}
-
 /*
 New ping command formatted nicely to present ping in
 ascending order. And with equally spaced columns.
