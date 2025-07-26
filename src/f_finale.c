@@ -1049,6 +1049,7 @@ static const char *credits[] = {
 	"Logan \"GBA\" Arias",
 	"Zolton \"Zippy_Zolton\" Auburn",
 	"Colette \"fickleheart\" Bordelon",
+	"\"candelavla\"",
 	"Andrew \"orospakr\" Clunis",
 	"Sally \"TehRealSalt\" Cochenour",
 	"Gregor \"Oogaland\" Dick",
@@ -1061,7 +1062,6 @@ static const char *credits[] = {
 	"Julio \"Chaos Zero 64\" Guir",
 	"\"Hanicef\"",
 	"\"Hannu_Hanhi\"", // For many OpenGL performance improvements!
-	"\"hazepastel\"",
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
 	"Iestyn \"Monster Iestyn\" Jealous",
