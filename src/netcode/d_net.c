@@ -1071,7 +1071,7 @@ void Command_Ping_f(void)
 		if (players[i].ingame)
 		{
 			CONS_Printf("%.2u: %*s", i, (int)maxlen, player_names[i]);
-			if (players[i].bot == BOT_NONE)
+			if (serverplayer != i && players[i].bot == BOT_NONE)
 				CONS_Printf(" - %d ms - %d pl", playerpingtable[i], playerpacketlosstable[i]);
 			CONS_Printf("\n");
 		}
