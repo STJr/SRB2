@@ -1063,7 +1063,11 @@ void Command_Ping_f(void)
 	{
 		const size_t plen = strlen(player_names[i]);
 		if (players[i].ingame && plen > maxlen)
+		{
 			maxlen = plen;
+			if (players[i].bot != BOT_NONE)
+				maxlen -= 2; // do not include the color codes inside [BOT]
+		}
 	}
 
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
@@ -1071,7 +1075,11 @@ void Command_Ping_f(void)
 		if (players[i].ingame)
 		{
 			CONS_Printf("%.2u: %*s", i, (int)maxlen, player_names[i]);
-			if (serverplayer != i && players[i].bot == BOT_NONE)
+			if (serverplayer == i)
+				CONS_Printf(" - Host");
+			else if (players[i].bot != BOT_NONE)
+				CONS_Printf(" - Bot");
+			else
 				CONS_Printf(" - %d ms - %d pl", playerpingtable[i], playerpacketlosstable[i]);
 			CONS_Printf("\n");
 		}
