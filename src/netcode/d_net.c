@@ -1071,48 +1071,31 @@ convenience.
 
 void Command_Ping_f(void)
 {
-	struct pingcell pingv[MAXPLAYERS];
-	INT32           pingc;
+	size_t maxlen = 0;
 
-	int name_width = 0;
-	int   ms_width = 0;
-
-	pingc = 0;
-	for (INT32 i = 1; i < MAXPLAYERS; ++i)
-		if (players[i].ingame)
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
-		int n;
-
-		n = strlen(player_names[i]);
-		if (n > name_width)
-			name_width = n;
-
-		n = playerpingtable[i];
-		if (n > ms_width)
-			ms_width = n;
-
-		pingv[pingc].num = i;
-		pingv[pingc].ms  = playerpingtable[i];
-		pingc++;
+		const size_t plen = strlen(player_names[i]);
+		if (players[i].ingame && plen > maxlen)
+			maxlen = plen;
 	}
 
-	     if (ms_width < 10)  ms_width = 1;
-	else if (ms_width < 100) ms_width = 2;
-	else                     ms_width = 3;
-
-	qsort(pingv, pingc, sizeof (struct pingcell), &pingcellcmp);
-
-	for (INT32 i = 0; i < pingc; ++i)
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
-		CONS_Printf("%02d : %-*s %*d ms\n",
-				pingv[i].num,
-				name_width, player_names[pingv[i].num],
-				ms_width,   pingv[i].ms);
+		if (players[i].ingame)
+		{
+			CONS_Printf("%.2u: %*s", i, (int)maxlen, player_names[i]);
+			if (players[i].bot == BOT_NONE)
+				CONS_Printf(" - %d ms - %d pl", playerpingtable[i], playerpacketlosstable[i]);
+			CONS_Printf("\n");
+		}
 	}
 
 	if (!server && players[consoleplayer].ingame)
 	{
-		CONS_Printf("\nYour ping is %d ms\n", playerpingtable[consoleplayer]);
+		CONS_Printf("\n");
+		CONS_Printf("Your ping is %d ms\n", playerpingtable[consoleplayer]);
+		CONS_Printf("Your packet loss is %d %%\n", playerpacketlosstable[consoleplayer]);
 	}
 }
 
