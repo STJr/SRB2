@@ -347,14 +347,14 @@ fixed_t FV4_Dot(const vector4_t *a_1, const vector4_t *a_2);
 typedef struct
 {
 	fixed_t m[16];
-} matrix_t;
+} oldmatrix_t;
 
-void FM_LoadIdentity(matrix_t* matrix);
-void FM_CreateObjectMatrix(matrix_t *matrix, fixed_t x, fixed_t y, fixed_t z, fixed_t anglex, fixed_t angley, fixed_t anglez, fixed_t upx, fixed_t upy, fixed_t upz, fixed_t radius);
-const vector3_t *FM_MultMatrixVec3(const matrix_t *matrix, const vector3_t *vec, vector3_t *out);
-const vector4_t *FM_MultMatrixVec4(const matrix_t *matrix, const vector4_t *vec, vector4_t *out);
-void FM_MultMatrix(matrix_t *dest, const matrix_t *multme);
-void FM_Translate(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z);
-void FM_Scale(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z);
+void FM_LoadIdentity(oldmatrix_t* matrix);
+void FM_CreateObjectMatrix(oldmatrix_t *matrix, fixed_t x, fixed_t y, fixed_t z, fixed_t anglex, fixed_t angley, fixed_t anglez, fixed_t upx, fixed_t upy, fixed_t upz, fixed_t radius);
+const vector3_t *FM_MultMatrixVec3(const oldmatrix_t *matrix, const vector3_t *vec, vector3_t *out);
+const vector4_t *FM_MultMatrixVec4(const oldmatrix_t *matrix, const vector4_t *vec, vector4_t *out);
+void FM_MultMatrix(oldmatrix_t *dest, const oldmatrix_t *multme);
+void FM_Translate(oldmatrix_t *dest, fixed_t x, fixed_t y, fixed_t z);
+void FM_Scale(oldmatrix_t *dest, fixed_t x, fixed_t y, fixed_t z);
 
 #endif //m_fixed.h
