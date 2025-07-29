@@ -91,6 +91,8 @@ enum matrixfield_e {
 
 static const char *const matrixfield_opt[] = {
 	"clone",
+	"getvalue",
+	"setvalue",
 	"mulXYZ",
 	NULL};
 
