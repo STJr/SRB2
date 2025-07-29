@@ -2227,7 +2227,8 @@ static boolean S_CheckQueue(void)
 
 static void S_ClearQueue(void)
 {
-	queue_name[0] = queue_flags = queue_looping = queue_position = queue_fadeinms = 0;
+	queue_name[0] = queue_flags = queue_position = queue_fadeinms = 0;
+	queue_looping = false;
 }
 
 static void S_ChangeMusicToQueue(void)
