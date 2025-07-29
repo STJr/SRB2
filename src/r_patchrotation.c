@@ -77,6 +77,16 @@ patch_t *Patch_GetRotated(patch_t *patch, INT32 angle, boolean flip)
 	return rotsprite->patches[angle];
 }
 
+static spriteframepivot_t *GetSpriteInfoRotationPivot(spriteinfo_t *info, UINT16 frame)
+{
+	if (R_IsSpriteInfoAvailable(info, frame) && info->frames[frame].pivot.available)
+	{
+		return &info->frames[frame].pivot;
+	}
+
+	return NULL;
+}
+
 patch_t *Patch_GetRotatedSprite(
 	spriteframe_t *sprite,
 	size_t frame, size_t spriteangle,
@@ -104,16 +114,21 @@ patch_t *Patch_GetRotatedSprite(
 		patch_t *patch;
 		INT32 xpivot = 0, ypivot = 0;
 		lumpnum_t lump = sprite->lumppat[spriteangle];
+		spriteframepivot_t *pivot;
 
 		if (lump == LUMPERROR)
 			return NULL;
 
 		patch = W_CachePatchNum(lump, PU_SPRITE);
 
-		if (sprinfo->available)
+		pivot = GetSpriteInfoRotationPivot(sprinfo, frame);
+		if (pivot == NULL)
+			pivot = GetSpriteInfoRotationPivot(sprinfo, SPRINFO_DEFAULT_FRAME);
+
+		if (pivot != NULL)
 		{
-			xpivot = sprinfo->pivot[frame].x;
-			ypivot = sprinfo->pivot[frame].y;
+			xpivot = pivot->x;
+			ypivot = pivot->y;
 		}
 		else
 		{

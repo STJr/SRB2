@@ -874,6 +874,7 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 	char *tmp;
 	INT32 value;
 	char *lastline;
+	boolean available = false;
 
 	do
 	{
@@ -925,9 +926,15 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 			value = atoi(word2); // used for numerical settings
 
 			if (fastcmp(word, "XPIVOT"))
-				sprinfo->pivot[frame].x = value;
+			{
+				sprinfo->frames[frame].pivot.x = value;
+				available = true;
+			}
 			else if (fastcmp(word, "YPIVOT"))
-				sprinfo->pivot[frame].y = value;
+			{
+				sprinfo->frames[frame].pivot.y = value;
+				available = true;
+			}
 			// TODO: 2.3: Delete
 			else if (fastcmp(word, "ROTAXIS"))
 				deh_warning("SpriteInfo: ROTAXIS is deprecated and will be removed.");
@@ -938,6 +945,10 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 			}
 		}
 	} while (!myfeof(f)); // finish when the line is empty
+
+	if (available)
+		sprinfo->frames[frame].pivot.available = true;
+
 	Z_Free(s);
 }
 
@@ -955,7 +966,6 @@ void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 
 	// allocate a spriteinfo
 	spriteinfo_t *info = Z_Calloc(sizeof(spriteinfo_t), PU_STATIC, NULL);
-	info->available = true;
 
 	do
 	{
@@ -1074,6 +1084,12 @@ void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 
 				// read sprite frame and store it in the spriteinfo_t struct
 				readspriteframe(f, info, frame);
+				set_bit_array(info->available, frame);
+
+				// TODO: 2.3: Delete
+				info->frames[SPRINFO_DEFAULT_FRAME].pivot.available = true;
+				set_bit_array(info->available, SPRINFO_DEFAULT_FRAME);
+
 				if (sprite2)
 				{
 					INT32 i;
