@@ -9,6 +9,8 @@
 /// \file  vector3d.c
 /// \brief Fixed-point 3D vector
 
+#include <string.h>
+
 #include "vector3d.h"
 #include "r_main.h" // R_PointToDist2
 

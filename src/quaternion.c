@@ -9,6 +9,8 @@
 /// \file  quaternion.c
 /// \brief Fixed-point 3D vector
 
+#include <string.h>
+
 #include "quaternion.h"
 #include "vector3d.h"
 #include "matrix.h"

@@ -9,6 +9,8 @@
 /// \file  matrix.c
 /// \brief Fixed-point 3D vector
 
+#include <string.h>
+
 #include "matrix.h"
 
 static matrix_t identitymatrix = {{
