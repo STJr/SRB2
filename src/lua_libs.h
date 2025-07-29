@@ -60,8 +60,6 @@ extern boolean ignoregameinputs;
 #define META_NODE "NODE_T*"
 #endif
 #define META_SLOPE "PSLOPE_T*"
-#define META_VECTOR2 "VECTOR2_T"
-#define META_VECTOR3 "VECTOR3_T"
 #define META_MAPHEADER "MAPHEADER_T*"
 
 #define META_POLYOBJ "POLYOBJ_T*"
@@ -106,6 +104,11 @@ extern boolean ignoregameinputs;
 
 #define META_INTERCEPT "INTERCEPT_T*"
 
+#define META_VECTOR2 "VECTOR2_T"
+#define META_VECTOR3 "VECTOR3_T"
+#define META_MATRIX "MATRIX_T"
+#define META_QUATERNION "QUATERNION_T"
+
 boolean luaL_checkboolean(lua_State *L, int narg);
 
 int LUA_EnumLib(lua_State *L);
@@ -127,3 +130,6 @@ int LUA_HudLib(lua_State *L);
 int LUA_ColorLib(lua_State *L);
 int LUA_InputLib(lua_State *L);
 int LUA_InterceptLib(lua_State *L);
+int LUA_MatrixLib(lua_State *L);
+int LUA_QuaternionLib(lua_State *L);
+int LUA_VectorLib(lua_State *L);

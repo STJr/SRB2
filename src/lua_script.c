@@ -64,6 +64,9 @@ static lua_CFunction liblist[] = {
 	LUA_ColorLib, // general color functions
 	LUA_InputLib, // inputs
 	LUA_InterceptLib, // intercept_t
+	LUA_VectorLib, // vectors
+	LUA_MatrixLib, // matrices
+	LUA_QuaternionLib, // quaternions
 	NULL
 };
 

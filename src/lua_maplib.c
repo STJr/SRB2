@@ -466,19 +466,6 @@ static const char *const slope_opt[] = {
 
 static int slope_fields_ref = LUA_NOREF;
 
-// shared by both vector2_t and vector3_t
-enum vector_e {
-	vector_x = 0,
-	vector_y,
-	vector_z
-};
-
-static const char *const vector_opt[] = {
-	"x",
-	"y",
-	"z",
-	NULL};
-
 static const char *const array_opt[] ={"iterate",NULL};
 static const char *const valid_opt[] ={"valid",NULL};
 
@@ -2795,47 +2782,6 @@ static int slope_set(lua_State *L)
 	return 0;
 }
 
-///////////////
-// vector*_t //
-///////////////
-
-static int vector2_get(lua_State *L)
-{
-	vector2_t *vec = *((vector2_t **)luaL_checkudata(L, 1, META_VECTOR2));
-	enum vector_e field = luaL_checkoption(L, 2, vector_opt[0], vector_opt);
-
-	if (!vec)
-		return luaL_error(L, "accessed vector2_t doesn't exist anymore.");
-
-	switch(field)
-	{
-		case vector_x: lua_pushfixed(L, vec->x); return 1;
-		case vector_y: lua_pushfixed(L, vec->y); return 1;
-		default: break;
-	}
-
-	return 0;
-}
-
-static int vector3_get(lua_State *L)
-{
-	vector3_t *vec = *((vector3_t **)luaL_checkudata(L, 1, META_VECTOR3));
-	enum vector_e field = luaL_checkoption(L, 2, vector_opt[0], vector_opt);
-
-	if (!vec)
-		return luaL_error(L, "accessed vector3_t doesn't exist anymore.");
-
-	switch(field)
-	{
-		case vector_x: lua_pushfixed(L, vec->x); return 1;
-		case vector_y: lua_pushfixed(L, vec->y); return 1;
-		case vector_z: lua_pushfixed(L, vec->z); return 1;
-		default: break;
-	}
-
-	return 0;
-}
-
 /////////////////////
 // mapheaderinfo[] //
 /////////////////////
@@ -3156,8 +3102,6 @@ int LUA_MapLib(lua_State *L)
 	LUA_RegisterUserdataMetatable(L, META_FFLOOR, ffloor_get, ffloor_set, NULL);
 	LUA_RegisterUserdataMetatable(L, META_BBOX, bbox_get, NULL, NULL);
 	LUA_RegisterUserdataMetatable(L, META_SLOPE, slope_get, slope_set, NULL);
-	LUA_RegisterUserdataMetatable(L, META_VECTOR2, vector2_get, NULL, NULL);
-	LUA_RegisterUserdataMetatable(L, META_VECTOR3, vector3_get, NULL, NULL);
 	LUA_RegisterUserdataMetatable(L, META_MAPHEADER, mapheaderinfo_get, NULL, NULL);
 	LUA_RegisterUserdataMetatable(L, META_THINGCUSTOMARGS, thingcustomargs_get, NULL, NULL);
 

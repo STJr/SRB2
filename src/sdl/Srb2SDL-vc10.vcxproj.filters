@@ -790,6 +790,9 @@
     <ClCompile Include="..\lua_mathlib.c">
       <Filter>LUA</Filter>
     </ClCompile>
+    <ClCompile Include="..\lua_matrixlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
     <ClCompile Include="..\lua_mobjlib.c">
       <Filter>LUA</Filter>
     </ClCompile>
@@ -797,6 +800,9 @@
       <Filter>LUA</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_polyobjlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_quaternionlib.c">
       <Filter>LUA</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_script.c">
@@ -810,6 +816,12 @@
     </ClCompile>
     <ClCompile Include="..\lua_thinkerlib.c">
       <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_vectorlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\matrix.c">
+      <Filter>M_Misc</Filter>
     </ClCompile>
     <ClCompile Include="..\md5.c">
       <Filter>M_Misc</Filter>
@@ -958,6 +970,9 @@
     <ClCompile Include="..\p_user.c">
       <Filter>P_Play</Filter>
     </ClCompile>
+    <ClCompile Include="..\quaternion.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
     <ClCompile Include="..\tables.c">
       <Filter>P_Play</Filter>
     </ClCompile>
@@ -1014,6 +1029,9 @@
     </ClCompile>
     <ClCompile Include="..\screen.c">
       <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vector3d.c">
+      <Filter>M_Misc</Filter>
     </ClCompile>
     <ClCompile Include="..\v_video.c">
       <Filter>R_Rend</Filter>
