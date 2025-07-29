@@ -157,11 +157,13 @@ typedef int32_t boolean;
 
 #ifndef __cplusplus
 #ifndef __bool_true_false_are_defined
+#if __STDC_VERSION__ < 202311L // don't mess with true/false in C23
 #ifndef _WIN32
 enum {false = 0, true = 1};
 #else
 #define false FALSE
 #define true TRUE
+#endif
 #endif
 #endif
 #endif
