@@ -1364,6 +1364,8 @@ static int player_set(lua_State *L)
 	case player_lastinputtime:
 		plr->lastinputtime = (tic_t)luaL_checkinteger(L, 3);
 		break;
+	case player_ping:
+		return NOSET;
 	case player_muted:
 		plr->muted = lua_toboolean(L, 3);
 		break;
