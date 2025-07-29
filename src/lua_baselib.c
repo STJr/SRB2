@@ -4297,21 +4297,26 @@ static int lib_gSetCustomExitVars(lua_State *L)
 
 	// LUA EXTENSION: Custom exit like support
 	// Supported:
-	//	G_SetCustomExitVars();               [reset to defaults]
-	//	G_SetCustomExitVars(int)             [nextmap override only]
-	//	G_SetCustomExitVars(nil, int)        [skipstats only]
-	//	G_SetCustomExitVars(int, int)        [both of the above]
-	//	G_SetCustomExitVars(int, int, int)   [nextmapoverride, skipstats and nextgametype]
+	//	G_SetCustomExitVars();					[reset to defaults]
+	//	G_SetCustomExitVars(int)				[nextmap override only]
+	//	G_SetCustomExitVars(nil, int)			[skipstats only]
+	//	G_SetCustomExitVars(int, int)			[both of the above]
+	//	G_SetCustomExitVars(int, int, int)		[nextmapoverride, skipstats and nextgametype]
+	//	G_SetCustomExitVars(int, int, int, int) [nextmapoverride, skipstats, nextgametype and keepcutscenes]
 
 	nextmapoverride = 0;
 	skipstats = 0;
 	nextgametype = -1;
+	keepcutscene = false;
 
 	if (n >= 1)
 	{
 		nextmapoverride = (INT16)luaL_optinteger(L, 1, 0);
 		skipstats = (INT16)luaL_optinteger(L, 2, 0);
 		nextgametype = (INT16)luaL_optinteger(L, 3, -1);
+		
+		if (!lua_isnil(L, 4))
+			keepcutscene = luaL_checkboolean(L, 4);
 	}
 
 	return 0;
