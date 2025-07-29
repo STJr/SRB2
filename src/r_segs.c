@@ -1713,6 +1713,70 @@ static void R_RenderSegLoop (void)
 	}
 }
 
+static void R_MarkSegBounds(void)
+{
+	INT32 top, bottom;
+	INT16 topclip, bottomclip;
+
+	for (; rw_x < rw_stopx; rw_x++)
+	{
+		// mark floor / ceiling areas
+		INT32 yl = (topfrac+HEIGHTUNIT-1)>>HEIGHTBITS;
+		INT32 yh = bottomfrac>>HEIGHTBITS;
+
+		// Mark ceiling
+		top = ceilingclip[rw_x]+1;
+
+		// no space above wall?
+		if (yl < top)
+			yl = top;
+
+		if (markceiling)
+		{
+			if (yl > floorclip[rw_x])
+				bottom = floorclip[rw_x] - 1;
+			else
+				bottom = yl - 1;
+
+			if (ceilingplane && top <= bottom)
+				R_ExpandPlaneY(ceilingplane, rw_x, top, bottom);
+		}
+
+		// Mark floor
+		bottom = floorclip[rw_x]-1;
+
+		// no space below floor?
+		if (yh > bottom)
+			yh = bottom;
+
+		if (markfloor)
+		{
+			if (yh < ceilingclip[rw_x])
+				top = ceilingclip[rw_x] + 1;
+			else
+				top = yh + 1;
+
+			if (floorplane && top <= bottom)
+				R_ExpandPlaneY(floorplane, rw_x, top, bottom);
+		}
+
+		frontscale[rw_x] = rw_scale;
+
+		topclip = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
+		bottomclip = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
+
+		if (markceiling) // no top wall
+			ceilingclip[rw_x] = topclip;
+
+		if (markfloor) // no bottom wall
+			floorclip[rw_x] = bottomclip;
+
+		rw_scale += rw_scalestep;
+		topfrac += topstep;
+		bottomfrac += bottomstep;
+	}
+}
+
 // Uses precalculated seg->length
 static INT64 R_CalcSegDist(seg_t* seg, INT64 x2, INT64 y2)
 {
@@ -3090,11 +3154,28 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		}
 	}
 
-	rw_silhouette = &(ds_p->silhouette);
-	rw_tsilheight = &(ds_p->tsilheight);
-	rw_bsilheight = &(ds_p->bsilheight);
+	if (!segtextured && !numffloors && !numbackffloors)
+	{
+		if (markfloor || markceiling)
+			R_MarkSegBounds();
+		else
+		{
+			for (; rw_x < rw_stopx; rw_x++)
+			{
+				frontscale[rw_x] = rw_scale;
+				rw_scale += rw_scalestep;
+			}
+		}
+	}
+	else
+	{
+		rw_silhouette = &ds_p->silhouette;
+		rw_tsilheight = &ds_p->tsilheight;
+		rw_bsilheight = &ds_p->bsilheight;
 
-	R_RenderSegLoop();
+		R_RenderSegLoop();
+	}
+
 	colfunc = colfuncs[BASEDRAWFUNC];
 
 	if (portalline) // if curline is a portal, set portalrender for drawseg
