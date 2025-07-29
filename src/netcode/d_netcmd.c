@@ -1170,6 +1170,13 @@ static void SetPlayerName(INT32 playernum, char *newname)
 	{
 		if (strcasecmp(newname, player_names[playernum]) != 0)
 		{
+			if (!LUA_HookNameChange(&players[playernum], newname))
+			{
+				// Name change rejected by Lua
+				if (playernum == consoleplayer)
+					CV_StealthSet(&cv_playername, player_names[consoleplayer]);
+				return;
+			}
 			if (netgame)
 				HU_AddChatText(va("\x82*%s renamed to %s", player_names[playernum], newname), false);
 

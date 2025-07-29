@@ -1088,6 +1088,18 @@ void LUA_HookPlayerQuit(player_t *plr, kickreason_t reason)
 	}
 }
 
+int LUA_HookNameChange(player_t *plr, const char *name)
+{
+	Hook_State hook;
+	if (prepare_hook(&hook, true, HOOK(NameChange)))
+	{
+		LUA_PushUserdata(gL, plr, META_PLAYER); // Player that changed name
+		lua_pushstring(gL, name);   // New player name
+		call_hooks(&hook, 1, res_false);
+	}
+	return hook.status;
+}
+
 int LUA_HookTeamSwitch(player_t *player, int newteam, boolean fromspectators, boolean tryingautobalance, boolean tryingscramble)
 {
 	Hook_State hook;
