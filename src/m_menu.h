@@ -484,6 +484,7 @@ UINT16 M_GetColorIndex(UINT16 color);
 menucolor_t* M_GetColorFromIndex(UINT16 index);
 void M_InitPlayerSetupColors(void);
 void M_FreePlayerSetupColors(void);
+void M_RegisterCustomCVOption(consvar_t* cvar);
 
 // These defines make it a little easier to make menus
 #define DEFAULTMENUSTYLE(id, header, source, prev, x, y)\

@@ -316,6 +316,7 @@ menu_t OP_P1ControlsDef, OP_P2ControlsDef, OP_MouseOptionsDef;
 menu_t OP_Mouse2OptionsDef, OP_Joystick1Def, OP_Joystick2Def;
 menu_t OP_CameraOptionsDef, OP_Camera2OptionsDef;
 menu_t OP_PlaystyleDef;
+menu_t OP_AddonCustomOptionsDef;
 static void M_VideoModeMenu(INT32 choice);
 static void M_Setup1PControlsMenu(INT32 choice);
 static void M_Setup2PControlsMenu(INT32 choice);
@@ -349,6 +350,7 @@ static void M_EraseData(INT32 choice);
 
 static void M_Addons(INT32 choice);
 static void M_AddonsOptions(INT32 choice);
+static void M_AddonsCvarOptions(INT32 choice);
 static patch_t *addonsp[NUM_EXT+5];
 
 #define addonmenusize 9 // number of items actually displayed in the addons menu view, formerly (2*numaddonsshown + 1)
@@ -1038,6 +1040,7 @@ static menuitem_t OP_MainMenu[] =
 	{IT_CALL    | IT_STRING, NULL, "Server Options...",    M_ServerOptions,     80},
 
 	{IT_SUBMENU | IT_STRING, NULL, "Data Options...",      &OP_DataOptionsDef, 100},
+	{IT_CALL	| IT_STRING, NULL, "Custom Options...",	   M_AddonsCvarOptions,110},
 };
 
 static menuitem_t OP_P1ControlsMenu[] =
@@ -1644,6 +1647,9 @@ static menuitem_t OP_MonitorToggleMenu[] =
 	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Eggman Box",        &cv_eggmanbox,    140},
 };
 
+#define MAXADDONOPTIONS 999
+menuitem_t OP_AddonOptionsSlots[MAXADDONOPTIONS];
+
 // ==========================================================================
 // ALL MENU DEFINITIONS GO HERE
 // ==========================================================================
@@ -2219,6 +2225,23 @@ menu_t OP_ScreenshotOptionsDef =
 	0,
 	NULL
 };
+
+INT16 menu_cc_pos = 0;
+
+static void M_AddonsCvarOptions(INT32 choice)
+{
+	(void)choice;
+
+	if (menu_cc_pos)
+		M_SetupNextMenu(&OP_AddonCustomOptionsDef);
+	else
+		M_StartMessage(M_GetText("No Custom Option was found.\nTry to load any Addon!\n(Press a key)\n"), NULL, MM_NOTHING);
+}
+
+menu_t OP_AddonCustomOptionsDef = DEFAULTSCROLLMENUSTYLE(
+	MTREE3(MN_OP_MAIN, MN_OP_DATA, MN_OP_ADDONS),
+	"M_ADDONS", OP_AddonOptionsSlots, &OP_MainDef, 30, 30);
+
 
 menu_t OP_AddonsOptionsDef = DEFAULTMENUSTYLE(
 	MTREE3(MN_OP_MAIN, MN_OP_DATA, MN_OP_ADDONS),
@@ -6976,6 +6999,65 @@ static void M_SelectableClearMenus(INT32 choice)
 	(void)choice;
 	M_ClearMenus(true);
 }
+
+#define CCVHEIGHT 5
+#define CCVHEIGHTHEADER 1
+#define CCVHEIGHTHEADERAFTER 6
+
+UINT16	menu_cc_lastoffset = 4;
+INT16	menu_cc_lastheader = 0;
+
+boolean CCSETUP = false;
+
+void M_RegisterCustomCVOption(consvar_t* cvar)
+{
+	if (menu_cc_pos == INT16_MAX)
+		return;
+
+	if (menu_cc_pos >= MAXADDONOPTIONS - 2)
+	{
+		CONS_Printf("Failed to register the console variable '%s' into the menu. Custom Options menu has reached its hard limit of %d.\n", cvar->displayname, MAXADDONOPTIONS);
+		menu_cc_pos = INT16_MAX;
+		return;
+	}
+
+	if (CCSETUP == false)
+	{
+		CONS_Printf("Custom Options menu initiation.\n");
+		
+		for (INT16 i = 0; i < MAXADDONOPTIONS; ++i)
+			OP_AddonOptionsSlots[i] = (menuitem_t){ IT_DISABLED, NULL, "", 0, INT16_MAX };
+
+		CCSETUP = true;
+	}
+
+	if (
+		cvar->category && ((menu_cc_pos == 0 && cvar->category[0] != '\0') 
+		|| !fasticmp(cvar->category, OP_AddonOptionsSlots[menu_cc_lastheader].text)))
+	{
+		menu_cc_lastheader = menu_cc_pos;
+		menu_cc_lastoffset += CCVHEIGHTHEADER;
+
+		OP_AddonOptionsSlots[menu_cc_pos] = (menuitem_t){ IT_HEADER, NULL, cvar->category, NULL, menu_cc_lastoffset };
+		menu_cc_lastoffset += CCVHEIGHTHEADERAFTER;
+
+
+		++menu_cc_pos;
+	}
+
+	UINT16 status = IT_STRING | IT_CVAR;
+
+	if (cvar->flags & CV_FLOAT)
+		status |= IT_CV_FLOATSLIDER;
+	else if (cvar->PossibleValue && cvar->PossibleValue[0].strvalue && fasticmp(cvar->PossibleValue[0].strvalue, "MIN"))
+		status |= IT_CV_SLIDER;
+		
+	OP_AddonOptionsSlots[menu_cc_pos] = (menuitem_t){ status, NULL, cvar->displayname, cvar, menu_cc_lastoffset };
+	menu_cc_lastoffset += CCVHEIGHT;
+
+	++menu_cc_pos;
+}
+
 
 // ======
 // CHEATS
