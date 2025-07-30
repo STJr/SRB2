@@ -254,7 +254,7 @@ static void FlipCam2_OnChange(void)
 //
 // killough 5/2/98: reformatted
 //
-INT32 R_PointOnSide(fixed_t x, fixed_t y, node_t *restrict node)
+INT32 R_PointOnSide(fixed_t x, fixed_t y, bspnode_t *restrict node)
 {
 	if (!node->dx)
 		return x <= node->x ? node->dy > 0 : node->dy < 0;
@@ -1054,7 +1054,7 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
 //
 subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y)
 {
-	node_t *node;
+	bspnode_t *node;
 	INT32 side, i;
 	size_t nodenum;
 	subsector_t *ret;

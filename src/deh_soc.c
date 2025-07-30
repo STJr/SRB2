@@ -874,6 +874,7 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 	char *tmp;
 	INT32 value;
 	char *lastline;
+	boolean available = false;
 
 	do
 	{
@@ -925,9 +926,15 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 			value = atoi(word2); // used for numerical settings
 
 			if (fastcmp(word, "XPIVOT"))
-				sprinfo->pivot[frame].x = value;
+			{
+				sprinfo->frames[frame].pivot.x = value;
+				available = true;
+			}
 			else if (fastcmp(word, "YPIVOT"))
-				sprinfo->pivot[frame].y = value;
+			{
+				sprinfo->frames[frame].pivot.y = value;
+				available = true;
+			}
 			// TODO: 2.3: Delete
 			else if (fastcmp(word, "ROTAXIS"))
 				deh_warning("SpriteInfo: ROTAXIS is deprecated and will be removed.");
@@ -938,6 +945,10 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 			}
 		}
 	} while (!myfeof(f)); // finish when the line is empty
+
+	if (available)
+		sprinfo->frames[frame].pivot.available = true;
+
 	Z_Free(s);
 }
 
@@ -955,7 +966,6 @@ void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 
 	// allocate a spriteinfo
 	spriteinfo_t *info = Z_Calloc(sizeof(spriteinfo_t), PU_STATIC, NULL);
-	info->available = true;
 
 	do
 	{
@@ -1074,6 +1084,12 @@ void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 
 				// read sprite frame and store it in the spriteinfo_t struct
 				readspriteframe(f, info, frame);
+				set_bit_array(info->available, frame);
+
+				// TODO: 2.3: Delete
+				info->frames[SPRINFO_DEFAULT_FRAME].pivot.available = true;
+				set_bit_array(info->available, SPRINFO_DEFAULT_FRAME);
+
 				if (sprite2)
 				{
 					INT32 i;
@@ -2844,7 +2860,7 @@ void readframe(MYFILE *f, INT32 num)
 
 				for (z = 0; actionpointers[z].name; z++)
 				{
-					if (actionpointers[z].action.acv == states[num].action.acv)
+					if (actionpointers[z].action == states[num].action)
 						break;
 				}
 
@@ -2856,8 +2872,6 @@ void readframe(MYFILE *f, INT32 num)
 						if (fastcmp(actiontocompare, actionpointers[z].name))
 						{
 							states[num].action = actionpointers[z].action;
-							states[num].action.acv = actionpointers[z].action.acv; // assign
-							states[num].action.acp1 = actionpointers[z].action.acp1;
 							found = true;
 							break;
 						}
@@ -3487,6 +3501,18 @@ static void readcondition(UINT8 set, UINT32 id, char *word2)
 		if (re <= 0 || re > MAXEXTRAEMBLEMS)
 		{
 			deh_warning("Extra emblem %d out of range (1 - %d)", re, MAXEXTRAEMBLEMS);
+			return;
+		}
+	}
+	else if (fastcmp(params[0], "LUA"))
+	{
+		PARAMCHECK(1);
+		ty = UC_LUA;
+		re = atoi(params[1]);
+
+		if (re <= 0 || re > MAXLUACONDITIONS)
+		{
+			deh_warning("Lua condition %d out of range (1 - %d)", re, MAXLUACONDITIONS);
 			return;
 		}
 	}

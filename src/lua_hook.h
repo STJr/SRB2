@@ -62,6 +62,7 @@ automatically.
 	X (ShieldSpecial),/* shield abilities */\
 	X (PlayerCanDamage),/* P_PlayerCanDamage */\
 	X (PlayerQuit),\
+	X (NameChange),\
 	X (IntermissionThinker),/* Y_Ticker */\
 	X (TeamSwitch),/* team switching in... uh... *what* speak, spit it the fuck out */\
 	X (ViewpointSwitch),/* spy mode (no trickstabs) */\
@@ -72,6 +73,7 @@ automatically.
 	X (GameEnd),\
 	X (PlayerCmd),/* building the player's ticcmd struct (Ported from SRB2Kart) */\
 	X (MusicChange),\
+	X (SoundPlay),\
 	X (PlayerHeight),/* override player height */\
 	X (PlayerCanEnterSpinGaps),\
 	X (AddonLoaded),\
@@ -89,6 +91,7 @@ automatically.
 	X (scores),/* emblems/multiplayer list */\
 	X (title),/* titlescreen */\
 	X (titlecard),\
+	X (escpanel) /* rings/time/score/emblem panel in pause menu */,\
 	X (intermission),\
 	X (continue),\
 	X (playersetup),\
@@ -130,6 +133,10 @@ int LUA_HookCharacterHUD
 	INT32 skinIndex, UINT8 sprite2, UINT8 frame, UINT8 rotation, skincolornum_t color,
 	INT32 ticker, boolean mode
 );
+boolean LUA_HookEscapePanel(
+	int hook, huddrawlist_h drawlist,
+	int x, int y, int width, int height
+);
 
 int  LUA_HookMobj(mobj_t *, int hook);
 int  LUA_Hook2Mobj(mobj_t *, mobj_t *, int hook);
@@ -157,11 +164,13 @@ int  LUA_HookMapThingSpawn(mobj_t *, mapthing_t *);
 int  LUA_HookFollowMobj(player_t *, mobj_t *);
 int  LUA_HookPlayerCanDamage(player_t *, mobj_t *);
 void LUA_HookPlayerQuit(player_t *, kickreason_t);
+int  LUA_HookNameChange(player_t *plr, const char *name);
 int  LUA_HookTeamSwitch(player_t *, int newteam, boolean fromspectators, boolean tryingautobalance, boolean tryingscramble);
 int  LUA_HookViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean forced);
 int  LUA_HookSeenPlayer(player_t *player, player_t *seenfriend);
 int  LUA_HookShouldJingleContinue(player_t *, const char *musname);
 int  LUA_HookPlayerCmd(player_t *, ticcmd_t *);
 int  LUA_HookMusicChange(const char *oldname, struct MusicChange *);
+int  LUA_HookSoundPlay(sfxenum_t sfx_id, void *origin, const int origintype);
 fixed_t LUA_HookPlayerHeight(player_t *player);
 int  LUA_HookPlayerCanEnterSpinGaps(player_t *player);

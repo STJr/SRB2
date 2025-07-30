@@ -378,7 +378,7 @@ static void HU_removeChatText_Log(void)
 void HU_AddChatText(const char *text, boolean playsound)
 {
 	if (playsound && cv_consolechat.value != 2) // Don't play the sound if we're using hidden chat.
-		S_StartSound(NULL, sfx_radio);
+		S_StartSoundFromEverywhere(sfx_radio);
 	// reguardless of our preferences, put all of this in the chat buffer in case we decide to change from oldchat mid-game.
 
 	if (chat_nummsg_log >= CHAT_BUFSIZE) // too many messages!

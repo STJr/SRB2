@@ -1,8 +1,8 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 2018-2024 by Lactozilla.
-// Copyright (C) 2019-2024 by Sonic Team Junior.
+// Copyright (C) 2018-2025 by Lactozilla.
+// Copyright (C) 2019-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -119,12 +119,20 @@ typedef enum
 typedef struct
 {
 	INT32 x, y;
+	boolean available;
 } spriteframepivot_t;
 
 typedef struct
 {
-	spriteframepivot_t pivot[MAXFRAMENUM];
-	boolean available;
+	spriteframepivot_t pivot;
+} spriteinfoframe_t;
+
+#define SPRINFO_DEFAULT_FRAME (MAXFRAMENUM)
+
+typedef struct
+{
+	UINT8 available[BIT_ARRAY_SIZE(MAXFRAMENUM + 1)]; // 1 extra for default_frame
+	spriteinfoframe_t frames[MAXFRAMENUM + 1];
 } spriteinfo_t;
 
 boolean Picture_IsLumpPNG(const UINT8 *d, size_t s);
@@ -145,5 +153,7 @@ boolean Picture_PNGDimensions(UINT8 *png, INT32 *width, INT32 *height, INT16 *to
 extern spriteinfo_t spriteinfo[NUMSPRITES];
 void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps);
 void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum);
+
+boolean R_IsSpriteInfoAvailable(spriteinfo_t *info, UINT16 frame);
 
 #endif // __R_PICFORMATS__

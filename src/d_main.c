@@ -15,6 +15,10 @@
 ///        plus functions to parse command line parameters, configure game
 ///        parameters, and call the startup functions.
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -248,15 +252,11 @@ void D_ProcessEvents(void)
 		}
 
 		// Menu input
-#ifdef HAVE_THREADS
 		I_lock_mutex(&m_menu_mutex);
-#endif
 		{
 			eaten = M_Responder(ev);
 		}
-#ifdef HAVE_THREADS
 		I_unlock_mutex(m_menu_mutex);
-#endif
 
 		if (eaten)
 			continue; // menu ate the event
@@ -268,15 +268,11 @@ void D_ProcessEvents(void)
 		}
 
 		// console input
-#ifdef HAVE_THREADS
 		I_lock_mutex(&con_mutex);
-#endif
 		{
 			eaten = CON_Responder(ev);
 		}
-#ifdef HAVE_THREADS
 		I_unlock_mutex(con_mutex);
-#endif
 
 		if (eaten)
 			continue; // ate the event
@@ -600,13 +596,9 @@ static void D_Display(void)
 	// vid size change is now finished if it was on...
 	vid.recalc = 0;
 
-#ifdef HAVE_THREADS
 	I_lock_mutex(&m_menu_mutex);
-#endif
 	M_Drawer(); // menu is drawn even on top of everything
-#ifdef HAVE_THREADS
 	I_unlock_mutex(m_menu_mutex);
-#endif
 	// focus lost moved to M_Drawer
 
 	CON_Drawer();
@@ -709,16 +701,11 @@ static void D_Display(void)
 
 tic_t rendergametic;
 
+static void D_RunFrame(void);
+static tic_t oldentertics = 0;
+
 void D_SRB2Loop(void)
 {
-	tic_t entertic = 0, oldentertics = 0, realtics = 0, rendertimeout = INFTICS;
-	double deltatics = 0.0;
-	double deltasecs = 0.0;
-	static lumpnum_t gstartuplumpnum;
-
-	boolean interp = false;
-	boolean doDisplay = false;
-
 	if (dedicated)
 		server = true;
 
@@ -754,21 +741,68 @@ void D_SRB2Loop(void)
 	// hack to start on a nice clear console screen.
 	COM_ImmedExecute("cls;version");
 
+#ifdef __EMSCRIPTEN__
+	EM_ASM(
+		try {
+			StartedMainLoopCallback();
+		} catch (err) {
+			console.log('Faild to find StartedMainLoopCallback()');
+		}
+	);
+#endif
+
 	I_FinishUpdate(); // page flip or blit buffer
 	/*
 	LMFAO this was showing garbage under OpenGL
 	because I_FinishUpdate was called afterward
 	*/
 	/* Smells like a hack... Don't fade Sonic's ass into the title screen. */
+
 	if (gamestate != GS_TITLESCREEN)
 	{
-		gstartuplumpnum = W_CheckNumForPatchName("STARTUP");
+		lumpnum_t gstartuplumpnum = W_CheckNumForPatchName("STARTUP");
 		if (gstartuplumpnum == LUMPERROR)
 			gstartuplumpnum = W_GetNumForPatchName("MISSING");
 		V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(gstartuplumpnum, PU_PATCH));
 	}
-
+#ifdef __EMSCRIPTEN__
+	emscripten_set_main_loop(D_RunFrame, 0, 1);
+#else
 	for (;;)
+	{
+		D_RunFrame();
+	}
+#endif
+}
+
+static boolean D_LockFrame = false;
+
+#ifdef __EMSCRIPTEN__
+int EMSCRIPTEN_KEEPALIVE pause_loop(void)
+{
+	D_LockFrame = true;
+	emscripten_pause_main_loop();
+	return 0;
+}
+
+int EMSCRIPTEN_KEEPALIVE resume_loop(void)
+{
+	D_LockFrame = false;
+	emscripten_resume_main_loop();
+	return 0;
+}
+#endif
+
+static void D_RunFrame(void)
+{
+	static tic_t entertic = 0, realtics = 0, rendertimeout = INFTICS;
+	static double deltatics = 0.0;
+	static double deltasecs = 0.0;
+
+	static boolean interp = false;
+	static boolean doDisplay = false;
+
+	if (!D_LockFrame)
 	{
 		// capbudget is the minimum precise_t duration of a single loop iteration
 		precise_t capbudget;
@@ -924,6 +958,7 @@ void D_SRB2Loop(void)
 		deltasecs = (double)((INT64)(finishprecise - enterprecise)) / I_GetPrecisePrecision();
 		deltatics = deltasecs * NEWTICRATE;
 	}
+	return;
 }
 
 //
@@ -1371,15 +1406,15 @@ void D_SRB2Main(void)
 
 	P_SetRandSeed(M_RandomizedSeed());
 
-	if (M_CheckParm("-password") && M_IsNextParm())
-		D_SetPassword(M_GetNextParm());
-
 	// player setup menu colors must be initialized before
 	// any wad file is added, as they may contain colors themselves
 	M_InitPlayerSetupColors();
 
 	CONS_Printf("Z_Init(): Init zone memory allocation daemon. \n");
 	Z_Init();
+
+	if (M_CheckParm("-password") && M_IsNextParm())
+		D_SetPassword(M_GetNextParm());
 
 	clientGamedata = M_NewGameDataStruct();
 	serverGamedata = M_NewGameDataStruct();

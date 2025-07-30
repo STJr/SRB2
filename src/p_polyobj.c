@@ -2034,7 +2034,7 @@ boolean EV_DoPolyObjRotate(polyrotdata_t *prdata)
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polyrotate_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyObjRotate;
+	th->thinker.function = (actionf_p1)T_PolyObjRotate;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
@@ -2106,7 +2106,7 @@ boolean EV_DoPolyObjMove(polymovedata_t *pmdata)
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polymove_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyObjMove;
+	th->thinker.function = (actionf_p1)T_PolyObjMove;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
@@ -2168,7 +2168,7 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polywaypoint_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyObjWaypoint;
+	th->thinker.function = (actionf_p1)T_PolyObjWaypoint;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
@@ -2236,7 +2236,7 @@ static void Polyobj_doSlideDoor(polyobj_t *po, polydoordata_t *doordata)
 
 	// allocate and add a new slide door thinker
 	th = Z_Malloc(sizeof(polyslidedoor_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyDoorSlide;
+	th->thinker.function = (actionf_p1)T_PolyDoorSlide;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 
 	// point the polyobject to this thinker
@@ -2287,7 +2287,7 @@ static void Polyobj_doSwingDoor(polyobj_t *po, polydoordata_t *doordata)
 
 	// allocate and add a new swing door thinker
 	th = Z_Malloc(sizeof(polyswingdoor_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyDoorSwing;
+	th->thinker.function = (actionf_p1)T_PolyDoorSwing;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 
 	// point the polyobject to this thinker
@@ -2372,7 +2372,7 @@ boolean EV_DoPolyObjDisplace(polydisplacedata_t *prdata)
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polydisplace_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyObjDisplace;
+	th->thinker.function = (actionf_p1)T_PolyObjDisplace;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
@@ -2421,7 +2421,7 @@ boolean EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *prdata)
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polyrotdisplace_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyObjRotDisplace;
+	th->thinker.function = (actionf_p1)T_PolyObjRotDisplace;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
@@ -2526,7 +2526,7 @@ boolean EV_DoPolyObjFlag(polyflagdata_t *pfdata)
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polymove_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyObjFlag;
+	th->thinker.function = (actionf_p1)T_PolyObjFlag;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
@@ -2674,12 +2674,12 @@ boolean EV_DoPolyObjFade(polyfadedata_t *pfdata)
 	if (po->translucency == pfdata->destvalue)
 		return true;
 
-	if (po->thinker && po->thinker->function.acp1 == (actionf_p1)T_PolyObjFade)
+	if (po->thinker && po->thinker->function == (actionf_p1)T_PolyObjFade)
 		P_RemoveThinker(po->thinker);
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polyfade_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyObjFade;
+	th->thinker.function = (actionf_p1)T_PolyObjFade;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 

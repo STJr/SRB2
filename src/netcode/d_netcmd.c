@@ -1170,6 +1170,13 @@ static void SetPlayerName(INT32 playernum, char *newname)
 	{
 		if (strcasecmp(newname, player_names[playernum]) != 0)
 		{
+			if (!LUA_HookNameChange(&players[playernum], newname))
+			{
+				// Name change rejected by Lua
+				if (playernum == consoleplayer)
+					CV_StealthSet(&cv_playername, player_names[consoleplayer]);
+				return;
+			}
 			if (netgame)
 				HU_AddChatText(va("\x82*%s renamed to %s", player_names[playernum], newname), false);
 
@@ -4399,7 +4406,7 @@ static void SoundTest_OnChange(void)
 	}
 
 	S_StopSounds();
-	S_StartSound(NULL, cv_soundtest.value);
+	S_StartSoundFromEverywhere(cv_soundtest.value);
 }
 
 static void AutoBalance_OnChange(void)
@@ -4811,7 +4818,7 @@ static void Command_Archivetest_f(void)
 	// assign mobjnum
 	i = 1;
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
-		if (th->function.acp1 != (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->function != (actionf_p1)P_RemoveThinkerDelayed)
 			((mobj_t *)th)->mobjnum = i++;
 
 	// allocate buffer

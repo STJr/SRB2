@@ -1319,7 +1319,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			else if (R_ThingIsSemiBright(spr->mobj))
 				lightlevel = 128 + (*sector->lightlist[light].lightlevel>>1);
 			else if (!R_ThingIsFullBright(spr->mobj))
-				lightlevel = *sector->lightlist[light].lightlevel > 255 ? 255 : *sector->lightlist[light].lightlevel;
+				lightlevel = max(min(255, *sector->lightlist[light].lightlevel), 0);
 
 			if (*sector->lightlist[light].extra_colormap)
 				colormap = *sector->lightlist[light].extra_colormap;
@@ -1331,7 +1331,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			else if (R_ThingIsSemiBright(spr->mobj))
 				lightlevel = 128 + (sector->lightlevel>>1);
 			else if (!R_ThingIsFullBright(spr->mobj))
-				lightlevel = sector->lightlevel > 255 ? 255 : sector->lightlevel;
+				lightlevel = max(min(255, sector->lightlevel), 0);
 
 			if (sector->extra_colormap)
 				colormap = sector->extra_colormap;

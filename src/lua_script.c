@@ -276,6 +276,18 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word,"tutorialmode")) {
 		lua_pushboolean(L, tutorialmode);
 		return 1;
+	} else if (fastcmp(word,"keepcutscene")) {
+		lua_pushboolean(L, keepcutscene);
+		return 1;
+	} else if (fastcmp(word,"nextgametype")) {
+		lua_pushinteger(L, nextgametype);
+		return 1;
+	} else if (fastcmp(word,"skipstats")) {
+		lua_pushinteger(L, skipstats);
+		return 1;
+	} else if (fastcmp(word,"nextmapoverride")) {
+		lua_pushinteger(L, nextmapoverride);
+		return 1;
 	// end map vars
 	// begin CTF colors
 	} else if (fastcmp(word,"skincolor_redteam")) {
@@ -430,6 +442,15 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word, "token")) {
 		lua_pushinteger(L, token);
 		return 1;
+	} else if (fastcmp(word, "emblems")) {
+		lua_pushinteger(L, M_CountEmblems(clientGamedata));
+		return 1;
+	} else if (fastcmp(word, "numemblems")) {
+		lua_pushinteger(L, numemblems);
+		return 1;
+	} else if (fastcmp(word, "numextraemblems")) {
+		lua_pushinteger(L, numextraemblems);
+		return 1;		
 	} else if (fastcmp(word, "nummaprings")) {
 		lua_pushinteger(L, nummaprings);
 		return 1;

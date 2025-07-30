@@ -46,15 +46,10 @@
 
 #define MAXHUDLINES 20
 
-#ifdef HAVE_THREADS
 I_mutex con_mutex;
 
 #  define Lock_state()    I_lock_mutex(&con_mutex)
 #  define Unlock_state() I_unlock_mutex(con_mutex)
-#else/*HAVE_THREADS*/
-#  define Lock_state()
-#  define Unlock_state()
-#endif/*HAVE_THREADS*/
 
 static boolean con_started = false; // console has been initialised
        boolean con_startup = false; // true at game startup
@@ -1362,11 +1357,11 @@ static void CON_Print(char *msg)
 		return;
 
 	if (*msg == '\3') // chat text, makes ding sound
-		S_StartSound(NULL, sfx_radio);
+		S_StartSoundFromEverywhere(sfx_radio);
 	else if (*msg == '\4') // chat action, dings and is in yellow
 	{
 		*msg = '\x82'; // yellow
-		S_StartSound(NULL, sfx_radio);
+		S_StartSoundFromEverywhere(sfx_radio);
 	}
 
 	Lock_state();

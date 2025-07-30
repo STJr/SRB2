@@ -352,9 +352,7 @@ void M_ClearMenus(boolean callexitmenufunc);
 // Maybe this goes here????? Who knows.
 boolean M_MouseNeeded(void);
 
-#ifdef HAVE_THREADS
 extern I_mutex m_menu_mutex;
-#endif
 
 extern menu_t *currentMenu;
 
@@ -445,7 +443,7 @@ extern INT16 char_on, startchar;
 #define NOSAVESLOT 0 //slot where Play Without Saving appears
 #define MARATHONSLOT 420 // just has to be nonzero, but let's use one that'll show up as an obvious error if something goes wrong while not using our existing saves
 
-#define BwehHehHe() S_StartSound(NULL, sfx_bewar1+M_RandomKey(4)) // Bweh heh he
+#define BwehHehHe() S_StartSoundFromEverywhere(sfx_bewar1+M_RandomKey(4)) // Bweh heh he
 
 void M_TutorialSaveControlResponse(INT32 ch);
 
@@ -486,6 +484,7 @@ UINT16 M_GetColorIndex(UINT16 color);
 menucolor_t* M_GetColorFromIndex(UINT16 index);
 void M_InitPlayerSetupColors(void);
 void M_FreePlayerSetupColors(void);
+void M_RegisterCustomCVOption(consvar_t* cvar);
 
 // These defines make it a little easier to make menus
 #define DEFAULTMENUSTYLE(id, header, source, prev, x, y)\
@@ -524,7 +523,7 @@ void M_FreePlayerSetupColors(void);
 	M_DrawPauseMenu,\
 	x, y,\
 	0,\
-	NULL\
+	M_QuitPauseMenu\
 }
 
 #define CENTERMENUSTYLE(id, header, source, prev, y)\

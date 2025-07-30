@@ -228,7 +228,7 @@ void T_MoveFloor(floormove_t *movefloor)
 					movefloor->direction = -1;
 					movefloor->speed = lines[movefloor->sourceline].args[3] << (FRACBITS - 2);
 					movefloor->sector->soundorg.z = movefloor->sector->floorheight;
-					S_StartSound(&movefloor->sector->soundorg, sfx_pstop);
+					S_StartSoundFromSector(movefloor->sector, sfx_pstop);
 					remove = false;
 				}
 				else
@@ -408,7 +408,7 @@ void T_MoveElevator(elevator_t *elevator)
 /*
 	// make floor move sound
 	if (!(leveltime&7))
-		S_StartSound(&elevator->sector->soundorg, sfx_stnmov);
+		S_StartSoundFromMobj(&elevator->sector->soundorg, sfx_stnmov);
 */
 	if (res == pastdest || res == crushed)            // if destination height acheived
 	{
@@ -486,7 +486,7 @@ void T_MoveElevator(elevator_t *elevator)
 			dontupdate = true;
 		}
 		// make floor stop sound
-		// S_StartSound(&elevator->sector->soundorg, sfx_pstop);
+		// S_StartSoundFromMobj(&elevator->sector->soundorg, sfx_pstop);
 	}
 	if (!dontupdate)
 	{
@@ -677,9 +677,8 @@ void T_BounceCheese(bouncecheese_t *bouncer)
 			bouncer->low = !bouncer->low;
 			if (abs(bouncer->speed) > 6*FRACUNIT)
 			{
-				mobj_t *mp = (void *)&actionsector->soundorg;
 				actionsector->soundorg.z = bouncer->sector->floorheight;
-				S_StartSound(mp, sfx_splash);
+				S_StartSoundFromSector(actionsector, sfx_splash);
 			}
 		}
 
@@ -1178,7 +1177,7 @@ void T_ThwompSector(thwomp_t *thwomp)
 			if (res == pastdest)
 			{
 				if (rover->fofflags & FOF_EXISTS)
-					S_StartSound((void *)&actionsector->soundorg, thwomp->sound);
+					S_StartSoundFromSector(actionsector, thwomp->sound);
 
 				thwomp->direction = 1; // start heading back up
 				thwomp->delay = TICRATE; // but only after a small delay
@@ -1625,7 +1624,7 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 		sec->floordata = dofloor;
 
 		// set up some generic aspects of the floormove_t
-		dofloor->thinker.function.acp1 = (actionf_p1)T_MoveFloor;
+		dofloor->thinker.function = (actionf_p1)T_MoveFloor;
 		dofloor->type = floortype;
 		dofloor->crush = false; // default: types that crush will change this
 		dofloor->sector = sec;
@@ -1760,7 +1759,7 @@ void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype)
 		P_AddThinker(THINK_MAIN, &elevator->thinker);
 		sec->floordata = elevator;
 		sec->ceilingdata = elevator;
-		elevator->thinker.function.acp1 = (actionf_p1)T_MoveElevator;
+		elevator->thinker.function = (actionf_p1)T_MoveElevator;
 		elevator->type = elevtype;
 		elevator->sourceline = line;
 		elevator->distance = 1; // Always crush unless otherwise
@@ -1884,7 +1883,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	}
 
 	sec->soundorg.z = (controlsec->floorheight + controlsec->ceilingheight)/2;
-	S_StartSound(&sec->soundorg, mobjinfo[type].activesound);
+	S_StartSoundFromSector(sec, mobjinfo[type].activesound);
 
 #undef controlsec
 
@@ -1970,7 +1969,7 @@ void EV_BounceSector(sector_t *sec, fixed_t momz, line_t *sourceline)
 	bouncer = Z_Calloc(sizeof (*bouncer), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &bouncer->thinker);
 	sec->ceilingdata = bouncer;
-	bouncer->thinker.function.acp1 = (actionf_p1)T_BounceCheese;
+	bouncer->thinker.function = (actionf_p1)T_BounceCheese;
 
 	// set up the fields according to the type of elevator action
 	bouncer->sourceline = sourceline;
@@ -1996,7 +1995,7 @@ void EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, boole
 	// create and initialize new thinker
 	faller = Z_Calloc(sizeof (*faller), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &faller->thinker);
-	faller->thinker.function.acp1 = (actionf_p1)T_ContinuousFalling;
+	faller->thinker.function = (actionf_p1)T_ContinuousFalling;
 
 	// set up the fields
 	faller->sector = sec;
@@ -2032,7 +2031,7 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	// create and initialize new crumble thinker
 	crumble = Z_Calloc(sizeof (*crumble), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &crumble->thinker);
-	crumble->thinker.function.acp1 = (actionf_p1)T_StartCrumble;
+	crumble->thinker.function = (actionf_p1)T_StartCrumble;
 
 	// set up the fields
 	crumble->sector = sec;
@@ -2098,7 +2097,7 @@ void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 	thing = SearchMarioNode(roversec->touching_thinglist);
 
 	if (!thing)
-		S_StartSound(puncher, sfx_mario1); // "Thunk!" sound - puncher is "close enough".
+		S_StartSoundFromMobj(puncher, sfx_mario1); // "Thunk!" sound - puncher is "close enough".
 	else // Found something!
 	{
 		const boolean itsamonitor = (thing->flags & MF_MONITOR) == MF_MONITOR;
@@ -2108,7 +2107,7 @@ void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		P_AddThinker(THINK_MAIN, &block->thinker);
 		roversec->floordata = block;
 		roversec->ceilingdata = block;
-		block->thinker.function.acp1 = (actionf_p1)T_MarioBlock;
+		block->thinker.function = (actionf_p1)T_MarioBlock;
 
 		// Set up the fields
 		block->sector = roversec;
@@ -2142,12 +2141,12 @@ void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 			thing->momz = FixedMul(3*FRACUNIT, thing->scale);
 			P_TouchSpecialThing(thing, puncher, false);
 			// "Thunk!" sound
-			S_StartSound(puncher, sfx_mario1); // Puncher is "close enough"
+			S_StartSoundFromMobj(puncher, sfx_mario1); // Puncher is "close enough"
 		}
 		else
 		{
 			// "Powerup rise" sound
-			S_StartSound(puncher, sfx_mario9); // Puncher is "close enough"
+			S_StartSoundFromMobj(puncher, sfx_mario9); // Puncher is "close enough"
 		}
 
 		if (itsamonitor && thing)

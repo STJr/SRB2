@@ -2671,7 +2671,7 @@ fixed_t *hwbbox;
 
 static void HWR_RenderBSPNode(INT32 bspnum)
 {
-	node_t *bsp;
+	bspnode_t *bsp;
 	INT32 side;
 
 	ps_numbspcalls.value.i++;
@@ -3168,7 +3168,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		if (h <= temp)
 		{
 			if (!lightset)
-				lightlevel = *list[i-1].lightlevel > 255 ? 255 : *list[i-1].lightlevel;
+				lightlevel = max(min(*list[i-1].lightlevel, 255), 0);
 			if (!(spr->mobj->renderflags & RF_NOCOLORMAPS))
 				colormap = *list[i-1].extra_colormap;
 			break;
@@ -3187,7 +3187,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		if (!(list[i].flags & FOF_NOSHADE) && (list[i].flags & FOF_CUTSPRITES))
 		{
 			if (!lightset)
-				lightlevel = *list[i].lightlevel > 255 ? 255 : *list[i].lightlevel;
+				lightlevel = max(min(*list[i].lightlevel, 255), 0);
 			if (!(spr->mobj->renderflags & RF_NOCOLORMAPS))
 				colormap = *list[i].extra_colormap;
 		}
@@ -3568,13 +3568,13 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 			INT32 light = R_GetPlaneLight(sector, spr->mobj->z, false);
 
 			if (!lightset)
-				lightlevel = *sector->lightlist[light].lightlevel > 255 ? 255 : *sector->lightlist[light].lightlevel;
+				lightlevel = max(min(*sector->lightlist[light].lightlevel, 255), 0);
 
 			if (*sector->lightlist[light].extra_colormap && !(spr->mobj->renderflags & RF_NOCOLORMAPS))
 				colormap = *sector->lightlist[light].extra_colormap;
 		}
 		else if (!lightset)
-			lightlevel = sector->lightlevel > 255 ? 255 : sector->lightlevel;
+			lightlevel = max(min(sector->lightlevel, 255), 0);
 
 		if (R_ThingIsSemiBright(spr->mobj))
 			lightlevel = 128 + (lightlevel>>1);

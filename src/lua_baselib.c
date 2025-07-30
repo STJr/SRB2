@@ -171,6 +171,8 @@ static const struct {
 	{META_SKINCOLOR,    "skincolor_t"},
 	{META_COLORRAMP,    "skincolor_t.ramp"},
 	{META_SPRITEINFO,   "spriteinfo_t"},
+	{META_SPRITEINFOFRAMELIST,"spriteinfoframe_t[]"},
+	{META_SPRITEINFOFRAME,"spriteinfoframe_t"},
 	{META_PIVOTLIST,    "spriteframepivot_t[]"},
 	{META_FRAMEPIVOT,   "spriteframepivot_t"},
 
@@ -3368,10 +3370,10 @@ static int GetValidSoundOrigin(lua_State *L, void **origin)
 			return LUA_ErrInvalid(L, "sector_t");
 
 		*origin = &((sector_t *)(*origin))->soundorg;
-		return 1;
+		return 2;
 	}
 
-	return LUA_ErrInvalid(L, "mobj_t/sector_t");
+	return 0;
 }
 
 static int lib_sStartSound(lua_State *L)
@@ -3390,15 +3392,23 @@ static int lib_sStartSound(lua_State *L)
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
-	if (!lua_isnil(L, 1))
-		if (!GetValidSoundOrigin(L, &origin))
-			return 0;
-	if (!player || P_IsLocalPlayer(player))
+	if (player == NULL || P_IsLocalPlayer(player))
 	{
-		if (hud_running || hook_cmd_running)
-			origin = NULL;	// HUD rendering and CMD building startsound shouldn't have an origin, just remove it instead of having a retarded error.
-
-		S_StartSound(origin, sound_id);
+		if (lua_isnil(L, 1))
+			S_StartSoundFromEverywhere(sound_id);
+		else
+		{
+			int origintype = GetValidSoundOrigin(L, &origin);
+			if (origintype == 1)
+				S_StartSoundFromMobj(origin, sound_id);
+			else if (origintype == 2)
+			{
+				origin = *((sector_t**)luaL_checkudata(L, 1, META_SECTOR)); // Restore this (other functions still use soundorg outright)
+				S_StartSoundFromSector(origin, sound_id);
+			}
+			else
+				return LUA_ErrInvalid(L, "mobj_t/sector_t");
+		}
 	}
 	return 0;
 }
@@ -3419,12 +3429,25 @@ static int lib_sStartSoundAtVolume(lua_State *L)
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
-	if (!lua_isnil(L, 1))
-		if (!GetValidSoundOrigin(L, &origin))
-			return LUA_ErrInvalid(L, "mobj_t/sector_t");
+	if (player == NULL || P_IsLocalPlayer(player))
+	{
+		if (lua_isnil(L, 1))
+			S_StartSoundFromEverywhereVol(sound_id, volume);
+		else
+		{
+			int origintype = GetValidSoundOrigin(L, &origin);
+			if (origintype == 1)
+				S_StartSoundFromMobjVol(origin, sound_id, volume);
+			else if (origintype == 2)
+			{
+				origin = *((sector_t**)luaL_checkudata(L, 1, META_SECTOR)); // Restore this (other functions still use soundorg outright)
+				S_StartSoundFromSectorVol(origin, sound_id, volume);
+			}
+			else
+				return LUA_ErrInvalid(L, "mobj_t/sector_t");
+		}
 
-	if (!player || P_IsLocalPlayer(player))
-		S_StartSoundAtVolume(origin, sound_id, volume);
+	}
 	return 0;
 }
 
@@ -4058,6 +4081,34 @@ static int lib_gAddGametype(lua_State *L)
 	return 0;
 }
 
+// Lua exclusive function to unlock Lua Conditions
+// Up to Lua scripter
+static int lib_gUnlockCondition(lua_State* L)
+{
+	int id = luaL_checkinteger(L, 1) - 1;
+	boolean global = luaL_checkboolean(L, 2);
+
+	if (id <= 0 || id > MAXLUACONDITIONS)
+	{
+		luaL_error(L, "Lua condition %d out of range (1 - %d)", id + 1, MAXLUACONDITIONS);
+		return 0;
+	}
+
+	if (global)
+	{
+		serverGamedata->lua[id] = true;
+		M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+	}
+
+	clientGamedata->lua[id] = true;
+	if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
+	{
+		S_StartSoundFromEverywhere(sfx_s3k68);
+	}
+
+	return 0;
+}
+
 // Bot adding function!
 // Partly lifted from Got_AddPlayer
 static int lib_gAddPlayer(lua_State *L)
@@ -4352,21 +4403,26 @@ static int lib_gSetCustomExitVars(lua_State *L)
 
 	// LUA EXTENSION: Custom exit like support
 	// Supported:
-	//	G_SetCustomExitVars();               [reset to defaults]
-	//	G_SetCustomExitVars(int)             [nextmap override only]
-	//	G_SetCustomExitVars(nil, int)        [skipstats only]
-	//	G_SetCustomExitVars(int, int)        [both of the above]
-	//	G_SetCustomExitVars(int, int, int)   [nextmapoverride, skipstats and nextgametype]
+	//	G_SetCustomExitVars();					[reset to defaults]
+	//	G_SetCustomExitVars(int)				[nextmap override only]
+	//	G_SetCustomExitVars(nil, int)			[skipstats only]
+	//	G_SetCustomExitVars(int, int)			[both of the above]
+	//	G_SetCustomExitVars(int, int, int)		[nextmapoverride, skipstats and nextgametype]
+	//	G_SetCustomExitVars(int, int, int, int) [nextmapoverride, skipstats, nextgametype and keepcutscenes]
 
 	nextmapoverride = 0;
 	skipstats = 0;
 	nextgametype = -1;
+	keepcutscene = false;
 
 	if (n >= 1)
 	{
 		nextmapoverride = (INT16)luaL_optinteger(L, 1, 0);
 		skipstats = (INT16)luaL_optinteger(L, 2, 0);
 		nextgametype = (INT16)luaL_optinteger(L, 3, -1);
+		
+		if (!lua_isnil(L, 4))
+			keepcutscene = luaL_checkboolean(L, 4);
 	}
 
 	return 0;
@@ -4809,6 +4865,7 @@ static luaL_Reg lib[] = {
 	{"G_AddGametype", lib_gAddGametype},
 	{"G_AddPlayer", lib_gAddPlayer},
 	{"G_RemovePlayer", lib_gRemovePlayer},
+	{"G_UnlockCondition", lib_gUnlockCondition},
 	{"G_SetUsedCheats", lib_gSetUsedCheats},
 	{"G_BuildMapName",lib_gBuildMapName},
 	{"G_BuildMapTitle",lib_gBuildMapTitle},
