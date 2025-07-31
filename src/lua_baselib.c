@@ -2986,6 +2986,7 @@ static int lib_pStopMoveFloor(lua_State *L)
 		sec->floorspeed = 0;
 		sec->floordata = NULL;
 	}
+	return 0;
 }
 
 
