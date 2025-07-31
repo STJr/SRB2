@@ -2932,13 +2932,7 @@ static int lib_evStartCrumble(lua_State *L)
 	return 0;
 }
 
-// Lua Versions of EV_DoFloor and EV_DoCeiling which works on a per sector basis.
-// EV_DoFloor(sector_t sec[, int height, int speed])
-// EV_DoCeiling(sector_t sec[, int height, int speed])
-// Height being undefined stops movement; speed doesn't matter at that point.
-// Allows for a way to interpolate sector movement through Lua.
-
-static int lib_evDoFloor(lua_State *L)
+static int lib_pStartMoveFloor(lua_State *L)
 {
 	NOHUD
 	INLEVEL
@@ -2946,50 +2940,56 @@ static int lib_evDoFloor(lua_State *L)
 
 	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
 		sec = *((sector_t**)luaL_checkudata(L, 1, META_SECTOR));
-
-	INT32 speed = luaL_optinteger(L, 3, FLOORSPEED);; //Default Floor Speed if undefined.
-	if (speed < 0) speed = INT32_MAX/2; //Instant if speed is negative.
-
 	if (!sec)
 		return LUA_ErrInvalid(L, "sector_t");
+	fixed_t destheight = luaL_checkfixed(L, 2);
+	fixed_t speed = luaL_checkfixed(L, 3);
+	if (speed <= 0)
+		return luaL_error(L, "argument #3 must be greater than 0");
+
 	floormove_t* floor;
 	floor = Z_Calloc(sizeof(*floor), PU_LEVSPEC, NULL);
+	if (sec->floordata != NULL)
+	{
+		P_RemoveThinker(sec->floordata);
+		sec->floordata = NULL;
+		sec->floorspeed = 0;
+	}
+	sec->floordata = floor;
+	P_AddThinker(THINK_MAIN, &floor->thinker);
+	floor->thinker.function = (actionf_p1)T_MoveFloor;
+	floor->sector = sec;
+	floor->speed = speed;
+	floor->texture = -1;
+	floor->type = -1;
+	floor->floordestheight = destheight;
+	floor->direction = destheight >= sec->floorheight ? 1 : -1;
+	R_CreateInterpolator_SectorPlane(&floor->thinker, sec, true);
+
+	return 0;
+}
+
+static int lib_pStopMoveFloor(lua_State *L)
+{
+	NOHUD
+	INLEVEL
+	sector_t* sec = NULL;
+
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+		sec = *((sector_t**)luaL_checkudata(L, 1, META_SECTOR));
+	if (!sec)
+		return LUA_ErrInvalid(L, "sector_t");
+
 	if (sec->floordata != NULL) // Override movement on new lua call.
 	{
 		P_RemoveThinker(sec->floordata);
 		sec->floorspeed = 0;
 		sec->floordata = NULL;
 	}
-	P_AddThinker(THINK_MAIN, &floor->thinker);
-	sec->floordata = floor;
-	floor->thinker.function.acp1 = (actionf_p1)T_MoveFloor;
-	floor->sector = sec;
-	floor->speed = speed;
-	floor->texture = -1;
-
-	floor->speed = speed;
-	INT32 destheight = luaL_optinteger(L, 2, sec->ceilingheight); // Don't move ceiling if no height is given.
-	if (destheight >= sec->ceilingheight) // Move up
-	{
-		floor->direction = 1;
-		floor->floordestheight = destheight;
-	}
-	else // Move down
-	{
-		floor->direction = -1;
-		floor->floordestheight= destheight;
-	}
-
-	floor->type = -1; // Don't use any T_MoveFloor stopping actions.
-	
-	R_CreateInterpolator_SectorPlane(&floor->thinker, sec, false);
-
-	return 0;
 }
 
 
-
-static int lib_evDoCeiling(lua_State *L)
+static int lib_pStartMoveCeiling(lua_State *L)
 {
 	NOHUD
 	INLEVEL
@@ -2997,44 +2997,52 @@ static int lib_evDoCeiling(lua_State *L)
 
 	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
 		sec = *((sector_t**)luaL_checkudata(L, 1, META_SECTOR));
-
-	INT32 speed = luaL_optinteger(L, 3, CEILSPEED);; //Default Ceiling Speed if undefined.
-	if (speed < 0) speed = INT32_MAX/2; //Instant if speed is negative.
-
 	if (!sec)
 		return LUA_ErrInvalid(L, "sector_t");
+	fixed_t destheight = luaL_checkfixed(L, 2);
+	fixed_t speed = luaL_checkfixed(L, 3);
+	if (speed <= 0)
+		return luaL_error(L, "argument #3 must be greater than 0");
+
 	ceiling_t* ceiling;
 	ceiling = Z_Calloc(sizeof(*ceiling), PU_LEVSPEC, NULL);
-	if (sec->ceilingdata != NULL) // Override movement on new lua call.
+	if (sec->ceilingdata != NULL)
+	{
+		P_RemoveThinker(sec->ceilingdata);
+		sec->ceilingdata = NULL;
+		sec->ceilspeed = 0;
+	}
+	sec->ceilingdata = ceiling;
+	P_AddThinker(THINK_MAIN, &ceiling->thinker);
+	ceiling->thinker.function = (actionf_p1)T_MoveCeiling;
+	ceiling->sector = sec;
+	ceiling->speed = speed;
+	ceiling->texture = -1;
+	ceiling->type = -1;
+	ceiling->direction = destheight >= sec->ceilingheight ? 1 : -1;
+	ceiling->topheight = ceiling->bottomheight = destheight;
+	R_CreateInterpolator_SectorPlane(&ceiling->thinker, sec, true);
+
+	return 0;
+}
+
+static int lib_pStopMoveCeiling(lua_State *L)
+{
+	NOHUD
+	INLEVEL
+	sector_t* sec = NULL;
+
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+		sec = *((sector_t**)luaL_checkudata(L, 1, META_SECTOR));
+	if (!sec)
+		return LUA_ErrInvalid(L, "sector_t");
+
+	if (sec->ceilingdata != NULL)
 	{
 		P_RemoveThinker(sec->ceilingdata);
 		sec->ceilspeed = 0;
 		sec->ceilingdata = NULL;
 	}
-	P_AddThinker(THINK_MAIN, &ceiling->thinker);
-	sec->ceilingdata = ceiling;
-	ceiling->thinker.function.acp1 = (actionf_p1)T_MoveCeiling;
-	ceiling->sector = sec;
-	ceiling->speed = speed;
-	ceiling->texture = -1;
-
-	ceiling->speed = speed;
-	INT32 destheight = luaL_optinteger(L, 2, sec->ceilingheight); // Don't move ceiling if no height is given.
-	if (destheight >= sec->ceilingheight) // Move up
-	{
-		ceiling->direction = 1;
-		ceiling->topheight = destheight;
-	}
-	else // Move down
-	{
-		ceiling->direction = -1;
-		ceiling->bottomheight = destheight;
-	}
-
-	ceiling->type = -1; // Don't use any T_MoveCeiling stopping actions.
-	
-	R_CreateInterpolator_SectorPlane(&ceiling->thinker, sec, true);
-
 	return 0;
 }
 
@@ -4793,8 +4801,10 @@ static luaL_Reg lib[] = {
 	{"P_StartQuake",lib_pStartQuake},
 	{"EV_CrumbleChain",lib_evCrumbleChain},
 	{"EV_StartCrumble",lib_evStartCrumble},
-	{"EV_DoFloor",lib_evDoFloor},
-	{"EV_DoCeiling",lib_evDoCeiling},
+	{"P_StartMoveFloor",lib_pStartMoveFloor},
+	{"P_StopMoveFloor",lib_pStopMoveFloor},
+	{"P_StartMoveCeiling",lib_pStartMoveCeiling},
+	{"P_StopMoveCeiling",lib_pStopMoveCeiling},
 
 	// p_slopes
 	{"P_GetZAt",lib_pGetZAt},
