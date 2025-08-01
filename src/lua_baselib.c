@@ -4328,7 +4328,7 @@ static int lib_gSetCustomExitVars(lua_State *L)
 
 // Another Lua function that doesn't actually exist!
 // Sets mapexitflags, nextmapoverride and nextgametype without instantly ending the level, for instances where other sources should be exiting the level, like normal signposts.
-static int lib_gSetNextMap(lua_State* L)
+static int lib_gSetNextLevel(lua_State * L)
 {
 	int n = lua_gettop(L); // Num arguments
 	NOHUD
