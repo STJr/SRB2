@@ -4574,11 +4574,24 @@ static void P_ProcessExitSector(player_t *player, mtag_t sectag)
 		nextmapoverride = (INT16)(udmf ? lines[lineindex].args[0] : lines[lineindex].frontsector->floorheight>>FRACBITS);
 
 	if (lines[lineindex].args[1] & TMEF_SKIPTALLY)
-		skipstats = 1;
+		mapexitflags |= EXITMAP_SKIPSTATS;
 
 	//skip stats actually skips post-level cutscenes.
-	if (lines[lineindex].args[1] & TMEF_KEEPCUTSCENE)
-		keepcutscene = true;
+	if (lines[lineindex].args[1] & TMEF_SKIPCUTSCENE)
+		mapexitflags |= EXITMAP_SKIPCUTSCENE;
+
+	//skip special stage checks
+	if (lines[lineindex].args[1] & TMEF_SKIPSPECIAL)
+		mapexitflags |= EXITMAP_SKIPSPECIAL;
+
+	//skips recording of emblems and visited maps entirely
+	if (lines[lineindex].args[1] & TMEF_SKIPRECORDS)
+		mapexitflags |= EXITMAP_SKIPRECORDS;
+
+	//removes time attack rewards
+	if (lines[lineindex].args[1] & TMEF_NOTIMEATTACK)
+		mapexitflags |= EXITMAP_NOTIMEATTACK;
+
 }
 
 static void P_ProcessTeamBase(player_t *player, boolean redteam)

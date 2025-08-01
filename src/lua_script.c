@@ -276,14 +276,11 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word,"tutorialmode")) {
 		lua_pushboolean(L, tutorialmode);
 		return 1;
-	} else if (fastcmp(word,"keepcutscene")) {
-		lua_pushboolean(L, keepcutscene);
-		return 1;
 	} else if (fastcmp(word,"nextgametype")) {
 		lua_pushinteger(L, nextgametype);
 		return 1;
-	} else if (fastcmp(word,"skipstats")) {
-		lua_pushinteger(L, skipstats);
+	} else if (fastcmp(word,"mapexitflags")) {
+		lua_pushinteger(L, mapexitflags);
 		return 1;
 	} else if (fastcmp(word,"nextmapoverride")) {
 		lua_pushinteger(L, nextmapoverride);

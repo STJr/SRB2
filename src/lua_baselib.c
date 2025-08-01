@@ -3982,7 +3982,7 @@ static int lib_gUnlockCondition(lua_State* L)
 	int id = luaL_checkinteger(L, 1) - 1;
 	boolean global = luaL_checkboolean(L, 2);
 
-	if (id <= 0 || id > MAXLUACONDITIONS)
+	if (id < 0 || id >= MAXLUACONDITIONS)
 	{
 		luaL_error(L, "Lua condition %d out of range (1 - %d)", id + 1, MAXLUACONDITIONS);
 		return 0;
@@ -4289,11 +4289,13 @@ static int lib_gDoReborn(lua_State *L)
 
 // Another Lua function that doesn't actually exist!
 // Sets nextmapoverride, skipstats and nextgametype without instantly ending the level, for instances where other sources should be exiting the level, like normal signposts.
+// TODO: Remove this for 2.3
 static int lib_gSetCustomExitVars(lua_State *L)
 {
 	int n = lua_gettop(L); // Num arguments
-	NOHUD
+	NOHUD	
 	INLEVEL
+	LUA_Deprecated(L, "G_SetCustomExitVars", "G_SetNextLevel");
 
 	// LUA EXTENSION: Custom exit like support
 	// Supported:
@@ -4302,21 +4304,53 @@ static int lib_gSetCustomExitVars(lua_State *L)
 	//	G_SetCustomExitVars(nil, int)			[skipstats only]
 	//	G_SetCustomExitVars(int, int)			[both of the above]
 	//	G_SetCustomExitVars(int, int, int)		[nextmapoverride, skipstats and nextgametype]
-	//	G_SetCustomExitVars(int, int, int, int) [nextmapoverride, skipstats, nextgametype and keepcutscenes]
 
 	nextmapoverride = 0;
-	skipstats = 0;
 	nextgametype = -1;
-	keepcutscene = false;
+	mapexitflags = 0;
 
 	if (n >= 1)
 	{
 		nextmapoverride = (INT16)luaL_optinteger(L, 1, 0);
-		skipstats = (INT16)luaL_optinteger(L, 2, 0);
 		nextgametype = (INT16)luaL_optinteger(L, 3, -1);
 		
-		if (!lua_isnil(L, 4))
-			keepcutscene = luaL_checkboolean(L, 4);
+		int options = luaL_optinteger(L, 2, 0);
+
+		if (options > 0)
+			mapexitflags |= EXITMAP_SKIPSTATS;
+
+		if (options > 1)
+			mapexitflags |= EXITMAP_SKIPCUTSCENE;
+	}
+
+	return 0;
+}
+
+// Another Lua function that doesn't actually exist!
+// Sets mapexitflags, nextmapoverride and nextgametype without instantly ending the level, for instances where other sources should be exiting the level, like normal signposts.
+static int lib_gSetNextMap(lua_State* L)
+{
+	int n = lua_gettop(L); // Num arguments
+	NOHUD
+	INLEVEL
+
+	// LUA EXTENSION: Custom exit like support
+	// Supported:
+	//	G_SetNextLevel();				[reset to defaults]
+	//	G_SetNextLevel(int)				[sets mapexitflags]
+	//	G_SetNextLevel(nil, int)		[nextmap override only]
+	//	G_SetNextLevel(int, int)		[both of the above]
+	//	G_SetNextLevel(int, int, int)	[mapexitflags, nextmapoverride and nextgametype]
+
+	mapexitflags = 0;
+	nextmapoverride = 0;
+	nextgametype = -1;
+
+	if (n >= 1)
+	{
+		mapexitflags =		(UINT8)luaL_optinteger(L, 1, 0);
+		nextmapoverride =	(INT16)luaL_optinteger(L, 2, 0);
+		nextgametype =		(INT16)luaL_optinteger(L, 3, -1);
 	}
 
 	return 0;
@@ -4329,13 +4363,15 @@ static int lib_gEnoughPlayersFinished(lua_State *L)
 	return 1;
 }
 
+// TODO: Remove this for 2.3
 static int lib_gExitLevel(lua_State *L)
 {
 	int n = lua_gettop(L); // Num arguments
 	NOHUD
+	INLEVEL
 	// Moved this bit to G_SetCustomExitVars
 	if (n >= 1) // Don't run the reset to defaults option
-		lib_gSetCustomExitVars(L);
+		lib_gSetCustomExitVars(L); // TODO: For 2.3 Replace this with SetNextLevel
 	G_ExitLevel();
 	return 0;
 }
@@ -4766,6 +4802,7 @@ static luaL_Reg lib[] = {
 	{"G_DoReborn",lib_gDoReborn},
 	{"G_SetCustomExitVars",lib_gSetCustomExitVars},
 	{"G_EnoughPlayersFinished",lib_gEnoughPlayersFinished},
+	{"G_SetNextLevel",lib_gSetNextLevel},
 	{"G_ExitLevel",lib_gExitLevel},
 	{"G_IsSpecialStage",lib_gIsSpecialStage},
 	{"G_GametypeUsesLives",lib_gGametypeUsesLives},
