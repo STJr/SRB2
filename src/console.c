@@ -143,7 +143,7 @@ static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 		{1, "Black"},		{
 												{9, "Gold"},		{10,"Yellow"},		{11,"Emerald"},
 												{12,"Green"},		{13,"Cyan"},		{14,"Steel"},
 												{15,"Periwinkle"},	{16,"Blue"},		{17,"Purple"},
-												{18,"Lavender"},
+												{18,"Lavender"},	{19,"Gray"},
 												{0, NULL}};
 
 
@@ -325,6 +325,7 @@ void CON_SetupBackColormapEx(INT32 color, boolean prompt)
 		case 16:	palindex = 159;	break; 	// Blue
 		case 17:	palindex = 187; shift = 7; 	break; 	// Purple
 		case 18:	palindex = 199; shift = 7; 	break; 	// Lavender
+		case 19:	palindex = 15; shift = 7;	break; 	// Gray
 		// Default green
 		default:	palindex = 111; break;
 	}
