@@ -33,6 +33,21 @@ static vector3_t *GetVector(lua_State *L, int index)
 	return vec;
 }
 
+static void GetVectorOrXYZ(lua_State *L, int index, vector3_t *result)
+{
+	vector3_t *vec = GetVector(L, index);
+	if (vec)
+	{
+		*result = *vec;
+	}
+	else
+	{
+		result->x = luaL_checkfixed(L, 1);
+		result->y = luaL_checkfixed(L, 2);
+		result->z = luaL_checkfixed(L, 3);
+	}
+}
+
 static matrix_t *NewMatrix(lua_State *L)
 {
 	matrix_t *mat = lua_newuserdata(L, sizeof(*mat));
@@ -53,21 +68,17 @@ static int matrix_new(lua_State *L)
 
 static int matrix_translation(lua_State *L)
 {
-	fixed_t x = luaL_checkfixed(L, 1);
-	fixed_t y = luaL_checkfixed(L, 2);
-	fixed_t z = luaL_checkfixed(L, 3);
-
-	Matrix_SetTranslation(NewMatrix(L), x, y, z);
+	vector3_t translation;
+	GetVectorOrXYZ(L, 1, &translation);
+	Matrix_SetTranslation(NewMatrix(L), translation.x, translation.y, translation.z);
 	return 1;
 }
 
 static int matrix_scaling(lua_State *L)
 {
-	fixed_t x = luaL_checkfixed(L, 1);
-	fixed_t y = luaL_checkfixed(L, 2);
-	fixed_t z = luaL_checkfixed(L, 3);
-
-	Matrix_SetScaling(NewMatrix(L), x, y, z);
+	vector3_t scaling;
+	GetVectorOrXYZ(L, 1, &scaling);
+	Matrix_SetScaling(NewMatrix(L), scaling.x, scaling.y, scaling.z);
 	return 1;
 }
 
