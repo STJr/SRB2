@@ -51,7 +51,7 @@ static int matrix_new(lua_State *L)
 	return 1;
 }
 
-static int matrix_fromTranslation(lua_State *L)
+static int matrix_translation(lua_State *L)
 {
 	fixed_t x = luaL_checkfixed(L, 1);
 	fixed_t y = luaL_checkfixed(L, 2);
@@ -61,7 +61,7 @@ static int matrix_fromTranslation(lua_State *L)
 	return 1;
 }
 
-static int matrix_fromScaling(lua_State *L)
+static int matrix_scaling(lua_State *L)
 {
 	fixed_t x = luaL_checkfixed(L, 1);
 	fixed_t y = luaL_checkfixed(L, 2);
@@ -73,8 +73,8 @@ static int matrix_fromScaling(lua_State *L)
 
 static luaL_Reg matrix[] = {
 	{"new", matrix_new},
-	{"fromTranslation", matrix_fromTranslation},
-	{"fromScaling", matrix_fromScaling},
+	{"translation", matrix_translation},
+	{"scaling", matrix_scaling},
 	{NULL, NULL}
 };
 
