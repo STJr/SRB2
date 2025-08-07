@@ -6071,7 +6071,7 @@ static void P_MoveHoop(mobj_t *mobj)
 {
 	const fixed_t fuse = (mobj->fuse*mobj->extravalue2);
 	const angle_t fa = mobj->movedir*(FINEANGLES/mobj->extravalue1);
-	matrix_t m;
+	oldmatrix_t m;
 	vector4_t v;
 	vector4_t res;
 	fixed_t finalx, finaly, finalz;
@@ -6112,7 +6112,7 @@ void P_SpawnHoopOfSomething(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT
 {
 	mobj_t *mobj;
 	INT32 i;
-	matrix_t m;
+	oldmatrix_t m;
 	vector4_t v;
 	vector4_t res;
 	fixed_t finalx, finaly, finalz;
@@ -6181,7 +6181,7 @@ void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 numb
 {
 	mobj_t *mobj;
 	INT32 i;
-	matrix_t m;
+	oldmatrix_t m;
 	vector4_t v;
 	vector4_t res;
 	fixed_t finalx, finaly, finalz, dist;
@@ -6372,7 +6372,7 @@ static void P_NightsItemChase(mobj_t *thing)
 //
 void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 {
-	matrix_t m;
+	oldmatrix_t m;
 	vector4_t unit_lengthways, unit_sideways, pos_lengthways, pos_sideways;
 	vector4_t res;
 	fixed_t radius, dist = 0, zstore;
@@ -13565,7 +13565,7 @@ void P_SpawnHoop(mapthing_t *mthing)
 	mobj_t *mobj = NULL;
 	mobj_t *nextmobj = NULL;
 	mobj_t *hoopcenter;
-	matrix_t pitchmatrix, yawmatrix;
+	oldmatrix_t pitchmatrix, yawmatrix;
 	fixed_t radius = mthing->args[0] << FRACBITS;
 	fixed_t sizefactor = 4*FRACUNIT;
 	fixed_t hoopsize = radius/sizefactor;
@@ -13748,7 +13748,7 @@ static void P_SpawnItemCircle(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 n
 	angle_t angle = FixedAngle(mthing->angle << FRACBITS);
 	angle_t fa;
 	INT32 i;
-	matrix_t m;
+	oldmatrix_t m;
 	vector4_t v, res;
 
 	for (i = 0; i < numitemtypes; i++)

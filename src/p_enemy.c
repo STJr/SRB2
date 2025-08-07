@@ -1298,7 +1298,7 @@ void A_PointyThink(void *data)
 	INT32 i;
 	player_t *player = NULL;
 	mobj_t *ball;
-	matrix_t m;
+	oldmatrix_t m;
 	vector4_t v;
 	vector4_t res;
 	angle_t fa;

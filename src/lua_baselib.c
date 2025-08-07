@@ -199,13 +199,7 @@ static const struct {
 	{META_SUBSECTOR,    "subsector_t"},
 	{META_SECTOR,       "sector_t"},
 	{META_FFLOOR,       "ffloor_t"},
-#ifdef HAVE_LUA_SEGS
-	{META_SEG,          "seg_t"},
-	{META_NODE,         "node_t"},
-#endif
 	{META_SLOPE,        "slope_t"},
-	{META_VECTOR2,      "vector2_t"},
-	{META_VECTOR3,      "vector3_t"},
 	{META_MAPHEADER,    "mapheader_t"},
 
 	{META_POLYOBJ,      "polyobj_t"},
@@ -224,10 +218,6 @@ static const struct {
 
 	{META_THINGARGS,     "mapthing.args"},
 	{META_THINGSTRINGARGS, "mapthing.stringargs"},
-#ifdef HAVE_LUA_SEGS
-	{META_NODEBBOX,     "node_t.bbox"},
-	{META_NODECHILDREN, "node_t.children"},
-#endif
 
 	{META_BBOX,         "bbox"},
 
@@ -244,8 +234,14 @@ static const struct {
 	{META_KEYEVENT,     "keyevent_t"},
 	{META_TEXTEVENT,    "textevent_t"},
 	{META_MOUSE,        "mouse_t"},
-	
+
 	{META_INTERCEPT,	"intercept_t"},
+
+	{META_VECTOR2,      "vector2_t"},
+	{META_VECTOR3,      "vector3_t"},
+	{META_MATRIX,       "matrix_t"},
+	{META_QUATERNION,   "quaternion_t"},
+
 	{NULL,              NULL}
 };
 
