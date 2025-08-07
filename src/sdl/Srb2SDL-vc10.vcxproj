@@ -505,6 +505,7 @@
     <ClCompile Include="..\hu_stuff.c" />
     <ClCompile Include="..\info.c" />
     <ClCompile Include="..\i_time.c" />
+    <ClCompile Include="..\lua_archive.c" />
     <ClCompile Include="..\lua_baselib.c" />
     <ClCompile Include="..\lua_blockmaplib.c" />
     <ClCompile Include="..\lua_consolelib.c" />

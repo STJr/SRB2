@@ -105,3 +105,4 @@ lua_interceptlib.c
 lua_vectorlib.c
 lua_matrixlib.c
 lua_quaternionlib.c
+lua_archive.c

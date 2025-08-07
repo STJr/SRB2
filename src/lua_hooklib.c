@@ -22,6 +22,7 @@
 #include "lua_libs.h"
 #include "lua_hook.h"
 #include "lua_hud.h" // hud_running errors
+#include "lua_archive.h"
 
 #include "m_perfstats.h"
 #include "netcode/d_netcmd.h" // for cv_perfstats

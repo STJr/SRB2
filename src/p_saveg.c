@@ -34,6 +34,7 @@
 #include "r_sky.h"
 #include "p_polyobj.h"
 #include "lua_script.h"
+#include "lua_archive.h"
 #include "p_slopes.h"
 #include "hu_stuff.h"
 

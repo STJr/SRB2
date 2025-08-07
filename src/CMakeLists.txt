@@ -111,6 +111,7 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	lua_vectorlib.c
 	lua_matrixlib.c
 	lua_quaternionlib.c
+	lua_archive.c
 )
 
 # This updates the modification time for comptime.c at the
