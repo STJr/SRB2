@@ -47,8 +47,33 @@ savedata_t savedata;
 		(p)->buf = realloc((p)->buf, (p)->size); \
 	}
 
+static FILE *minilogfile = NULL;
+
+static void OpenMinilog(void)
+{
+	if (!minilogfile)
+	{
+		minilogfile = fopen("minilog.txt", "w");
+		if (!minilogfile)
+			I_Error("Cannot open mini log");
+	}
+}
+
+static void minilog(const char *fmt, ...)
+{
+	OpenMinilog();
+
+	va_list argptr;
+	va_start(argptr, fmt);
+	vfprintf(minilogfile, fmt, argptr);
+	va_end(argptr);
+
+	fflush(minilogfile);
+}
+
 void P_WriteUINT8(save_t *p, UINT8 v)
 {
+	minilog("WriteUINT8\n");
 	ALLOC_SIZE(p, sizeof(v));
 	memcpy(&p->buf[p->pos], &v, sizeof(v));
 	p->pos += sizeof(v);
@@ -56,6 +81,7 @@ void P_WriteUINT8(save_t *p, UINT8 v)
 
 void P_WriteSINT8(save_t *p, SINT8 v)
 {
+	minilog("WriteSINT8\n");
 	ALLOC_SIZE(p, sizeof(v));
 	memcpy(&p->buf[p->pos], &v, sizeof(v));
 	p->pos += sizeof(v);
@@ -63,6 +89,7 @@ void P_WriteSINT8(save_t *p, SINT8 v)
 
 void P_WriteUINT16(save_t *p, UINT16 v)
 {
+	minilog("WriteUINT16\n");
 	ALLOC_SIZE(p, sizeof(v));
 	memcpy(&p->buf[p->pos], &v, sizeof(v));
 	p->pos += sizeof(v);
@@ -70,6 +97,7 @@ void P_WriteUINT16(save_t *p, UINT16 v)
 
 void P_WriteINT16(save_t *p, INT16 v)
 {
+	minilog("WriteINT16\n");
 	ALLOC_SIZE(p, sizeof(v));
 	memcpy(&p->buf[p->pos], &v, sizeof(v));
 	p->pos += sizeof(v);
@@ -77,6 +105,7 @@ void P_WriteINT16(save_t *p, INT16 v)
 
 void P_WriteUINT32(save_t *p, UINT32 v)
 {
+	minilog("WriteUINT32\n");
 	ALLOC_SIZE(p, sizeof(v));
 	memcpy(&p->buf[p->pos], &v, sizeof(v));
 	p->pos += sizeof(v);
@@ -84,6 +113,7 @@ void P_WriteUINT32(save_t *p, UINT32 v)
 
 void P_WriteINT32(save_t *p, INT32 v)
 {
+	minilog("WriteINT32\n");
 	ALLOC_SIZE(p, sizeof(v));
 	memcpy(&p->buf[p->pos], &v, sizeof(v));
 	p->pos += sizeof(v);
@@ -91,6 +121,7 @@ void P_WriteINT32(save_t *p, INT32 v)
 
 void P_WriteChar(save_t *p, char v)
 {
+	minilog("WriteChar\n");
 	ALLOC_SIZE(p, sizeof(v));
 	memcpy(&p->buf[p->pos], &v, sizeof(v));
 	p->pos += sizeof(v);
@@ -98,6 +129,7 @@ void P_WriteChar(save_t *p, char v)
 
 void P_WriteFixed(save_t *p, fixed_t v)
 {
+	minilog("WriteFixed\n");
 	ALLOC_SIZE(p, sizeof(v));
 	memcpy(&p->buf[p->pos], &v, sizeof(v));
 	p->pos += sizeof(v);
@@ -105,6 +137,7 @@ void P_WriteFixed(save_t *p, fixed_t v)
 
 void P_WriteAngle(save_t *p, angle_t v)
 {
+	minilog("WriteAngle\n");
 	ALLOC_SIZE(p, sizeof(v));
 	memcpy(&p->buf[p->pos], &v, sizeof(v));
 	p->pos += sizeof(v);
@@ -112,6 +145,7 @@ void P_WriteAngle(save_t *p, angle_t v)
 
 void P_WriteStringN(save_t *p, char const *s, size_t n)
 {
+	minilog("WriteStringN %u\n", n);
 	size_t i;
 
 	for (i = 0; i < n && s[i] != '\0'; i++)
@@ -123,6 +157,7 @@ void P_WriteStringN(save_t *p, char const *s, size_t n)
 
 void P_WriteStringL(save_t *p, char const *s, size_t n)
 {
+	minilog("WriteStringL %u\n", n);
 	size_t i;
 
 	for (i = 0; i < n - 1 && s[i] != '\0'; i++)
@@ -133,6 +168,7 @@ void P_WriteStringL(save_t *p, char const *s, size_t n)
 
 void P_WriteString(save_t *p, char const *s)
 {
+	minilog("WriteString\n");
 	size_t i;
 
 	for (i = 0; s[i] != '\0'; i++)
@@ -143,6 +179,7 @@ void P_WriteString(save_t *p, char const *s)
 
 void P_WriteMem(save_t *p, void const *s, size_t n)
 {
+	minilog("WriteMem %u\n", n);
 	ALLOC_SIZE(p, n);
 	memcpy(&p->buf[p->pos], s, n);
 	p->pos += n;
@@ -150,22 +187,26 @@ void P_WriteMem(save_t *p, void const *s, size_t n)
 
 void P_SkipStringN(save_t *p, size_t n)
 {
+	minilog("SkipStringN %u\n", n);
 	size_t i;
 	for (i = 0; p->pos < p->size && i < n && P_ReadChar(p) != '\0'; i++);
 }
 
 void P_SkipStringL(save_t *p, size_t n)
 {
+	minilog("SkipStringL %u\n", n);
 	P_SkipStringN(p, n);
 }
 
 void P_SkipString(save_t *p)
 {
+	minilog("SkipString\n");
 	P_SkipStringN(p, SIZE_MAX);
 }
 
 UINT8 P_ReadUINT8(save_t *p)
 {
+	minilog("ReadUINT8\n");
 	UINT8 v;
 	if (p->pos + sizeof(v) > p->size)
 		return 0;
@@ -176,6 +217,7 @@ UINT8 P_ReadUINT8(save_t *p)
 
 SINT8 P_ReadSINT8(save_t *p)
 {
+	minilog("ReadSINT8\n");
 	SINT8 v;
 	if (p->pos + sizeof(v) > p->size)
 		return 0;
@@ -186,6 +228,7 @@ SINT8 P_ReadSINT8(save_t *p)
 
 UINT16 P_ReadUINT16(save_t *p)
 {
+	minilog("ReadUINT16\n");
 	UINT16 v;
 	if (p->pos + sizeof(v) > p->size)
 		return 0;
@@ -196,6 +239,7 @@ UINT16 P_ReadUINT16(save_t *p)
 
 INT16 P_ReadINT16(save_t *p)
 {
+	minilog("ReadINT16\n");
 	INT16 v;
 	if (p->pos + sizeof(v) > p->size)
 		return 0;
@@ -206,6 +250,7 @@ INT16 P_ReadINT16(save_t *p)
 
 UINT32 P_ReadUINT32(save_t *p)
 {
+	minilog("ReadUINT32\n");
 	UINT32 v;
 	if (p->pos + sizeof(v) > p->size)
 		return 0;
@@ -216,6 +261,7 @@ UINT32 P_ReadUINT32(save_t *p)
 
 INT32 P_ReadINT32(save_t *p)
 {
+	minilog("ReadINT32\n");
 	INT32 v;
 	if (p->pos + sizeof(v) > p->size)
 		return 0;
@@ -226,6 +272,7 @@ INT32 P_ReadINT32(save_t *p)
 
 char P_ReadChar(save_t *p)
 {
+	minilog("P_ReadChar\n");
 	char v;
 	if (p->pos + sizeof(v) > p->size)
 		return 0;
@@ -236,6 +283,7 @@ char P_ReadChar(save_t *p)
 
 fixed_t P_ReadFixed(save_t *p)
 {
+	minilog("ReadFixed\n");
 	fixed_t v;
 	if (p->pos + sizeof(v) > p->size)
 		return 0;
@@ -246,6 +294,7 @@ fixed_t P_ReadFixed(save_t *p)
 
 angle_t P_ReadAngle(save_t *p)
 {
+	minilog("ReadAngle\n");
 	angle_t v;
 	if (p->pos + sizeof(v) > p->size)
 		return 0;
@@ -256,6 +305,7 @@ angle_t P_ReadAngle(save_t *p)
 
 void P_ReadStringN(save_t *p, char *s, size_t n)
 {
+	minilog("ReadStringN\n");
 	size_t i;
 	for (i = 0; p->pos < p->size && i < n && (s[i] = P_ReadChar(p)) != '\0'; i++);
 	s[i] = '\0';
@@ -263,16 +313,19 @@ void P_ReadStringN(save_t *p, char *s, size_t n)
 
 void P_ReadStringL(save_t *p, char *s, size_t n)
 {
+	minilog("P_ReadStringL %u\n", n);
 	P_ReadStringN(p, s, n - 1);
 }
 
 void P_ReadString(save_t *p, char *s)
 {
+	minilog("P_ReadString\n");
 	P_ReadStringN(p, s, SIZE_MAX);
 }
 
 void P_ReadMem(save_t *p, void *s, size_t n)
 {
+	minilog("P_ReadMem %u\n", n);
 	if (p->pos + n > p->size)
 		return;
 	memcpy(s, &p->buf[p->pos], n);

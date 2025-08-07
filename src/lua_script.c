@@ -40,6 +40,8 @@
 #include "g_state.h"
 
 #include "hu_stuff.h"
+#include "matrix.h"
+#include "quaternion.h"
 
 lua_State *gL = NULL;
 
@@ -441,7 +443,7 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		return 1;
 	} else if (fastcmp(word, "numextraemblems")) {
 		lua_pushinteger(L, numextraemblems);
-		return 1;		
+		return 1;
 	} else if (fastcmp(word, "nummaprings")) {
 		lua_pushinteger(L, nummaprings);
 		return 1;
@@ -1090,6 +1092,11 @@ enum
 	ARCH_MOUSE,
 	ARCH_SKIN,
 
+	ARCH_VECTOR2,
+	ARCH_VECTOR3,
+	ARCH_MATRIX,
+	ARCH_QUATERNION,
+
 	ARCH_TEND=0xFF,
 };
 
@@ -1118,6 +1125,10 @@ static const struct {
 	{META_SKINCOLOR,   ARCH_SKINCOLOR},
 	{META_MOUSE,    ARCH_MOUSE},
 	{META_SKIN,     ARCH_SKIN},
+	{META_VECTOR2,    ARCH_VECTOR2},
+	{META_VECTOR3,    ARCH_VECTOR3},
+	{META_MATRIX,     ARCH_MATRIX},
+	{META_QUATERNION, ARCH_QUATERNION},
 	{NULL,          ARCH_NULL}
 };
 
@@ -1141,7 +1152,51 @@ static UINT8 GetUserdataArchType(int index)
 	return ARCH_NULL;
 }
 
-static UINT8 ArchiveValue(save_t *save_p, int TABLESINDEX, int myindex)
+static void *PrepareArchiveLuaUserdata(lua_State *L, save_t *save_p, int myindex, int archtype, int USERDATAINDEX)
+{
+	boolean found = false;
+	INT32 i;
+	UINT16 t = (UINT16)lua_objlen(gL, USERDATAINDEX);
+
+	for (i = 1; i <= t && !found; i++)
+	{
+		lua_rawgeti(gL, USERDATAINDEX, i);
+		if (lua_rawequal(gL, myindex, -1))
+		{
+			t = i;
+			found = true;
+		}
+		lua_pop(gL, 1);
+	}
+	if (!found)
+	{
+		t++;
+
+		if (t == 0)
+		{
+			CONS_Alert(CONS_ERROR, "Too much userdata to archive!\n");
+			P_WriteUINT8(save_p, ARCH_NULL);
+			return NULL;
+		}
+	}
+
+	P_WriteUINT8(save_p, archtype);
+	P_WriteUINT16(save_p, t);
+
+	if (found)
+	{
+		return NULL;
+	}
+	else
+	{
+		lua_pushvalue(gL, myindex);
+		lua_rawseti(gL, USERDATAINDEX, t);
+
+		return lua_touserdata(L, myindex);
+	}
+}
+
+static UINT8 ArchiveValue(save_t *save_p, int TABLESINDEX, int USERDATAINDEX, int myindex)
 {
 	if (myindex < 0)
 		myindex = lua_gettop(gL)+1+myindex;
@@ -1446,6 +1501,50 @@ static UINT8 ArchiveValue(save_t *save_p, int TABLESINDEX, int myindex)
 			P_WriteUINT8(save_p, skin->skinnum); // UINT8 because MAXSKINS must be <= 256
 			break;
 		}
+		case ARCH_VECTOR2:
+		{
+			vector2_t *vector = PrepareArchiveLuaUserdata(gL, save_p, myindex, ARCH_VECTOR2, USERDATAINDEX);
+			if (vector)
+			{
+				P_WriteFixed(save_p, vector->x);
+				P_WriteFixed(save_p, vector->y);
+			}
+			break;
+		}
+		case ARCH_VECTOR3:
+		{
+			vector3_t *vector = PrepareArchiveLuaUserdata(gL, save_p, myindex, ARCH_VECTOR3, USERDATAINDEX);
+			if (vector)
+			{
+				P_WriteFixed(save_p, vector->x);
+				P_WriteFixed(save_p, vector->y);
+				P_WriteFixed(save_p, vector->z);
+			}
+			break;
+		}
+		case ARCH_MATRIX:
+		{
+			matrix_t *matrix = PrepareArchiveLuaUserdata(gL, save_p, myindex, ARCH_MATRIX, USERDATAINDEX);
+			if (matrix)
+			{
+				for (size_t r = 0; r < 4; r++)
+					for (size_t c = 0; c < 4; c++)
+						P_WriteFixed(save_p, matrix->matrix[r][c]);
+			}
+			break;
+		}
+		case ARCH_QUATERNION:
+		{
+			quaternion_t *quat = PrepareArchiveLuaUserdata(gL, save_p, myindex, ARCH_QUATERNION, USERDATAINDEX);
+			if (quat)
+			{
+				P_WriteFixed(save_p, quat->x);
+				P_WriteFixed(save_p, quat->y);
+				P_WriteFixed(save_p, quat->z);
+				P_WriteFixed(save_p, quat->w);
+			}
+			break;
+		}
 		default:
 			P_WriteUINT8(save_p, ARCH_NULL);
 			return 2;
@@ -1458,6 +1557,7 @@ static UINT8 ArchiveValue(save_t *save_p, int TABLESINDEX, int myindex)
 static void ArchiveExtVars(save_t *save_p, void *pointer, const char *ptype)
 {
 	int TABLESINDEX;
+	int USERDATAINDEX;
 	UINT16 i;
 
 	if (!gL) {
@@ -1466,7 +1566,8 @@ static void ArchiveExtVars(save_t *save_p, void *pointer, const char *ptype)
 		return;
 	}
 
-	TABLESINDEX = lua_gettop(gL);
+	TABLESINDEX = lua_gettop(gL) - 1;
+	USERDATAINDEX = lua_gettop(gL);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, LREG_EXTVARS);
 	I_Assert(lua_istable(gL, -1));
@@ -1503,7 +1604,7 @@ static void ArchiveExtVars(save_t *save_p, void *pointer, const char *ptype)
 	{
 		I_Assert(lua_type(gL, -2) == LUA_TSTRING);
 		P_WriteString(save_p, lua_tostring(gL, -2));
-		if (ArchiveValue(save_p, TABLESINDEX, -1) == 2)
+		if (ArchiveValue(save_p, TABLESINDEX, USERDATAINDEX, -1) == 2)
 			CONS_Alert(CONS_ERROR, "Type of value for %s entry '%s' (%s) could not be archived!\n", ptype, lua_tostring(gL, -2), luaL_typename(gL, -1));
 		lua_pop(gL, 1);
 	}
@@ -1517,22 +1618,25 @@ static save_t *lua_save_p;
 static int NetArchive(lua_State *L)
 {
 	int TABLESINDEX = lua_upvalueindex(1);
+	int USERDATAINDEX = lua_upvalueindex(2);
 	int i, n = lua_gettop(L);
 	for (i = 1; i <= n; i++)
-		ArchiveValue(lua_save_p, TABLESINDEX, i);
+		ArchiveValue(lua_save_p, TABLESINDEX, USERDATAINDEX, i);
 	return n;
 }
 
 static void ArchiveTables(save_t *save_p)
 {
 	int TABLESINDEX;
+	int USERDATAINDEX;
 	UINT16 i, n;
 	UINT8 e;
 
 	if (!gL)
 		return;
 
-	TABLESINDEX = lua_gettop(gL);
+	TABLESINDEX = lua_gettop(gL) - 1;
+	USERDATAINDEX = lua_gettop(gL);
 
 	n = (UINT16)lua_objlen(gL, TABLESINDEX);
 	for (i = 1; i <= n; i++)
@@ -1542,14 +1646,14 @@ static void ArchiveTables(save_t *save_p)
 		while (lua_next(gL, -2))
 		{
 			// Write key
-			e = ArchiveValue(save_p, TABLESINDEX, -2); // key should be either a number or a string, ArchiveValue can handle this.
+			e = ArchiveValue(save_p, TABLESINDEX, USERDATAINDEX, -2); // key should be either a number or a string, ArchiveValue can handle this.
 			if (e == 1)
 				n++; // the table contained a new table we'll have to archive. :(
 			else if (e == 2) // invalid key type (function, thread, lightuserdata, or anything we don't recognise)
 				CONS_Alert(CONS_ERROR, "Index '%s' (%s) of table %d could not be archived!\n", lua_tostring(gL, -2), luaL_typename(gL, -2), i);
 
 			// Write value
-			e = ArchiveValue(save_p, TABLESINDEX, -1);
+			e = ArchiveValue(save_p, TABLESINDEX, USERDATAINDEX, -1);
 			if (e == 1)
 				n++; // the table contained a new table we'll have to archive. :(
 			else if (e == 2) // invalid value type
@@ -1576,7 +1680,31 @@ static void ArchiveTables(save_t *save_p)
 	}
 }
 
-static UINT8 UnArchiveValue(save_t *save_p, int TABLESINDEX)
+static void *PrepareUnarchiveLuaUserdata(lua_State *L, save_t *save_p, const char *meta, size_t size, int USERDATAINDEX)
+{
+	UINT16 tid = P_ReadUINT16(save_p);
+	lua_rawgeti(L, USERDATAINDEX, tid);
+	if (lua_isnil(L, -1))
+	{
+		lua_pop(L, 1);
+
+		void *ud = lua_newuserdata(L, size);
+
+		luaL_getmetatable(L, meta);
+		lua_setmetatable(L, -2);
+
+		lua_pushvalue(L, -1);
+		lua_rawseti(L, USERDATAINDEX, tid);
+
+		return ud;
+	}
+	else
+	{
+		return NULL;
+	}
+}
+
+static UINT8 UnArchiveValue(save_t *save_p, int TABLESINDEX, int USERDATAINDEX)
 {
 	UINT8 type = P_ReadUINT8(save_p);
 	switch (type)
@@ -1701,6 +1829,50 @@ static UINT8 UnArchiveValue(save_t *save_p, int TABLESINDEX)
 	case ARCH_SKIN:
 		LUA_PushUserdata(gL, skins[P_ReadUINT8(save_p)], META_SKIN);
 		break;
+	case ARCH_VECTOR2:
+	{
+		vector2_t *vector = PrepareUnarchiveLuaUserdata(gL, save_p, META_VECTOR2, sizeof(vector2_t), USERDATAINDEX);
+		if (vector)
+		{
+			vector->x = P_ReadFixed(save_p);
+			vector->y = P_ReadFixed(save_p);
+		}
+		break;
+	}
+	case ARCH_VECTOR3:
+	{
+		vector3_t *vector = PrepareUnarchiveLuaUserdata(gL, save_p, META_VECTOR3, sizeof(vector3_t), USERDATAINDEX);
+		if (vector)
+		{
+			vector->x = P_ReadFixed(save_p);
+			vector->y = P_ReadFixed(save_p);
+			vector->z = P_ReadFixed(save_p);
+		}
+		break;
+	}
+	case ARCH_MATRIX:
+	{
+		matrix_t *matrix = PrepareUnarchiveLuaUserdata(gL, save_p, META_MATRIX, sizeof(matrix_t), USERDATAINDEX);
+		if (matrix)
+		{
+			for (size_t r = 0; r < 4; r++)
+				for (size_t c = 0; c < 4; c++)
+					matrix->matrix[r][c] = P_ReadFixed(save_p);
+		}
+		break;
+	}
+	case ARCH_QUATERNION:
+	{
+		quaternion_t *quat = PrepareUnarchiveLuaUserdata(gL, save_p, META_QUATERNION, sizeof(quaternion_t), USERDATAINDEX);
+		if (quat)
+		{
+			quat->x = P_ReadFixed(save_p);
+			quat->y = P_ReadFixed(save_p);
+			quat->z = P_ReadFixed(save_p);
+			quat->w = P_ReadFixed(save_p);
+		}
+		break;
+	}
 	case ARCH_TEND:
 		return 1;
 	}
@@ -1710,6 +1882,7 @@ static UINT8 UnArchiveValue(save_t *save_p, int TABLESINDEX)
 static void UnArchiveExtVars(save_t *save_p, void *pointer)
 {
 	int TABLESINDEX;
+	int USERDATAINDEX;
 	UINT16 field_count = P_ReadUINT16(save_p);
 	UINT16 i;
 	char field[1024];
@@ -1718,13 +1891,14 @@ static void UnArchiveExtVars(save_t *save_p, void *pointer)
 		return;
 	I_Assert(gL != NULL);
 
-	TABLESINDEX = lua_gettop(gL);
+	TABLESINDEX = lua_gettop(gL) - 1;
+	USERDATAINDEX = lua_gettop(gL);
 	lua_createtable(gL, 0, field_count); // pointer's ext vars subtable
 
 	for (i = 0; i < field_count; i++)
 	{
 		P_ReadString(save_p, field);
-		UnArchiveValue(save_p, TABLESINDEX);
+		UnArchiveValue(save_p, TABLESINDEX, USERDATAINDEX);
 		lua_setfield(gL, -2, field);
 	}
 
@@ -1739,22 +1913,25 @@ static void UnArchiveExtVars(save_t *save_p, void *pointer)
 static int NetUnArchive(lua_State *L)
 {
 	int TABLESINDEX = lua_upvalueindex(1);
+	int USERDATAINDEX = lua_upvalueindex(2);
 	int i, n = lua_gettop(L);
 	for (i = 1; i <= n; i++)
-		UnArchiveValue(lua_save_p, TABLESINDEX);
+		UnArchiveValue(lua_save_p, TABLESINDEX, USERDATAINDEX);
 	return n;
 }
 
 static void UnArchiveTables(save_t *save_p)
 {
 	int TABLESINDEX;
+	int USERDATAINDEX;
 	UINT16 i, n;
 	UINT16 metatableid;
 
 	if (!gL)
 		return;
 
-	TABLESINDEX = lua_gettop(gL);
+	TABLESINDEX = lua_gettop(gL) - 1;
+	USERDATAINDEX = lua_gettop(gL);
 
 	n = (UINT16)lua_objlen(gL, TABLESINDEX);
 	for (i = 1; i <= n; i++)
@@ -1762,13 +1939,13 @@ static void UnArchiveTables(save_t *save_p)
 		lua_rawgeti(gL, TABLESINDEX, i);
 		while (true)
 		{
-			UINT8 e = UnArchiveValue(save_p, TABLESINDEX); // read key
+			UINT8 e = UnArchiveValue(save_p, TABLESINDEX, USERDATAINDEX); // read key
 			if (e == 1) // End of table
 				break;
 			else if (e == 2) // Key contains a new table
 				n++;
 
-			if (UnArchiveValue(save_p, TABLESINDEX) == 2) // read value
+			if (UnArchiveValue(save_p, TABLESINDEX, USERDATAINDEX) == 2) // read value
 				n++;
 
 			if (lua_isnil(gL, -2)) // if key is nil (if a function etc was accidentally saved)
@@ -1810,7 +1987,10 @@ void LUA_Archive(save_t *save_p)
 	thinker_t *th;
 
 	if (gL)
+	{
 		lua_newtable(gL); // tables to be archived.
+		lua_newtable(gL); // userdata to be archived.
+	}
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -1837,7 +2017,7 @@ void LUA_Archive(save_t *save_p)
 	ArchiveTables(save_p);
 
 	if (gL)
-		lua_pop(gL, 1); // pop tables
+		lua_pop(gL, 2); // pop tables
 }
 
 void LUA_UnArchive(save_t *save_p)
@@ -1847,7 +2027,10 @@ void LUA_UnArchive(save_t *save_p)
 	thinker_t *th;
 
 	if (gL)
+	{
 		lua_newtable(gL); // tables to be read
+		lua_newtable(gL); // userdata to be read
+	}
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -1873,7 +2056,7 @@ void LUA_UnArchive(save_t *save_p)
 	UnArchiveTables(save_p);
 
 	if (gL)
-		lua_pop(gL, 1); // pop tables
+		lua_pop(gL, 2); // pop tables
 }
 
 // For mobj_t, player_t, etc. to take custom variables.
