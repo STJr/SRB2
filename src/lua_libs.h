@@ -55,10 +55,6 @@ extern boolean ignoregameinputs;
 #define META_SUBSECTOR "SUBSECTOR_T*"
 #define META_SECTOR "SECTOR_T*"
 #define META_FFLOOR "FFLOOR_T*"
-#ifdef HAVE_LUA_SEGS
-#define META_SEG "SEG_T*"
-#define META_NODE "NODE_T*"
-#endif
 #define META_SLOPE "PSLOPE_T*"
 #define META_MAPHEADER "MAPHEADER_T*"
 
@@ -81,10 +77,6 @@ extern boolean ignoregameinputs;
 #define META_THINGCUSTOMARGS "MAPTHING_T*CUSTOMARGS"
 #define META_POLYOBJVERTICES "POLYOBJ_T*VERTICES"
 #define META_POLYOBJLINES "POLYOBJ_T*LINES"
-#ifdef HAVE_LUA_SEGS
-#define META_NODEBBOX "NODE_T*BBOX"
-#define META_NODECHILDREN "NODE_T*CHILDREN"
-#endif
 
 #define META_BBOX "BOUNDING_BOX"
 

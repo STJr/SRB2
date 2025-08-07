@@ -48,10 +48,6 @@ enum
 	ARCH_SIDE,
 	ARCH_SUBSECTOR,
 	ARCH_SECTOR,
-#ifdef HAVE_LUA_SEGS
-	ARCH_SEG,
-	ARCH_NODE,
-#endif
 	ARCH_FFLOOR,
 	ARCH_POLYOBJ,
 	ARCH_SLOPE,
@@ -82,10 +78,6 @@ static const struct {
 	{META_SIDE,     ARCH_SIDE},
 	{META_SUBSECTOR,ARCH_SUBSECTOR},
 	{META_SECTOR,   ARCH_SECTOR},
-#ifdef HAVE_LUA_SEGS
-	{META_SEG,      ARCH_SEG},
-	{META_NODE,     ARCH_NODE},
-#endif
 	{META_FFLOOR,	ARCH_FFLOOR},
 	{META_POLYOBJ,  ARCH_POLYOBJ},
 	{META_SLOPE,    ARCH_SLOPE},
@@ -373,30 +365,6 @@ static UINT8 ArchiveValue(save_t *save_p, int TABLESINDEX, int USERDATAINDEX, in
 			}
 			break;
 		}
-#ifdef HAVE_LUA_SEGS
-		case ARCH_SEG:
-		{
-			seg_t *seg = *((seg_t **)lua_touserdata(gL, myindex));
-			if (!seg)
-				P_WriteUINT8(save_p, ARCH_NULL);
-			else {
-				P_WriteUINT8(save_p, ARCH_SEG);
-				P_WriteUINT16(save_p, seg - segs);
-			}
-			break;
-		}
-		case ARCH_NODE:
-		{
-			node_t *node = *((node_t **)lua_touserdata(gL, myindex));
-			if (!node)
-				P_WriteUINT8(save_p, ARCH_NULL);
-			else {
-				P_WriteUINT8(save_p, ARCH_NODE);
-				P_WriteUINT16(save_p, node - nodes);
-			}
-			break;
-		}
-#endif
 		case ARCH_FFLOOR:
 		{
 			ffloor_t *rover = *((ffloor_t **)lua_touserdata(gL, myindex));
@@ -762,14 +730,6 @@ static UINT8 UnArchiveValue(save_t *save_p, int TABLESINDEX, int USERDATAINDEX)
 	case ARCH_SECTOR:
 		LUA_PushUserdata(gL, &sectors[P_ReadUINT16(save_p)], META_SECTOR);
 		break;
-#ifdef HAVE_LUA_SEGS
-	case ARCH_SEG:
-		LUA_PushUserdata(gL, &segs[P_ReadUINT16(save_p)], META_SEG);
-		break;
-	case ARCH_NODE:
-		LUA_PushUserdata(gL, &nodes[P_ReadUINT16(save_p)], META_NODE);
-		break;
-#endif
 	case ARCH_FFLOOR:
 	{
 		sector_t *sector = &sectors[P_ReadUINT16(save_p)];

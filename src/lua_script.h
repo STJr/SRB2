@@ -162,9 +162,6 @@ void COM_Lua_f(void);
 	}\
 }
 
-// uncomment if you want seg_t/node_t in Lua
-// #define HAVE_LUA_SEGS
-
 #define ISINLEVEL \
 	(gamestate == GS_LEVEL || titlemapinaction)
 

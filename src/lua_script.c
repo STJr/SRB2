@@ -1020,16 +1020,6 @@ void LUA_InvalidateLevel(void)
 		LUA_InvalidateUserdata(&slope->o);
 		LUA_InvalidateUserdata(&slope->d);
 	}
-#ifdef HAVE_LUA_SEGS
-	for (i = 0; i < numsegs; i++)
-		LUA_InvalidateUserdata(&segs[i]);
-	for (i = 0; i < numnodes; i++)
-	{
-		LUA_InvalidateUserdata(&nodes[i]);
-		LUA_InvalidateUserdata(nodes[i].bbox);
-		LUA_InvalidateUserdata(nodes[i].children);
-	}
-#endif
 }
 
 void LUA_InvalidateMapthings(void)
