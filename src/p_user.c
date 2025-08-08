@@ -10028,7 +10028,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 					thiscam->angle = players[displayplayer].cmd.angleturn << 16;
 					thiscam->aiming = players[displayplayer].cmd.aiming << 16;
 				}
-			} 
+			}
 			else if (thiscam == &camera2)
 			{
 				// i dont think secondarydisplayplayer changes, so we should be fine.
@@ -10693,7 +10693,7 @@ boolean P_SpectatorJoinGame(player_t *player)
 
 		//find a team by num players, score, or random if all else fails.
 		for (z = 0; z < MAXPLAYERS; ++z)
-			if (playeringame[z])
+			if (players[z].ingame)
 			{
 				if (players[z].ctfteam == 1)
 					++numplayersred;

@@ -402,7 +402,7 @@ consvar_t cv_freedemocamera = CVAR_INIT("freedemocamera", "Off", CV_SAVE, CV_OnO
 // NOTE: this should be in hw_main.c, but we can't put it there as it breaks dedicated build
 consvar_t cv_glallowshaders = CVAR_INIT ("gr_allowcustomshaders", "On", CV_NETVAR, CV_OnOff, NULL);
 
-consvar_t cv_http_enable = CVAR_INIT ("http_enable", "On", "If on, it will use HTTP over direct when downloading addons. If disabled, it will always use direct but will fail if the server has it disabled", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_http_enable = CVAR_INIT ("http_enable", "On", CV_SAVE, CV_OnOff, NULL);
 
 char timedemo_name[256];
 boolean timedemo_csv;
