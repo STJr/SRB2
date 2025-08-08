@@ -95,7 +95,6 @@ char *reqpass;
 char **adminpass;
 UINT32 adminpasscount = 0;
 static char adminsalt[MAXNETNODES][9];
-I_StaticAssert(sizeof(netbuffer->u.salt) == sizeof(adminsalt[0]));
 
 tic_t neededtic;
 SINT8 servernode = 0; // the number of the server node
@@ -888,6 +887,7 @@ static void PT_Login(SINT8 node)
 
 static void PT_LoginChallenge(SINT8 node)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	char salt[9];
 	I_StaticAssert(sizeof(salt) == sizeof(netbuffer->u.salt));
 
@@ -911,6 +911,7 @@ static void PT_LoginChallenge(SINT8 node)
 
 static void PT_LoginAuth(SINT8 node, INT32 netconsole)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	UINT8 finalsha256[32];/* Well, it's the cool thing to do? */
 	UINT32 i;
 	if (client)
