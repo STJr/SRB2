@@ -250,11 +250,11 @@ extern textprompt_t *textprompts[MAX_PROMPTS];
  
 // EXIT_ prefix is already used. These flags are for exitmapflags variable
 typedef enum {
-	EXITMAP_SKIPSTATS	= 1,	// Skips Score Tally
-	EXITMAP_SKIPCUTSCENE= 1<<1,	// Skips Post-Level Cutscene
-	EXITMAP_SKIPSPECIAL	= 1<<2, // Skips Special Stages
-	EXITMAP_SKIPRECORDS = 1<<3, // Skips Records Check
-	EXITMAP_NOTIMEATTACK= 1<<4, // Skips Awarding Time Attack Emblems
+	EXITMAP_SKIPSTATS		= 1,	// Skips Score Tally
+	EXITMAP_SKIPCUTSCENE	= 1<<1,	// Skips Post-Level Cutscene
+	EXITMAP_SKIPSPECIAL		= 1<<2, // Skips Special Stages
+	EXITMAP_SKIPRECORDS		= 1<<3, // Skips Records Check
+	EXITMAP_NOTIMEATTACK	= 1<<4, // Skips Awarding Time Attack Emblems
 } mapexitflags_t;
 
 extern INT16 nextmapoverride;
