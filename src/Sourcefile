@@ -17,6 +17,7 @@ hu_stuff.c
 i_time.c
 y_inter.c
 st_stuff.c
+matrix.c
 m_aatree.c
 m_anigif.c
 m_argv.c
@@ -50,6 +51,7 @@ p_telept.c
 p_tick.c
 p_user.c
 p_slopes.c
+quaternion.c
 tables.c
 r_bsp.c
 r_data.c
@@ -71,6 +73,7 @@ r_picformats.c
 r_portal.c
 screen.c
 taglist.c
+vector3d.c
 v_video.c
 s_sound.c
 sounds.c
@@ -99,5 +102,9 @@ lua_hudlib_drawlist.c
 lua_inputlib.c
 lua_colorlib.c
 lua_interceptlib.c
+lua_vectorlib.c
+lua_matrixlib.c
+lua_quaternionlib.c
+lua_archive.c
 md5.c
 lonesha256.c

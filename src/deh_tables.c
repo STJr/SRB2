@@ -5550,11 +5550,6 @@ struct int_const_s const INT_CONST[] = {
 	{"POF_NOSPECIALS",POF_NOSPECIALS},             ///< Don't apply sector specials.
 	{"POF_SPLAT",POF_SPLAT},                       ///< Use splat flat renderer (treat cyan pixels as invisible).
 
-#ifdef HAVE_LUA_SEGS
-	// Node flags
-	{"NF_SUBSECTOR",NF_SUBSECTOR}, // Indicate a leaf.
-#endif
-
 	// Slope flags
 	{"SL_NOPHYSICS",SL_NOPHYSICS},
 	{"SL_DYNAMIC",SL_DYNAMIC},
@@ -5832,7 +5827,7 @@ struct int_const_s const INT_CONST[] = {
 	{"MB_BUTTON8",MB_BUTTON8},
 	{"MB_SCROLLUP",MB_SCROLLUP},
 	{"MB_SCROLLDOWN",MB_SCROLLDOWN},
-	
+
 	// P_PathTraverse constants
 	{"PT_ADDLINES",PT_ADDLINES},
 	{"PT_ADDTHINGS",PT_ADDTHINGS},

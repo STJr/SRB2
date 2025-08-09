@@ -505,6 +505,7 @@
     <ClCompile Include="..\hu_stuff.c" />
     <ClCompile Include="..\info.c" />
     <ClCompile Include="..\i_time.c" />
+    <ClCompile Include="..\lua_archive.c" />
     <ClCompile Include="..\lua_baselib.c" />
     <ClCompile Include="..\lua_blockmaplib.c" />
     <ClCompile Include="..\lua_consolelib.c" />
@@ -513,17 +514,21 @@
     <ClCompile Include="..\lua_hudlib_drawlist.c" />
     <ClCompile Include="..\lua_infolib.c" />
     <ClCompile Include="..\lua_inputlib.c" />
-	<ClCompile Include="..\lua_interceptlib.c" />
+    <ClCompile Include="..\lua_interceptlib.c" />
     <ClCompile Include="..\lua_maplib.c" />
     <ClCompile Include="..\lua_mathlib.c" />
+    <ClCompile Include="..\lua_matrixlib.c" />
     <ClCompile Include="..\lua_mobjlib.c" />
     <ClCompile Include="..\lua_playerlib.c" />
     <ClCompile Include="..\lua_polyobjlib.c" />
+    <ClCompile Include="..\lua_quaternionlib.c" />
     <ClCompile Include="..\lua_script.c" />
     <ClCompile Include="..\lua_skinlib.c" />
     <ClCompile Include="..\lua_taglib.c" />
     <ClCompile Include="..\lua_thinkerlib.c" />
+    <ClCompile Include="..\lua_vectorlib.c" />
     <ClCompile Include="..\lzf.c" />
+    <ClCompile Include="..\matrix.c" />
     <ClCompile Include="..\md5.c" />
     <ClCompile Include="..\m_aatree.c" />
     <ClCompile Include="..\m_anigif.c" />
@@ -573,6 +578,7 @@
     <ClCompile Include="..\p_telept.c" />
     <ClCompile Include="..\p_tick.c" />
     <ClCompile Include="..\p_user.c" />
+    <ClCompile Include="..\quaternion.c" />
     <ClCompile Include="..\r_bsp.c" />
     <ClCompile Include="..\r_data.c" />
     <ClCompile Include="..\r_draw.c" />
@@ -616,6 +622,7 @@
     <ClCompile Include="..\t_tan2a.c">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\vector3d.c" />
     <ClCompile Include="..\v_video.c" />
     <ClCompile Include="..\win32\win_dbg.c" />
     <ClCompile Include="..\w_wad.c" />

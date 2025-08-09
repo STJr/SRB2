@@ -869,10 +869,10 @@ boolean FV3_PointInsideBox(const vector3_t *point, const vector3_t *box)
 //
 // Loads the identity matrix into a matrix
 //
-void FM_LoadIdentity(matrix_t* matrix)
+void FM_LoadIdentity(oldmatrix_t* matrix)
 {
 #define M(row,col)  matrix->m[col * 4 + row]
-	memset(matrix, 0x00, sizeof(matrix_t));
+	memset(matrix, 0x00, sizeof(oldmatrix_t));
 
 	M(0, 0) = FRACUNIT;
 	M(1, 1) = FRACUNIT;
@@ -887,7 +887,7 @@ void FM_LoadIdentity(matrix_t* matrix)
 // Creates a matrix that can be used for
 // adjusting the position of an object
 //
-void FM_CreateObjectMatrix(matrix_t *matrix, fixed_t x, fixed_t y, fixed_t z, fixed_t anglex, fixed_t angley, fixed_t anglez, fixed_t upx, fixed_t upy, fixed_t upz, fixed_t radius)
+void FM_CreateObjectMatrix(oldmatrix_t *matrix, fixed_t x, fixed_t y, fixed_t z, fixed_t anglex, fixed_t angley, fixed_t anglez, fixed_t upx, fixed_t upy, fixed_t upz, fixed_t radius)
 {
 	vector3_t upcross;
 	vector3_t upvec;
@@ -926,7 +926,7 @@ void FM_CreateObjectMatrix(matrix_t *matrix, fixed_t x, fixed_t y, fixed_t z, fi
 //
 // Multiplies a vector by the specified matrix
 //
-const vector3_t *FM_MultMatrixVec3(const matrix_t *matrix, const vector3_t *vec, vector3_t *out)
+const vector3_t *FM_MultMatrixVec3(const oldmatrix_t *matrix, const vector3_t *vec, vector3_t *out)
 {
 #define M(row,col)  matrix->m[col * 4 + row]
 	out->x = FixedMul(vec->x, M(0, 0))
@@ -947,7 +947,7 @@ const vector3_t *FM_MultMatrixVec3(const matrix_t *matrix, const vector3_t *vec,
 	return out;
 }
 
-const vector4_t *FM_MultMatrixVec4(const matrix_t *matrix, const vector4_t *vec, vector4_t *out)
+const vector4_t *FM_MultMatrixVec4(const oldmatrix_t *matrix, const vector4_t *vec, vector4_t *out)
 {
 #define M(row,col)  matrix->m[col * 4 + row]
 	out->x = FixedMul(vec->x, M(0, 0))
@@ -979,9 +979,9 @@ const vector4_t *FM_MultMatrixVec4(const matrix_t *matrix, const vector4_t *vec,
 //
 // Multiples one matrix into another
 //
-void FM_MultMatrix(matrix_t *dest, const matrix_t *multme)
+void FM_MultMatrix(oldmatrix_t *dest, const oldmatrix_t *multme)
 {
-	matrix_t result;
+	oldmatrix_t result;
 	UINT8 i, j;
 #define M(row,col)  multme->m[col * 4 + row]
 #define D(row,col)  dest->m[col * 4 + row]
@@ -993,7 +993,7 @@ void FM_MultMatrix(matrix_t *dest, const matrix_t *multme)
 			R(i, j) = FixedMul(D(i, 0), M(0, j)) + FixedMul(D(i, 1), M(1, j)) + FixedMul(D(i, 2), M(2, j)) + FixedMul(D(i, 3), M(3, j));
 	}
 
-	M_Memcpy(dest, &result, sizeof(matrix_t));
+	M_Memcpy(dest, &result, sizeof(oldmatrix_t));
 
 #undef R
 #undef D
@@ -1005,12 +1005,12 @@ void FM_MultMatrix(matrix_t *dest, const matrix_t *multme)
 //
 // Translates a matrix
 //
-void FM_Translate(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z)
+void FM_Translate(oldmatrix_t *dest, fixed_t x, fixed_t y, fixed_t z)
 {
-	matrix_t trans;
+	oldmatrix_t trans;
 #define M(row,col)  trans.m[col * 4 + row]
 
-	memset(&trans, 0x00, sizeof(matrix_t));
+	memset(&trans, 0x00, sizeof(oldmatrix_t));
 
 	M(0, 0) = M(1, 1) = M(2, 2) = M(3, 3) = FRACUNIT;
 	M(0, 3) = x;
@@ -1026,12 +1026,12 @@ void FM_Translate(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z)
 //
 // Scales a matrix
 //
-void FM_Scale(matrix_t *dest, fixed_t x, fixed_t y, fixed_t z)
+void FM_Scale(oldmatrix_t *dest, fixed_t x, fixed_t y, fixed_t z)
 {
-	matrix_t scale;
+	oldmatrix_t scale;
 #define M(row,col)  scale.m[col * 4 + row]
 
-	memset(&scale, 0x00, sizeof(matrix_t));
+	memset(&scale, 0x00, sizeof(oldmatrix_t));
 
 	M(3, 3) = FRACUNIT;
 	M(0, 0) = x;
