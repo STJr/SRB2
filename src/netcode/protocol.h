@@ -269,6 +269,12 @@ typedef struct
 	UINT8 files[MAXFILENEEDED]; // is filled with writexxx (byteptr.h)
 } ATTRPACK filesneededconfig_pak;
 
+typedef struct
+{
+	UINT32 ping[MAXPLAYERS+1];
+	UINT32 pl[MAXPLAYERS];
+} pingtable_pak;
+
 //
 // Network packet data
 //
@@ -279,7 +285,7 @@ typedef struct
 	UINT8 ackreturn; // The return of the ack number
 
 	UINT8 packettype;
-	UINT8 reserved; // Padding
+	UINT8 packetindex;
 	union
 	{
 		clientcmd_pak clientpak;
@@ -301,8 +307,7 @@ typedef struct
 		plrconfig_pak playerconfig[MAXPLAYERS];
 		INT32 filesneedednum;
 		filesneededconfig_pak filesneededcfg;
-		UINT32 pingtable[MAXPLAYERS+1];
-		UINT32 packetloss[MAXPLAYERS+1];
+		pingtable_pak pingtable;
 	} u; // This is needed to pack diff packet types data together
 } ATTRPACK doomdata_t;
 

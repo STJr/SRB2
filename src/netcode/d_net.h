@@ -41,6 +41,8 @@ extern INT32 packetheaderlength;
 boolean Net_GetNetStat(void);
 extern INT32 getbytes;
 extern INT64 sendbytes; // Realtime updated
+extern UINT32 sentpackets[MAXNETNODES];
+extern UINT32 lostpackets[MAXNETNODES];
 
 #define PACKETMEASUREWINDOW (TICRATE*2)
 extern boolean packetloss[MAXPLAYERS][PACKETMEASUREWINDOW];

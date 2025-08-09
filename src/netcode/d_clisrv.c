@@ -1107,25 +1107,27 @@ static inline void PingUpdate(void)
 		//otherwise, pings fluctuate a lot and would be odd to look at.
 		playerpingtable[i] = realpingtable[i] / pingmeasurecount;
 		realpingtable[i] = 0; //Reset each as we go.
+
+		UINT32 node = playernode[i];
+		if (node < MAXNETNODES)
+		{
+			playerpacketlosstable[i] = lostpackets[node] * 100 / sentpackets[node]; // measure in percentage
+			lostpackets[node] = 0;
+			sentpackets[node] = 0;
+		}
 	}
 
 	//send out our ping packets
 	for (INT32 i = 0; i < MAXNETNODES; i++)
 		if (netnodes[i].ingame)
 		{
-			doomcom_t *doomcom = D_NewPacket(PT_PING, i, sizeof(INT32) * (MAXPLAYERS+1));
+			doomcom_t *doomcom = D_NewPacket(PT_PING, i, sizeof(pingtable_pak));
 			doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
-			memcpy(netbuffer->u.pingtable, playerpingtable, sizeof(INT32) * MAXPLAYERS);
-
-			UINT32 lost = 0;
-			for (INT32 j = 0; j < PACKETMEASUREWINDOW; j++)
-				if (packetloss[i][j])
-					lost++;
-
-			netbuffer->u.packetloss[i] = lost;
+			memcpy(netbuffer->u.pingtable.ping, playerpingtable, sizeof(INT32) * MAXPLAYERS);
+			memcpy(netbuffer->u.pingtable.pl, playerpacketlosstable, sizeof(INT32) * MAXPLAYERS);
 
 			// send the server's maxping as last element of our ping table. This is useful to let us know when we're about to get kicked.
-			netbuffer->u.pingtable[MAXPLAYERS] = cv_maxping.value;
+			netbuffer->u.pingtable.ping[MAXPLAYERS] = cv_maxping.value;
 			HSendPacket(doomcom, true, 0);
 		}
 
@@ -1150,11 +1152,11 @@ static void PT_Ping(doomcom_t *doomcom, INT32 netconsole)
 		for (INT32 i = 0; i < MAXPLAYERS; i++)
 			if (players[i].ingame)
 			{
-				playerpingtable[i] = (tic_t)netbuffer->u.pingtable[i];
-				playerpacketlosstable[i] = netbuffer->u.packetloss[i];
+				playerpingtable[i] = (tic_t)netbuffer->u.pingtable.ping[i];
+				playerpacketlosstable[i] = netbuffer->u.pingtable.pl[i];
 			}
 
-		servermaxping = (tic_t)netbuffer->u.pingtable[MAXPLAYERS];
+		servermaxping = (tic_t)netbuffer->u.pingtable.ping[MAXPLAYERS];
 	}
 }
 

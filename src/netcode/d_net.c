@@ -82,11 +82,11 @@ boolean *bannednode = NULL;
 static tic_t statstarttic;
 INT32 getbytes = 0;
 INT64 sendbytes = 0;
+UINT32 sentpackets[MAXNETNODES];
+UINT32 lostpackets[MAXNETNODES];
 static INT32 retransmit = 0, duppacket = 0;
 static INT32 sendackpacket = 0, getackpacket = 0;
 INT32 ticruned = 0, ticmiss = 0;
-
-boolean packetloss[MAXPLAYERS][PACKETMEASUREWINDOW];
 
 // globals
 INT32 getbps, sendbps;
@@ -170,6 +170,8 @@ typedef struct
 	UINT8 nextacknum;
 
 	UINT8 flags;
+	UINT8 sendnum;
+	UINT8 recvnum;
 } node_t;
 
 static node_t nodes[MAXNETNODES];
@@ -383,6 +385,7 @@ void Net_AckTicker(void)
 				doomdata_t *netbuffer = DOOMCOM_DATA(node->ackpak[i].doomcom);
 				netbuffer->ackreturn = GetAcktosend(nodei);
 				netbuffer->ack = node->ackpak[i].acknum;
+				netbuffer->packetindex = node->sendnum++;
 				netbuffer->checksum = NetbufferChecksum(node->ackpak[i].doomcom);
 				I_NetSend(node->ackpak[i].doomcom);
 			}
@@ -462,6 +465,8 @@ static void InitNode(node_t *node)
 	node->nextacknum = 1;
 	node->remotefirstack = 0;
 	node->flags = 0;
+	node->sendnum = 0;
+	node->recvnum = 0;
 
 	for (INT32 i = 0; i < MAXACKPACKETS; i++)
 		node->ackpak[i].acknum = 0;
@@ -777,6 +782,7 @@ boolean HSendPacket(doomcom_t *doomcom, boolean reliable, UINT8 acknum)
 	else
 		netbuffer->ack = acknum;
 
+	netbuffer->packetindex = nodes[doomcom->remotenode].sendnum++;
 	netbuffer->checksum = NetbufferChecksum(doomcom);
 	sendbytes += packetheaderlength + doomcom->datalength; // For stat
 
@@ -872,6 +878,11 @@ void HGetPacket(void (*handler)(doomcom_t *doomcom))
 		// Proceed the ack and ackreturn field
 		if (!Processackpak(doomcom))
 			continue; // discarded (duplicated)
+
+		// Measure packet loss
+		sentpackets[doomcom->remotenode] += (UINT32)netbuffer->packetindex - nodes[doomcom->remotenode].recvnum;
+		lostpackets[doomcom->remotenode] += (UINT32)netbuffer->packetindex - nodes[doomcom->remotenode].recvnum - 1;
+		nodes[doomcom->remotenode].recvnum = netbuffer->packetindex;
 
 		// A packet with just ackreturn
 		if (netbuffer->packettype == PT_NOTHING)

@@ -72,9 +72,9 @@ static boolean hms_allow_ipv4;
 static char *hms_api;
 static I_mutex hms_api_mutex;
 
-static bool hms_registered_ipv4;
+static boolean hms_registered_ipv4;
 #ifndef NO_IPV6
-static bool hms_registered_ipv6;
+static boolean hms_registered_ipv6;
 #endif
 
 static char hms_useragent[512];

@@ -424,12 +424,31 @@ void SV_Maketic(void)
 	INT32 i;
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		packetloss[i][maketic % PACKETMEASUREWINDOW] = false;
 		if (!players[i].ingame)
 			continue;
 
 		if ((netcmds[maketic % BACKUPTICS][i].angleturn & TICCMD_RECEIVED) == 0)
-			packetloss[i][maketic % PACKETMEASUREWINDOW] = true;
+		{
+			ticcmd_t *    ticcmd = &netcmds[(maketic    ) % BACKUPTICS][i];
+			ticcmd_t *prevticcmd = &netcmds[(maketic - 1) % BACKUPTICS][i];
+
+			// We didn't receive this tic
+			if (players[i].quittime)
+			{
+				// Copy the angle/aiming from the previous tic
+				// and empty the other inputs
+				memset(ticcmd, 0, sizeof(netcmds[0][0]));
+				ticcmd->angleturn = prevticcmd->angleturn | TICCMD_RECEIVED;
+				ticcmd->aiming = prevticcmd->aiming;
+			}
+			else
+			{
+				DEBFILE(va("MISS tic%4d for player %d\n", maketic, i));
+				// Copy the input from the previous tic
+				*ticcmd = *prevticcmd;
+				ticcmd->angleturn &= ~TICCMD_RECEIVED;
+			}
+		}
 	}
 
 	G_MoveTiccmd(netcmds[maketic % BACKUPTICS], playercmds, MAXPLAYERS);
