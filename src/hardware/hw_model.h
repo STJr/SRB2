@@ -75,7 +75,7 @@ typedef struct mesh_s
 typedef struct tag_s
 {
 	char name[64];
-//	matrix_t transform;
+//	oldmatrix_t transform;
 } tag_t;
 
 #define MODEL_INTERPOLATION_FLAG "+i"

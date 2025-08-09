@@ -321,7 +321,12 @@ void Net_ConnectionTimeout(INT32 node)
 	nodes[node].flags |= NF_TIMEOUT;
 
 	if (server)
-		SendKicksForNode(node, KICK_MSG_TIMEOUT | KICK_MSG_KEEP_BODY);
+	{
+		if (netnodes[node].ingame)
+			SendKicksForNode(node, KICK_MSG_TIMEOUT | KICK_MSG_KEEP_BODY);
+		else
+			Net_CloseConnection(node | FORCECLOSE);
+	}
 	else
 		CL_HandleTimeout();
 
