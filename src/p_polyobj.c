@@ -1651,7 +1651,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 		distx = target->x - pox;
 		disty = target->y - poy;
 		distz = target->z - poz;
-		dist = P_AproxDistance(P_AproxDistance(distx, disty), distz);
+		dist = GetDistance3D(pox, poy, poz, target->x, target->y, target->z);
 
 		if (dist < 1)
 			dist = 1;

@@ -1164,6 +1164,128 @@ static int lib_pPlayerZMovement(lua_State *L)
 	return 0;
 }
 
+static int lib_pGetMobjDistance2D(lua_State *L)
+{
+	mobj_t *mobj1 = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *mobj2 = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	//HUDSAFE
+	INLEVEL
+	if (!(mobj1 && mobj2))
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushfixed(L, P_GetMobjDistance2D(mobj1, mobj2));
+	return 1;
+}
+
+static int lib_pGetMobjDistance3D(lua_State *L)
+{
+	mobj_t *mobj1 = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *mobj2 = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	//HUDSAFE
+	INLEVEL
+	if (!(mobj1 && mobj2))
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushfixed(L, P_GetMobjDistance3D(mobj1, mobj2));
+	return 1;
+}
+
+static int lib_pGetMobjLargeDistance2D(lua_State *L)
+{
+	mobj_t *mobj1 = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *mobj2 = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	//HUDSAFE
+	INLEVEL
+	if (!(mobj1 && mobj2))
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushinteger(L, P_GetMobjLargeDistance2D(mobj1, mobj2));
+	return 1;
+}
+
+static int lib_pGetMobjLargeDistance3D(lua_State *L)
+{
+	mobj_t *mobj1 = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *mobj2 = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	//HUDSAFE
+	INLEVEL
+	if (!(mobj1 && mobj2))
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushinteger(L, P_GetMobjLargeDistance3D(mobj1, mobj2));
+	return 1;
+}
+
+static int lib_pAreMobjsClose2D(lua_State *L)
+{
+	mobj_t *mobj1 = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *mobj2 = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	fixed_t maxdist = luaL_checkfixed(L, 3);
+	//HUDSAFE
+	INLEVEL
+	if (!(mobj1 && mobj2))
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, P_AreMobjsClose2D(mobj1, mobj2, maxdist));
+	return 1;
+}
+
+static int lib_pAreMobjsClose3D(lua_State *L)
+{
+	mobj_t *mobj1 = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *mobj2 = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	fixed_t maxdist = luaL_checkfixed(L, 3);
+	//HUDSAFE
+	INLEVEL
+	if (!(mobj1 && mobj2))
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, P_AreMobjsClose3D(mobj1, mobj2, maxdist));
+	return 1;
+}
+
+static int lib_pAreMobjsFar2D(lua_State *L)
+{
+	mobj_t *mobj1 = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *mobj2 = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	fixed_t mindist = luaL_checkfixed(L, 3);
+	//HUDSAFE
+	INLEVEL
+	if (!(mobj1 && mobj2))
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, P_AreMobjsFar2D(mobj1, mobj2, mindist));
+	return 1;
+}
+
+static int lib_pAreMobjsFar3D(lua_State *L)
+{
+	mobj_t *mobj1 = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *mobj2 = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	fixed_t mindist = luaL_checkfixed(L, 3);
+	//HUDSAFE
+	INLEVEL
+	if (!(mobj1 && mobj2))
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, P_AreMobjsFar3D(mobj1, mobj2, mindist));
+	return 1;
+}
+
+static int lib_pGetMobjMomentum2D(lua_State *L)
+{
+	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	//HUDSAFE
+	INLEVEL
+	if (!mobj)
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushfixed(L, P_GetMobjMomentum2D(mobj));
+	return 1;
+}
+
+static int lib_pGetMobjMomentum3D(lua_State *L)
+{
+	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	//HUDSAFE
+	INLEVEL
+	if (!mobj)
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushfixed(L, P_GetMobjMomentum3D(mobj));
+	return 1;
+}
+
 // P_USER
 ////////////
 
@@ -3099,6 +3221,7 @@ static int lib_rPointToAngle2(lua_State *L)
 	return 1;
 }
 
+// TODO: 2.3: Delete
 static int lib_rPointToDist(lua_State *L)
 {
 	fixed_t x = luaL_checkfixed(L, 1);
@@ -3108,6 +3231,7 @@ static int lib_rPointToDist(lua_State *L)
 	return 1;
 }
 
+// TODO: 2.3: Delete
 static int lib_rPointToDist2(lua_State *L)
 {
 	fixed_t px2 = luaL_checkfixed(L, 1);
@@ -3115,7 +3239,7 @@ static int lib_rPointToDist2(lua_State *L)
 	fixed_t px1 = luaL_checkfixed(L, 3);
 	fixed_t py1 = luaL_checkfixed(L, 4);
 	//HUDSAFE
-	lua_pushfixed(L, R_PointToDist2(px2, py2, px1, py1));
+	lua_pushfixed(L, GetDistance2D(px2, py2, px1, py1));
 	return 1;
 }
 
@@ -4616,7 +4740,7 @@ static luaL_Reg lib[] = {
 	{"P_RandomChance",lib_pRandomChance}, // MACRO
 
 	// p_maputil
-	{"P_AproxDistance",lib_pAproxDistance},
+	{"P_AproxDistance",lib_pAproxDistance}, // TODO: 2.3: Delete
 	{"P_ClosestPointOnLine",lib_pClosestPointOnLine},
 	{"P_PointOnLineSide",lib_pPointOnLineSide},
 
@@ -4668,6 +4792,16 @@ static luaL_Reg lib[] = {
 	{"P_RingZMovement",lib_pRingZMovement},
 	{"P_SceneryZMovement",lib_pSceneryZMovement},
 	{"P_PlayerZMovement",lib_pPlayerZMovement},
+	{"P_GetMobjDistance2D",lib_pGetMobjDistance2D},
+	{"P_GetMobjDistance3D",lib_pGetMobjDistance3D},
+	{"P_GetMobjLargeDistance2D",lib_pGetMobjLargeDistance2D},
+	{"P_GetMobjLargeDistance3D",lib_pGetMobjLargeDistance3D},
+	{"P_AreMobjsClose2D",lib_pAreMobjsClose2D},
+	{"P_AreMobjsClose3D",lib_pAreMobjsClose3D},
+	{"P_AreMobjsFar2D",lib_pAreMobjsFar2D},
+	{"P_AreMobjsFar3D",lib_pAreMobjsFar3D},
+	{"P_GetMobjMomentum2D",lib_pGetMobjMomentum2D},
+	{"P_GetMobjMomentum3D",lib_pGetMobjMomentum3D},
 
 	// p_user
 	{"P_GetPlayerHeight",lib_pGetPlayerHeight},
@@ -4810,8 +4944,8 @@ static luaL_Reg lib[] = {
 	// r_defs
 	{"R_PointToAngle",lib_rPointToAngle},
 	{"R_PointToAngle2",lib_rPointToAngle2},
-	{"R_PointToDist",lib_rPointToDist},
-	{"R_PointToDist2",lib_rPointToDist2},
+	{"R_PointToDist",lib_rPointToDist}, // TODO: 2.3: Delete
+	{"R_PointToDist2",lib_rPointToDist2}, // TODO: 2.3: Delete
 	{"R_PointInSubsector",lib_rPointInSubsector},
 	{"R_PointInSubsectorOrNil",lib_rPointInSubsectorOrNil},
 

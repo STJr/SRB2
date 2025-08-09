@@ -21,6 +21,7 @@
 #endif
 #include "doomdef.h"
 #include "m_fixed.h"
+#include "tables.h"
 
 fixed_t FixedSqrt(fixed_t x)
 {
@@ -76,6 +77,95 @@ fixed_t FixedHypot(fixed_t x, fixed_t y)
 	yx2 = FixedMul(yx, yx); // (x/y)^2
 	yx1 = FixedSqrt(1 * FRACUNIT + yx2); // (1 + (x/y)^2)^1/2
 	return FixedMul(ax, yx1); // |x|*((1 + (x/y)^2)^1/2)
+}
+
+fixed_t GetDistance2D(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2)
+{
+	angle_t angle;
+	ufixed_t dx, dy, dist;
+
+	dx = abs(x2 - x1);
+	dy = abs(y2 - y1);
+
+	if (dy > dx)
+	{
+		fixed_t temp;
+
+		temp = dx;
+		dx = dy;
+		dy = temp;
+	}
+	if (!dy)
+		return dx;
+
+	angle = (tantoangle[FixedDiv(dy, dx)>>DBITS] + ANGLE_90) >> ANGLETOFINESHIFT;
+
+	// use as cosine
+	dist = FixedDiv(dx, FINESINE(angle));
+
+	return dist;
+}
+
+fixed_t GetDistance3D(fixed_t x1, fixed_t y1, fixed_t z1, fixed_t x2, fixed_t y2, fixed_t z2)
+{
+	return GetDistance2D(0, z1, GetDistance2D(x1, y1, x2, y2), z2);
+}
+
+INT32 GetLargeDistance2D(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2)
+{
+	return GetDistance2D(x1 / 2, y1 / 2, x2 / 2, y2 / 2) / (FRACUNIT / 2);
+}
+
+INT32 GetLargeDistance3D(fixed_t x1, fixed_t y1, fixed_t z1, fixed_t x2, fixed_t y2, fixed_t z2)
+{
+	return GetDistance3D(x1 / 2, y1 / 2, z1 / 2, x2 / 2, y2 / 2, z2 / 2) / (FRACUNIT / 2);
+}
+
+// Divided by 4 so that the largest possible 3D distance between two points can be contained in a signed 32-bit integer
+boolean ArePointsClose2D(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, fixed_t maxdist)
+{
+	if (
+		(UINT64)llabs((INT64)x2 - (INT64)x1) >= (UINT64)maxdist ||
+		(UINT64)llabs((INT64)y2 - (INT64)y1) >= (UINT64)maxdist
+	)
+		return false;
+
+	return GetDistance2D(x1 / 4, y1 / 4, x2 / 4, y2 / 4) < maxdist / 4;
+}
+
+boolean ArePointsClose3D(fixed_t x1, fixed_t y1, fixed_t z1, fixed_t x2, fixed_t y2, fixed_t z2, fixed_t maxdist)
+{
+	if (
+		(UINT64)llabs((INT64)x2 - (INT64)x1) >= (UINT64)maxdist ||
+		(UINT64)llabs((INT64)y2 - (INT64)y1) >= (UINT64)maxdist ||
+		(UINT64)llabs((INT64)z2 - (INT64)z1) >= (UINT64)maxdist
+	)
+		return false;
+
+	return GetDistance3D(x1 / 4, y1 / 4, z1 / 4, x2 / 4, y2 / 4, z2 / 4) < maxdist / 4;
+}
+
+boolean ArePointsFar2D(fixed_t x1, fixed_t y1, fixed_t x2, fixed_t y2, fixed_t mindist)
+{
+	if (
+		(UINT64)llabs((INT64)x2 - (INT64)x1) >= (UINT64)mindist ||
+		(UINT64)llabs((INT64)y2 - (INT64)y1) >= (UINT64)mindist
+	)
+		return true;
+
+	return GetDistance2D(x1 / 4, y1 / 4, x2 / 4, y2 / 4) > mindist / 4;
+}
+
+boolean ArePointsFar3D(fixed_t x1, fixed_t y1, fixed_t z1, fixed_t x2, fixed_t y2, fixed_t z2, fixed_t mindist)
+{
+	if (
+		(UINT64)llabs((INT64)x2 - (INT64)x1) >= (UINT64)mindist ||
+		(UINT64)llabs((INT64)y2 - (INT64)y1) >= (UINT64)mindist ||
+		(UINT64)llabs((INT64)z2 - (INT64)z1) >= (UINT64)mindist
+	)
+		return true;
+
+	return GetDistance3D(x1 / 4, y1 / 4, z1 / 4, x2 / 4, y2 / 4, z2 / 4) > mindist / 4;
 }
 
 vector2_t *FV2_Load(vector2_t *vec, fixed_t x, fixed_t y)

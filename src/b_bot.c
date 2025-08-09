@@ -22,8 +22,8 @@
 void B_UpdateBotleader(player_t *player)
 {
 	UINT32 i;
-	fixed_t dist;
-	fixed_t neardist = INT32_MAX;
+	INT32 dist;
+	INT32 neardist = INT32_MAX;
 	player_t *nearplayer = NULL;
 	//Find new botleader
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -41,7 +41,7 @@ void B_UpdateBotleader(player_t *player)
 			return;
 
 		//Update best candidate based on nearest distance
-		dist = R_PointToDist2(player->mo->x, player->mo->y, players[i].mo->x, players[i].mo->y);
+		dist = P_GetMobjLargeDistance2D(player->mo, players[i].mo);
 		if (neardist > dist)
 		{
 			neardist = dist;
@@ -72,11 +72,11 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	boolean jump_last = (bot->lastbuttons & BT_JUMP);
 	boolean spin_last = (bot->lastbuttons & BT_SPIN);
 
-	fixed_t dist = P_AproxDistance(sonic->x - tails->x, sonic->y - tails->y);
+	fixed_t dist = P_GetMobjDistance2D(sonic, tails);
 	fixed_t zdist = flip * (sonic->z - tails->z);
 	angle_t ang = sonic->angle;
-	fixed_t pmom = P_AproxDistance(sonic->momx, sonic->momy);
-	fixed_t bmom = P_AproxDistance(tails->momx, tails->momy);
+	fixed_t pmom = P_GetMobjMomentum2D(sonic);
+	fixed_t bmom = P_GetMobjMomentum2D(tails);
 	fixed_t followmax = 128 * 8 * scale; // Max follow distance before AI begins to enter catchup state
 	fixed_t followthres = 92 * scale; // Distance that AI will try to reach
 	fixed_t followmin = 32 * scale;
@@ -311,7 +311,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		else if (dist > followmin && abs(zdist) < 192*scale)
 		{
 			if (!_2d)
-				cmd->forwardmove = FixedHypot(pcmd->forwardmove, pcmd->sidemove);
+				cmd->forwardmove = GetDistance2D(0, 0, pcmd->forwardmove, pcmd->sidemove);
 			else
 				cmd->sidemove = pcmd->sidemove;
 		}
@@ -532,7 +532,7 @@ boolean B_CheckRespawn(player_t *player)
 	}
 
 	// If you can't see Sonic, I guess we should?
-	if (!P_CheckSight(sonic, tails) && P_AproxDistance(P_AproxDistance(tails->x-sonic->x, tails->y-sonic->y), tails->z-sonic->z) > FixedMul(1024*FRACUNIT, tails->scale))
+	if (!P_CheckSight(sonic, tails) && P_AreMobjsFar3D(tails, sonic, FixedMul(1024*FRACUNIT, tails->scale)))
 		return true;
 	return false;
 }

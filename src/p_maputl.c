@@ -63,7 +63,7 @@ void P_ClosestPointOnLine(fixed_t x, fixed_t y, line_t *line, vertex_t *result)
 	vy = dy;
 
 	//Normalize (&V, &V);
-	magnitude = R_PointToDist2(line->v2->x, line->v2->y, startx, starty);
+	magnitude = GetDistance2D(line->v2->x, line->v2->y, startx, starty);
 	vx = FixedDiv(vx, magnitude);
 	vy = FixedDiv(vy, magnitude);
 
@@ -89,7 +89,7 @@ void P_ClosestPointOnLine3D(const vector3_t *p, const vector3_t *Line, vector3_t
 	FV3_SubEx(v2, v1, &V);
 	FV3_SubEx(p, v1, &c);
 
-	d = R_PointToDist2(0, v2->z, R_PointToDist2(v2->x, v2->y, v1->x, v1->y), v1->z);
+	d = GetDistance3D(v2->x, v2->y, v2->z, v1->x, v1->y, v1->z);
 	FV3_Copy(&n, &V);
 	FV3_Divide(&n, d);
 

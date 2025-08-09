@@ -980,8 +980,8 @@ void S_UpdateSounds(void)
 						const mobj_t *soundmobj = c->origin;
 
 						fixed_t dist1, dist2;
-						dist1 = P_AproxDistance(listener.x-soundmobj->x, listener.y-soundmobj->y);
-						dist2 = P_AproxDistance(listener2.x-soundmobj->x, listener2.y-soundmobj->y);
+						dist1 = GetDistance2D(listener.x, listener.y, soundmobj->x, soundmobj->y);
+						dist2 = GetDistance2D(listener2.x, listener2.y, soundmobj->x, soundmobj->y);
 
 						if (dist1 <= dist2)
 						{

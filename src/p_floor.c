@@ -1095,7 +1095,7 @@ void T_ThwompSector(thwomp_t *thwomp)
 				if (players[i].mo->z > thwomp->sector->ceilingheight)
 					continue;
 
-				if (P_AproxDistance(thwompx - players[i].mo->x, thwompy - players[i].mo->y) > 96*FRACUNIT)
+				if (ArePointsFar2D(thwompx, thwompy, players[i].mo->x, players[i].mo->y, 96*FRACUNIT))
 					continue;
 
 				thwomp->direction = -1;
@@ -1940,7 +1940,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 
 					if (fromcenter)
 					{
-						P_InstaThrust(spawned, R_PointToAngle2(sec->soundorg.x, sec->soundorg.y, a, b), FixedDiv(P_AproxDistance(a - sec->soundorg.x, b - sec->soundorg.y), widthfactor));
+						P_InstaThrust(spawned, R_PointToAngle2(sec->soundorg.x, sec->soundorg.y, a, b), FixedDiv(GetDistance2D(a, b, sec->soundorg.x, sec->soundorg.y), widthfactor));
 						P_SetObjectMomZ(spawned, FixedDiv((c - bottomz), heightfactor), false);
 					}
 

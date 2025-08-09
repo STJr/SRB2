@@ -128,7 +128,7 @@ boolean P_Teleport(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle
 	if (!dontstopmove)
 		thing->momx = thing->momy = thing->momz = 0;
 	else // Change speed to match direction
-		P_InstaThrust(thing, angle, FixedHypot(thing->momx, thing->momy));
+		P_InstaThrust(thing, angle, P_GetMobjMomentum2D(thing));
 
 	if (thing->player)
 	{

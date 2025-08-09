@@ -812,7 +812,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 			if (thing->flags & MF_SOLID)
 				S_StartSoundFromMobj(tmthing, thing->info->deathsound);
 			for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
-				if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AproxDistance(P_AproxDistance(thing->x - iter->x, thing->y - iter->y), thing->z - iter->z) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
+				if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AreMobjsClose3D(thing, iter, 56*thing->scale)))//FixedMul(56*FRACUNIT, thing->scale))
 					P_KillMobj(iter, tmthing, tmthing, 0);
 		}
 		else
@@ -839,7 +839,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 		if (thing->flags & MF_SOLID)
 			S_StartSoundFromMobj(tmthing, thing->info->deathsound);
 		for (iter = thing->subsector->sector->thinglist; iter; iter = iter->snext)
-			if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AproxDistance(P_AproxDistance(thing->x - iter->x, thing->y - iter->y), thing->z - iter->z) < 56*thing->scale))//FixedMul(56*FRACUNIT, thing->scale))
+			if (iter->type == thing->type && iter->health > 0 && iter->flags & MF_SOLID && (iter == thing || P_AreMobjsClose3D(thing, iter, 56*thing->scale)))//FixedMul(56*FRACUNIT, thing->scale))
 				P_KillMobj(iter, tmthing, tmthing, 0);
 		return CHECKTHING_COLLIDE;
 	}
@@ -1001,7 +1001,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 		if (((thing->flags2 & MF2_AMBUSH) && (tmthing->z <= thing->z + thing->height) && (tmthing->z + tmthing->height >= thing->z))
 			|| ref != tmthing)
 		{
-			fixed_t dm = min(FixedHypot(ref->momx, ref->momy), 16*FRACUNIT);
+			fixed_t dm = min(P_GetMobjMomentum2D(ref), 16*FRACUNIT);
 			angle_t ang = R_PointToAngle2(0, 0, ref->momx, ref->momy) - thing->angle;
 			fixed_t s = FINESINE((ang >> ANGLETOFINESHIFT) & FINEMASK);
 			S_StartSoundFromMobj(tmthing, thing->info->activesound);
@@ -1085,7 +1085,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 		fixed_t dx = thing->x - tmthing->x;
 		fixed_t dy = thing->y - tmthing->y;
 		fixed_t dz = thing->z - tmthing->z;
-		fixed_t dm = FixedHypot(dz, FixedHypot(dx, dy));
+		fixed_t dm = GetDistance3D(0, 0, 0, dx, dy, dz);
 		thing->momx += FixedDiv(dx, dm);
 		thing->momy += FixedDiv(dy, dm);
 		thing->momz += FixedDiv(dz, dm);
@@ -3133,7 +3133,7 @@ static void P_HitCameraSlideLine(line_t *ld, camera_t *thiscam)
 	lineangle >>= ANGLETOFINESHIFT;
 	deltaangle >>= ANGLETOFINESHIFT;
 
-	movelen = P_AproxDistance(tmxmove, tmymove);
+	movelen = GetDistance2D(0, 0, tmxmove, tmymove);
 	newlen = FixedMul(movelen, FINECOSINE(deltaangle));
 
 	tmxmove = FixedMul(newlen, FINECOSINE(lineangle));
@@ -3179,7 +3179,7 @@ static void P_HitSlideLine(line_t *ld)
 	lineangle >>= ANGLETOFINESHIFT;
 	deltaangle >>= ANGLETOFINESHIFT;
 
-	movelen = R_PointToDist2(0, 0, tmxmove, tmymove);
+	movelen = GetDistance2D(0, 0, tmxmove, tmymove);
 	newlen = FixedMul(movelen, FINECOSINE(deltaangle));
 
 	tmxmove = FixedMul(newlen, FINECOSINE(lineangle));
@@ -3219,7 +3219,7 @@ static void P_HitBounceLine(line_t *ld)
 	lineangle >>= ANGLETOFINESHIFT;
 	deltaangle >>= ANGLETOFINESHIFT;
 
-	movelen = P_AproxDistance(tmxmove, tmymove);
+	movelen = GetDistance2D(0, 0, tmxmove, tmymove);
 
 	tmxmove = FixedMul(movelen, FINECOSINE(deltaangle));
 	tmymove = FixedMul(movelen, FINESINE(deltaangle));
@@ -4176,7 +4176,7 @@ static boolean PIT_RadiusAttack(mobj_t *thing)
 	dy = abs(thing->y - bombspot->y);
 	dz = abs(thing->z + (thing->height>>1) - bombspot->z);
 
-	dist = P_AproxDistance(P_AproxDistance(dx, dy), dz);
+	dist = GetDistance3D(0, 0, 0, dx, dy, dz);
 	dist -= thing->radius;
 
 	if (dist < 0)
