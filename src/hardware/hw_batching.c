@@ -116,7 +116,7 @@ void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPt
 		polygonArray[polygonArraySize].texture = current_texture;
 		polygonArray[polygonArraySize].shader = (shader_target != SHADER_NONE) ? HWR_GetShaderFromTarget(shader_target) : shader_target;
 		polygonArray[polygonArraySize].horizonSpecial = horizonSpecial;
-		// default to maximum value so skybox ánd horizon lines come first
+		// default to maximum value so skybox and horizon lines come first
 		polygonArray[polygonArraySize].hash = INT32_MIN+polygonArraySize;
 		polygonArraySize++;
 
