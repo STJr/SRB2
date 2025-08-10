@@ -2416,14 +2416,12 @@ void F_StartTitleScreen(void)
 
 	if (gamestate != GS_TITLESCREEN && gamestate != GS_WAITINGPLAYERS)
 	{
-		ttuser_count =\
-		 ttloaded[0] = ttloaded[1] = ttloaded[2] = ttloaded[3] = ttloaded[4] = ttloaded[5] =\
-		 testttscale = activettscale =\
-		 sonic_blink = sonic_blink_twice = sonic_idle_start = sonic_idle_end =\
-		 tails_blink = tails_blink_twice = tails_idle_start = tails_idle_end =\
-		 knux_blink  = knux_blink_twice  = knux_idle_start  = knux_idle_end  = 0;
+		ttuser_count = 0; // note: you cannot mix bool with int when setting these values, lines which set booleans use true/false here
+		ttloaded[0] = ttloaded[1] = ttloaded[2] = ttloaded[3] = ttloaded[4] = ttloaded[5] = false;
+		testttscale = activettscale = sonic_idle_start = tails_idle_start = knux_idle_start = sonic_idle_end = tails_idle_end = knux_idle_end = 0;
+		sonic_blink = sonic_blink_twice = tails_blink = tails_blink_twice = knux_blink  = knux_blink_twice = false;
 
-		sonic_blinked_already = tails_blinked_already = knux_blinked_already = 1; // don't blink on the first idle cycle
+		sonic_blinked_already = tails_blinked_already = knux_blinked_already = true; // don't blink on the first idle cycle
 
 		if (curttmode == TTMODE_ALACROIX)
 			finalecount = -3; // hack so that frames don't advance during the entry wipe
