@@ -1546,6 +1546,10 @@ void A_HoodThink(void *data)
 			P_SetMobjState(actor, actor->info->missilestate);
 			return;
 		}
+		else
+		{
+			P_SetTarget(&actor->target, NULL);
+		}
 	}
 }
 
@@ -14510,6 +14514,10 @@ void A_SnapperThinker(void *data)
 			else
 				actor->extravalue1 -= speed;
 		}
+	}
+	else
+	{
+		P_SetTarget(&actor->target, NULL);
 	}
 
 	P_SnapperLegPlace(actor);
