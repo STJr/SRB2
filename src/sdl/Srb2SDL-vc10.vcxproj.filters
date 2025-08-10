@@ -829,6 +829,9 @@
     <ClCompile Include="..\md5.c">
       <Filter>M_Misc</Filter>
     </ClCompile>
+    <ClCompile Include="..\lonesha256.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
     <ClCompile Include="..\m_aatree.c">
       <Filter>M_Misc</Filter>
     </ClCompile>
