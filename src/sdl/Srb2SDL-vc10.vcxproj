@@ -530,6 +530,7 @@
     <ClCompile Include="..\lzf.c" />
     <ClCompile Include="..\matrix.c" />
     <ClCompile Include="..\md5.c" />
+    <ClCompile Include="..\lonesha256.c" />
     <ClCompile Include="..\m_aatree.c" />
     <ClCompile Include="..\m_anigif.c" />
     <ClCompile Include="..\m_argv.c" />

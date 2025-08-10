@@ -3,6 +3,7 @@ include(clang-tidy-default)
 add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	comptime.c
 	md5.c
+	lonesha256.c
 	config.h.in
 	string.c
 	d_main.c
