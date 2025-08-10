@@ -4,6 +4,11 @@ sources+=$(call List,dedicated/Sourcefile)
 
 opts+=-DDEDICATED
 
+ifdef LINUX
+# necessary for older distributions
+libs+=-lpthread
+endif
+
 ifdef FREEBSD
 # on FreeBSD, we have to link to libpthread explicitly
 libs+=-lpthread
