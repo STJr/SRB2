@@ -130,7 +130,10 @@ typedef enum
 {
 	TMEF_SKIPTALLY    = 1,
 	TMEF_EMERALDCHECK = 1<<1,
-	TMEF_KEEPCUTSCENE = 1<<2,
+	TMEF_SKIPCUTSCENE = 1<<2,
+	TMEF_SKIPSPECIAL  = 1<<3,
+	TMEF_SKIPRECORDS  = 1<<4,
+	TMEF_NOTIMEATTACK = 1<<5,
 } textmapexitflags_t;
 
 typedef enum

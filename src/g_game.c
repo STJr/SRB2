@@ -158,10 +158,8 @@ cutscene_t *cutscenes[128];
 textprompt_t *textprompts[MAX_PROMPTS];
 
 INT16 nextmapoverride;
-UINT8 skipstats;
+UINT8 mapexitflags;
 INT16 nextgametype = -1;
-
-boolean keepcutscene;
 
 // Pointers to each CTF flag
 mobj_t *redflag;
@@ -555,83 +553,86 @@ static void G_SetMainRecords(gamedata_t *data, player_t *player)
 
 	I_Assert(player != NULL);
 
-	// Record new best time
-	if (!data->mainrecords[gamemap-1])
-		G_AllocMainRecordData(gamemap-1, data);
-
-	if (player->recordscore > data->mainrecords[gamemap-1]->score)
-		data->mainrecords[gamemap-1]->score = player->recordscore;
-
-	if ((data->mainrecords[gamemap-1]->time == 0) || (player->realtime < data->mainrecords[gamemap-1]->time))
-		data->mainrecords[gamemap-1]->time = player->realtime;
-
-	if ((UINT16)(player->rings) > data->mainrecords[gamemap-1]->rings)
-		data->mainrecords[gamemap-1]->rings = (UINT16)(player->rings);
-
-	if (modeattacking)
+	if (!(mapexitflags & EXITMAP_NOTIMEATTACK))
 	{
-		const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
-		char *gpath;
-		char lastdemo[256], bestdemo[256];
+		// Record new best time
+		if (!data->mainrecords[gamemap - 1])
+			G_AllocMainRecordData(gamemap - 1, data);
 
-		// Save demo!
-		bestdemo[255] = '\0';
-		lastdemo[255] = '\0';
-		G_SetDemoTime(player->realtime, player->recordscore, (UINT16)(player->rings));
-		G_CheckDemoStatus();
+		if (player->recordscore > data->mainrecords[gamemap - 1]->score)
+			data->mainrecords[gamemap - 1]->score = player->recordscore;
 
-		I_mkdir(va("%s"PATHSEP"replay", srb2home), 0755);
-		I_mkdir(va("%s"PATHSEP"replay"PATHSEP"%s", srb2home, timeattackfolder), 0755);
+		if ((data->mainrecords[gamemap - 1]->time == 0) || (player->realtime < data->mainrecords[gamemap - 1]->time))
+			data->mainrecords[gamemap - 1]->time = player->realtime;
 
-		if ((gpath = malloc(glen)) == NULL)
-			I_Error("Out of memory for replay filepath\n");
+		if ((UINT16)(player->rings) > data->mainrecords[gamemap - 1]->rings)
+			data->mainrecords[gamemap - 1]->rings = (UINT16)(player->rings);
 
-		sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
-		snprintf(lastdemo, 255, "%s-%s-last.lmp", gpath, skins[cv_chooseskin.value-1]->name);
-
-		if (FIL_FileExists(lastdemo))
+		if (modeattacking)
 		{
-			UINT8 *buf;
-			size_t len = FIL_ReadFile(lastdemo, &buf);
+			const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
+			char *gpath;
+			char lastdemo[256], bestdemo[256];
 
-			snprintf(bestdemo, 255, "%s-%s-time-best.lmp", gpath, skins[cv_chooseskin.value-1]->name);
-			if (!FIL_FileExists(bestdemo) || G_CmpDemoTime(bestdemo, lastdemo) & 1)
-			{ // Better time, save this demo.
-				if (FIL_FileExists(bestdemo))
-					remove(bestdemo);
-				FIL_WriteFile(bestdemo, buf, len);
-				CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW RECORD TIME!"), M_GetText("Saved replay as"), bestdemo);
+			// Save demo!
+			bestdemo[255] = '\0';
+			lastdemo[255] = '\0';
+			G_SetDemoTime(player->realtime, player->recordscore, (UINT16)(player->rings));
+			G_CheckDemoStatus();
+
+			I_mkdir(va("%s"PATHSEP"replay", srb2home), 0755);
+			I_mkdir(va("%s"PATHSEP"replay"PATHSEP"%s", srb2home, timeattackfolder), 0755);
+
+			if ((gpath = malloc(glen)) == NULL)
+				I_Error("Out of memory for replay filepath\n");
+
+			sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
+			snprintf(lastdemo, 255, "%s-%s-last.lmp", gpath, skins[cv_chooseskin.value-1]->name);
+
+			if (FIL_FileExists(lastdemo))
+			{
+				UINT8 *buf;
+				size_t len = FIL_ReadFile(lastdemo, &buf);
+
+				snprintf(bestdemo, 255, "%s-%s-time-best.lmp", gpath, skins[cv_chooseskin.value-1]->name);
+				if (!FIL_FileExists(bestdemo) || G_CmpDemoTime(bestdemo, lastdemo) & 1)
+				{ // Better time, save this demo.
+					if (FIL_FileExists(bestdemo))
+						remove(bestdemo);
+					FIL_WriteFile(bestdemo, buf, len);
+					CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW RECORD TIME!"), M_GetText("Saved replay as"), bestdemo);
+				}
+
+				snprintf(bestdemo, 255, "%s-%s-score-best.lmp", gpath, skins[cv_chooseskin.value-1]->name);
+				if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<1)))
+				{ // Better score, save this demo.
+					if (FIL_FileExists(bestdemo))
+						remove(bestdemo);
+					FIL_WriteFile(bestdemo, buf, len);
+					CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW HIGH SCORE!"), M_GetText("Saved replay as"), bestdemo);
+				}
+
+				snprintf(bestdemo, 255, "%s-%s-rings-best.lmp", gpath, skins[cv_chooseskin.value-1]->name);
+				if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<2)))
+				{ // Better rings, save this demo.
+					if (FIL_FileExists(bestdemo))
+						remove(bestdemo);
+					FIL_WriteFile(bestdemo, buf, len);
+					CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW MOST RINGS!"), M_GetText("Saved replay as"), bestdemo);
+				}
+
+				//CONS_Printf("%s '%s'\n", M_GetText("Saved replay as"), lastdemo);
+
+				Z_Free(buf);
 			}
-
-			snprintf(bestdemo, 255, "%s-%s-score-best.lmp", gpath, skins[cv_chooseskin.value-1]->name);
-			if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<1)))
-			{ // Better score, save this demo.
-				if (FIL_FileExists(bestdemo))
-					remove(bestdemo);
-				FIL_WriteFile(bestdemo, buf, len);
-				CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW HIGH SCORE!"), M_GetText("Saved replay as"), bestdemo);
-			}
-
-			snprintf(bestdemo, 255, "%s-%s-rings-best.lmp", gpath, skins[cv_chooseskin.value-1]->name);
-			if (!FIL_FileExists(bestdemo) || (G_CmpDemoTime(bestdemo, lastdemo) & (1<<2)))
-			{ // Better rings, save this demo.
-				if (FIL_FileExists(bestdemo))
-					remove(bestdemo);
-				FIL_WriteFile(bestdemo, buf, len);
-				CONS_Printf("\x83%s\x80 %s '%s'\n", M_GetText("NEW MOST RINGS!"), M_GetText("Saved replay as"), bestdemo);
-			}
-
-			//CONS_Printf("%s '%s'\n", M_GetText("Saved replay as"), lastdemo);
-
-			Z_Free(buf);
+			free(gpath);
 		}
-		free(gpath);
-	}
 
-	// Check emblems when level data is updated
-	if ((earnedEmblems = M_CheckLevelEmblems(data)))
-	{
-		CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for Record Attack records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
+		// Check emblems when level data is updated
+		if ((earnedEmblems = M_CheckLevelEmblems(data)))
+		{
+			CONS_Printf(M_GetText("\x82" "Earned %hu emblem%s for Record Attack records.\n"), (UINT16)earnedEmblems, earnedEmblems > 1 ? "s" : "");
+		}
 	}
 
 	// Update timeattack menu's replay availability.
@@ -3182,8 +3183,7 @@ void G_DoReborn(INT32 playernum)
 					//nextmapoverride = spstage_start;
 					nextmapoverride = gamemap;
 					countdown2 = TICRATE;
-					skipstats = 2;
-					keepcutscene = 0;
+					mapexitflags = EXITMAP_SKIPSTATS|EXITMAP_SKIPCUTSCENE;
 
 					for (i = 0; i < MAXPLAYERS; i++)
 					{
@@ -3407,6 +3407,9 @@ void G_ExitLevel(void)
 	{
 		gameaction = ga_completed;
 		lastdraw = true;
+
+		if (mapexitflags & EXITMAP_SKIPSPECIAL)
+			token = 0;
 
 		// If you want your teams scrambled on map change, start the process now.
 		// The teams will scramble at the start of the next round.
@@ -4003,7 +4006,8 @@ static boolean CanSaveLevel(INT32 mapnum)
 static void G_HandleSaveLevel(void)
 {
 	// Update records & emblems
-	G_UpdateAllVisited();
+	if (!(mapexitflags & EXITMAP_SKIPRECORDS))
+		G_UpdateAllVisited();
 
 	// do this before running the intermission or custom cutscene, mostly for the sake of marathon mode but it also massively reduces redundant file save events in f_finale.c
 	if (nextmap >= 1100-1)
@@ -4202,7 +4206,7 @@ static void G_DoCompleted(void)
 
 	Y_DetermineIntermissionType();
 
-	if ((skipstats && !modeattacking) || (modeattacking && stagefailed) || (intertype == int_none))
+	if (((mapexitflags & EXITMAP_SKIPSTATS) && !modeattacking) || (modeattacking && stagefailed) || (intertype == int_none))
 	{
 		G_HandleSaveLevel();
 		G_AfterIntermission();
@@ -4234,7 +4238,7 @@ void G_AfterIntermission(void)
 
 	if ((gametyperules & GTR_CUTSCENES) && mapheaderinfo[gamemap-1]->cutscenenum
 		&& !modeattacking
-		&& (skipstats <= 1 || keepcutscene == true)
+		&& !(mapexitflags & EXITMAP_SKIPCUTSCENE)
 		&& (gamecomplete || !(marathonmode & MA_NOCUTSCENES))
 		&& stagefailed == false)
 	{
