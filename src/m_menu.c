@@ -8685,7 +8685,7 @@ skiplife:
 			if (!useContinues)
 			{
 				INT32 workingscorenum = savegameinfo[savetodraw].continuescore;
-				char workingscorestr[11] = " 000000000\0";
+				char workingscorestr[11] = "000000000\0";
 				SINT8 j = 9;
 				// Change the above two lines if MAXSCORE ever changes from 8 digits long.
 				workingscorestr[0] = '\x86'; // done here instead of in initialiser 'cuz compiler complains
