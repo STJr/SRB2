@@ -1961,15 +1961,19 @@ static boolean PIT_CheckLine(line_t *ld)
 	// so two special lines that are only 8 pixels apart
 	// could be crossed in either order.
 
+	// TODO: Remove this line; blockingline gets set elsewhere now
 	// this line is out of the if so upper and lower textures can be hit by a splat
-	blockingline = ld;
+	// blockingline = ld;
 
 	{
 		UINT8 shouldCollide = LUA_HookMobjLineCollide(tmthing, blockingline); // checks hook for thing's type
 		if (P_MobjWasRemoved(tmthing))
 			return true; // one of them was removed???
 		if (shouldCollide == 1)
+		{
+			blockingline = ld;
 			return false; // force collide
+		}
 		else if (shouldCollide == 2)
 			return true; // force no collide
 	}
@@ -1978,6 +1982,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	{
 		if (P_PointOnLineSide(tmthing->x, tmthing->y, ld))
 			return true; // don't hit the back side
+		blockingline = ld;
 		return false;
 	}
 
@@ -1985,9 +1990,15 @@ static boolean PIT_CheckLine(line_t *ld)
 	if (!(tmthing->flags & MF_MISSILE))
 	{
 		if (ld->flags & ML_IMPASSIBLE) // block objects from moving through this linedef.
+		{
+			blockingline = ld;
 			return false;
+		}
 		if ((tmthing->flags & (MF_ENEMY|MF_BOSS)) && ld->flags & ML_BLOCKMONSTERS)
+		{
+			blockingline = ld;
 			return false; // block monsters only
+		}
 	}
 
 	// set openrange, opentop, openbottom
@@ -2014,6 +2025,23 @@ static boolean PIT_CheckLine(line_t *ld)
 
 	if (lowfloor < tmdropoffz)
 		tmdropoffz = lowfloor;
+
+	if (P_LineIsBlocking(tmthing, ld))
+	{
+		// Make sure we're not returning a line behind the one actually blocking tmthing!
+		// TODO: This code doesn't work quite right yet...
+		// if (blockingline != NULL)
+		// {
+		// 	vertex_t blockresult;
+		// 	vertex_t ldresult;
+		// 	P_ClosestPointOnLine(tmthing->x, tmthing->y, blockingline, &blockresult);
+		// 	P_ClosestPointOnLine(tmthing->x, tmthing->y, ld, &ldresult);
+		// 	if (GetDistance2D(tmthing->x, tmthing->y, ldresult.x, ldresult.y) < GetDistance2D(tmthing->x, tmthing->y, blockresult.x, blockresult.y))
+		// 		blockingline = ld;
+		// }
+		// else
+			blockingline = ld;
+	}
 
 	return true;
 }
