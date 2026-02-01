@@ -391,6 +391,7 @@ typedef struct mobj_s
 
 	fixed_t friction;
 	fixed_t movefactor;
+	fixed_t gravity;
 
 	INT32 fuse; // Does something in P_MobjThinker on reaching 0.
 	fixed_t watertop; // top of the water FOF the mobj is in

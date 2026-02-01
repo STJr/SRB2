@@ -1321,7 +1321,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 	if (!gravsector) // If there is no 3D floor gravity, check sector's gravity
 		gravsector = mo->subsector->sector;
 
-	gravityadd = -FixedMul(gravity, P_GetSectorGravityFactor(gravsector));
+	gravityadd = -FixedMul(FixedMul(gravity, mo->gravity), P_GetSectorGravityFactor(gravsector));
 
 	if ((gravsector->flags & MSF_GRAVITYFLIP) && gravityadd > 0)
 	{
@@ -10741,6 +10741,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 	mobj->friction = ORIG_FRICTION;
 
 	mobj->movefactor = FRACUNIT;
+	mobj->gravity = FRACUNIT;
 
 	// All mobjs are created at 100% scale.
 	mobj->scale = FRACUNIT;

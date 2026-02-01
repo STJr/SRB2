@@ -88,6 +88,7 @@ enum mobj_e {
 	mobj_tracer,
 	mobj_friction,
 	mobj_movefactor,
+	mobj_gravity,
 	mobj_fuse,
 	mobj_watertop,
 	mobj_waterbottom,
@@ -170,6 +171,7 @@ static const char *const mobj_opt[] = {
 	"tracer",
 	"friction",
 	"movefactor",
+	"gravity",
 	"fuse",
 	"watertop",
 	"waterbottom",
@@ -487,6 +489,9 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_movefactor:
 		lua_pushfixed(L, mo->movefactor);
+		break;
+	case mobj_gravity:
+		lua_pushfixed(L, mo->gravity);
 		break;
 	case mobj_fuse:
 		lua_pushinteger(L, mo->fuse);
@@ -885,6 +890,9 @@ static int mobj_set(lua_State *L)
 		break;
 	case mobj_movefactor:
 		mo->movefactor = luaL_checkfixed(L, 3);
+		break;
+	case mobj_gravity:
+		mo->gravity = luaL_checkfixed(L, 3);
 		break;
 	case mobj_fuse:
 		mo->fuse = luaL_checkinteger(L, 3);

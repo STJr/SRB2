@@ -2054,7 +2054,8 @@ typedef enum
 	MD2_DRAWONLYFORPLAYER   = 1<<24,
 	MD2_DONTDRAWFORVIEWMOBJ = 1<<25,
 	MD2_TRANSLATION         = 1<<26,
-	MD2_ALPHA               = 1<<27
+	MD2_ALPHA               = 1<<27,
+	MD2_GRAVITY             = 1<<28
 } mobj_diff2_t;
 
 typedef enum
@@ -2293,6 +2294,8 @@ static void SaveMobjThinker(save_t *save_p, const thinker_t *th, const UINT8 typ
 		diff2 |= MD2_DISPOFFSET;
 	if (mobj->alpha != FRACUNIT)
 		diff2 |= MD2_ALPHA;
+	if (mobj->gravity != FRACUNIT)
+		diff2 |= MD2_GRAVITY;
 
 	if (diff2 != 0)
 		diff |= MD_MORE;
@@ -2478,6 +2481,8 @@ static void SaveMobjThinker(save_t *save_p, const thinker_t *th, const UINT8 typ
 		P_WriteUINT16(save_p, mobj->translation);
 	if (diff2 & MD2_ALPHA)
 		P_WriteFixed(save_p, mobj->alpha);
+	if (diff2 & MD2_GRAVITY)
+		P_WriteFixed(save_p, mobj->gravity);
 
 	P_WriteUINT32(save_p, mobj->mobjnum);
 }
@@ -3541,6 +3546,10 @@ static thinker_t* LoadMobjThinker(save_t *save_p, actionf_p1 thinker)
 		mobj->alpha = P_ReadFixed(save_p);
 	else
 		mobj->alpha = FRACUNIT;
+	if (diff2 & MD2_GRAVITY)
+		mobj->gravity = P_ReadFixed(save_p);
+	else
+		mobj->gravity = FRACUNIT;
 
 	if (diff & MD_REDFLAG)
 	{
