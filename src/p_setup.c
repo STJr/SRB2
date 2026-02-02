@@ -8358,8 +8358,8 @@ void P_LoadMapsFromFile(UINT16 wadnum, boolean added_ingame)
 
 			name = W_GetFilenameFromFullname(lumpinfo->fullname); // Full lump name, with its extension
 
-			// Extension must be .wad
-			if (!M_CheckFilenameExtension(name, "wad"))
+			// Extension must be .wad or be prefixed with MAP
+			if (!M_CheckFilenameExtension(name, "wad") && (strlen(name) != 5 || strnicmp(name, "MAP", 3) != 0))
 				continue;
 
 			// Get the name without the extension

@@ -883,12 +883,24 @@ static void G_MakeMapName(mapname_t *name, const char *string)
 	strupr(name->chars);
 }
 
+static UINT16 G_AllocateMap(const char *name, UINT32 lumpnum)
+{
+	G_MakeMapName(&gamemaps[numgamemaps].name, name);
+	gamemaps[numgamemaps].lumpnum = lumpnum;
+
+	numgamemaps++;
+
+	CONS_Debug(DBG_SETUP, "Added map %d (%s)\n", numgamemaps, name);
+
+	return numgamemaps;
+}
+
 void G_InitMaps(void)
 {
 	for (UINT16 i = 0; i < NUMBASEMAPS; i++)
 	{
 		const char *name = G_BuildClassicMapName(i + 1);
-		G_AddMap(name, LUMPERROR);
+		G_AllocateMap(name, LUMPERROR); // bypass allocation checks to make sure we always allocate it
 	}
 
 	G_MakeMapName(&nextmapnames[0], "SCENE_TITLE");
@@ -902,6 +914,9 @@ static UINT16 MapIDForHashedString(const char *name, size_t name_length, UINT32 
 	// Special case
 	if (name_length == 2 && name[0] >= 'A' && name[0] <= 'Z')
 		return M_MapNumber(name[0], name[1]);
+
+	if (name_length == 5 && memcmp(name, "MAP", 3) == 0 && name[3] >= 'A' && name[3] <= 'Z')
+		return M_MapNumber(name[3], name[4]);
 
 	for (UINT16 i = 0; i < numgamemaps; i++)
 	{
@@ -951,14 +966,7 @@ UINT16 G_AddMap(const char *name, UINT32 lumpnum)
 		return mapnum;
 	}
 
-	G_MakeMapName(&gamemaps[numgamemaps].name, name);
-	gamemaps[numgamemaps].lumpnum = lumpnum;
-
-	numgamemaps++;
-
-	CONS_Debug(DBG_SETUP, "Added map %d (%s)\n", numgamemaps, name);
-
-	return numgamemaps;
+	return G_AllocateMap(name, lumpnum);
 }
 
 lumpnum_t G_GetMapLumpnum(const char *name)
