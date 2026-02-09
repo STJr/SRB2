@@ -1680,6 +1680,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 
 		if (HWR_UseShader())
 			HWD.pfnSetShader(HWR_GetShaderFromTarget(SHADER_MODEL));
+		
 		{
 			float this_scale = FIXED_TO_FLOAT(interp.scale);
 

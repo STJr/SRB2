@@ -1208,6 +1208,8 @@ void V_DrawFixedFill(fixed_t x, fixed_t y, fixed_t w, fixed_t h, INT32 c)
 	{
 		x >>= FRACBITS;
 		y >>= FRACBITS;
+		w >>= FRACBITS;
+		h >>= FRACBITS;
 		deststop += (y*vid.width) + x;
 	}
 	else
