@@ -13784,6 +13784,8 @@ static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 numi
 		}
 	}
 	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, 0, mthing->options & MTF_OBJECTFLIP, mthing->scale, mthing->options & MTF_ABSOLUTEZ);
+	horizontalspacing = FixedMul(horizontalspacing, mthing->scale);
+	verticalspacing = FixedMul(verticalspacing, mthing->scale);
 
 	for (r = 0; r < numitems; r++)
 	{
@@ -13843,6 +13845,7 @@ static void P_SpawnItemCircle(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 n
 		}
 	}
 	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, 0, false, mthing->scale, mthing->options & MTF_ABSOLUTEZ);
+	size = FixedMul(size, mthing->scale);
 
 	for (i = 0; i < numitems; i++)
 	{
