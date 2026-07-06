@@ -91,7 +91,7 @@
 #endif
 
 // maximum number of windowed modes (see windowedModes[][])
-#define MAXWINMODES (21)
+#define MAXWINMODES (24)
 
 /**	\brief
 */
@@ -157,6 +157,9 @@ static const char *fallback_resolution_name = "Fallback";
 // windowed video modes from which to choose from.
 static INT32 windowedModes[MAXWINMODES][2] =
 {
+	{3840,2160}, // 16:9, 4K
+	{2560,1600}, // 16:10, 1600p
+	{2560,1440}, // 16:9, 1440p
 	{1920,1200}, // 1.60,6.00
 	{1920,1080}, // 1.66
 	{1680,1050}, // 1.60,5.25
