@@ -990,7 +990,8 @@ void A_FaceStabRev(void *data)
 		}
 		else
 		{
-			P_TryMove(actor, actor->x - P_ReturnThrustX(actor, actor->angle, 2<<FRACBITS), actor->y - P_ReturnThrustY(actor, actor->angle, 2<<FRACBITS), false);
+			const fixed_t moveSpeed = FixedMul(2<<FRACBITS, actor->scale);
+			P_TryMove(actor, actor->x - P_ReturnThrustX(actor, actor->angle, moveSpeed), actor->y - P_ReturnThrustY(actor, actor->angle, moveSpeed), false);
 			if (!P_MobjWasRemoved(actor))
 				P_FaceStabFlume(actor);
 		}
@@ -1042,8 +1043,8 @@ void A_FaceStabHurl(void *data)
 				actor->extravalue2 = 26;
 
 			if (P_TryMove(actor,
-				actor->x + P_ReturnThrustX(actor, dirang, actor->extravalue2<<FRACBITS),
-				actor->y + P_ReturnThrustY(actor, dirang, actor->extravalue2<<FRACBITS),
+				actor->x + P_ReturnThrustX(actor, dirang, FixedMul(actor->extravalue2<<FRACBITS, actor->scale)),
+				actor->y + P_ReturnThrustY(actor, dirang, FixedMul(actor->extravalue2<<FRACBITS, actor->scale)),
 				false))
 			{
 				// Do the spear damage.
@@ -1054,8 +1055,8 @@ void A_FaceStabHurl(void *data)
 				fixed_t basesize = FRACUNIT/MAXVAL;
 				mobj_t *hwork = actor;
 				INT32 dist = 113;
-				fixed_t xo = P_ReturnThrustX(actor, actor->angle, dist*basesize);
-				fixed_t yo = P_ReturnThrustY(actor, actor->angle, dist*basesize);
+				fixed_t xo = P_ReturnThrustX(actor, actor->angle, FixedMul(dist*basesize, actor->scale));
+				fixed_t yo = P_ReturnThrustY(actor, actor->angle, FixedMul(dist*basesize, actor->scale));
 
 				while (step > 0)
 				{
@@ -1066,9 +1067,9 @@ void A_FaceStabHurl(void *data)
 					{
 						hwork = hwork->hnext;
 						hwork->angle = actor->angle + ANGLE_90;
-						P_SetScale(hwork, FixedSqrt(step*basesize), true);
+						P_SetScale(hwork, FixedMul(FixedSqrt(step*basesize), actor->scale), true);
 						hwork->fuse = 2;
-						P_MoveOrigin(hwork, actor->x + xo*(15-step), actor->y + yo*(15-step), actor->z + (actor->height - hwork->height)/2 + (P_MobjFlip(actor)*(8<<FRACBITS)));
+						P_MoveOrigin(hwork, actor->x + xo*(15-step), actor->y + yo*(15-step), actor->z + (actor->height - hwork->height)/2 + (P_MobjFlip(actor)*(FixedMul(8<<FRACBITS, actor->scale))));
 						if (P_MobjWasRemoved(hwork))
 						{
 							// if one of the sections are removed, erase the entire damn thing.
@@ -1133,8 +1134,8 @@ void A_FaceStabMiss(void *data)
 	}
 
 	if (actor->extravalue2 <= 0 || !P_TryMove(actor,
-		actor->x + P_ReturnThrustX(actor, actor->angle, actor->extravalue2<<FRACBITS),
-		actor->y + P_ReturnThrustY(actor, actor->angle, actor->extravalue2<<FRACBITS),
+		actor->x + P_ReturnThrustX(actor, actor->angle, FixedMul(actor->extravalue2<<FRACBITS, actor->scale)),
+		actor->y + P_ReturnThrustY(actor, actor->angle, FixedMul(actor->extravalue2<<FRACBITS, actor->scale)),
 		false))
 	{
 		if (P_MobjWasRemoved(actor))
@@ -1420,14 +1421,15 @@ static void P_ParabolicMove(mobj_t *actor, fixed_t x, fixed_t y, fixed_t z, fixe
 	z -= actor->z;
 
 	dh = GetDistance2D(0, 0, x, y);
-
+	
+	speed = FixedMul(speed, actor->scale);
 	actor->momx = FixedMul(FixedDiv(x, dh), speed);
 	actor->momy = FixedMul(FixedDiv(y, dh), speed);
 
 	if (!gravity)
 		return;
 
-	dh = FixedDiv(FixedMul(dh, gravity), speed);
+	dh = FixedDiv(FixedMul(dh, FixedMul(gravity, actor->scale)), speed);
 	actor->momz = (dh>>1) + FixedDiv(z, dh<<1);
 }
 
@@ -1491,7 +1493,7 @@ void A_HoodThink(void *data)
 	}
 
 	dx = (actor->target->x - actor->x), dy = (actor->target->y - actor->y), dz = (actor->target->z - actor->z);
-	dm = GetDistance2D(0, 0, dx, dy);
+	dm = FixedDiv(GetDistance2D(0, 0, dx, dy), actor->scale);
 	// Target dangerously close to robohood, retreat then.
 	if ((dm < 256<<FRACBITS) && (abs(dz) < 128<<FRACBITS) && !(actor->flags2 & MF2_AMBUSH))
 	{
@@ -4717,7 +4719,6 @@ void A_DropMine(void *data)
 	mobj_t *actor = data;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	fixed_t z;
 	mobj_t *mine;
 
 	if (LUA_CallAction(A_DROPMINE, actor))
@@ -4739,13 +4740,8 @@ void A_DropMine(void *data)
 			return;
 	}
 
-	if (actor->eflags & MFE_VERTICALFLIP)
-		z = actor->z + actor->height - mobjinfo[actor->info->raisestate].height - FixedMul((locvar1*FRACUNIT) - 12*FRACUNIT, actor->scale);
-	else
-		z = actor->z + FixedMul((locvar1*FRACUNIT) - 12*FRACUNIT, actor->scale);
-
 	// Use raisestate instead of MT_MINE
-	mine = P_SpawnMobj(actor->x, actor->y, z, (mobjtype_t)actor->info->raisestate);
+	mine = P_SpawnMobjFromMobj(actor, 0, 0, (locvar1*FRACUNIT) - 12*FRACUNIT, (mobjtype_t)actor->info->raisestate);
 	if (!P_MobjWasRemoved(mine))
 	{
 		if (actor->eflags & MFE_VERTICALFLIP)
@@ -5979,6 +5975,7 @@ void A_DetonChase(void *data)
 			speed = actor->target->player->normalspeed;
 		else
 			speed = actor->target->info->speed;
+		speed = FixedMul(speed, actor->scale);
 
 		actor->reactiontime = -42;
 
@@ -5991,7 +5988,7 @@ void A_DetonChase(void *data)
 		actor->momy = FixedMul(xyspeed, FINESINE(exact));
 
 		// Variable re-use
-		xyspeed = P_GetMobjDistance3D(actor->tracer, actor)>>(FRACBITS+6);
+		xyspeed = FixedDiv(P_GetMobjDistance3D(actor->tracer, actor), actor->scale)>>(FRACBITS+6);
 
 		if (xyspeed < 1)
 			xyspeed = 1;
@@ -6154,13 +6151,17 @@ void A_UnidusBall(void *data)
 		return;
 	}
 
+	P_SetScale(actor, actor->target->scale, false);
+	actor->destscale = actor->target->destscale;
+	actor->old_scale = actor->target->old_scale;
+
 	P_UnsetThingPosition(actor);
 	{
 		const angle_t angle = actor->movedir + FixedAngle(actor->info->speed*(leveltime%360));
 		const UINT16 fa = angle>>ANGLETOFINESHIFT;
 
-		actor->x = actor->target->x + FixedMul(FINECOSINE(fa),actor->threshold);
-		actor->y = actor->target->y + FixedMul(  FINESINE(fa),actor->threshold);
+		actor->x = actor->target->x + FixedMul(FixedMul(FINECOSINE(fa),actor->threshold), actor->scale);
+		actor->y = actor->target->y + FixedMul(FixedMul(  FINESINE(fa),actor->threshold), actor->scale);
 		actor->z = actor->target->z + actor->target->height/2 - actor->height/2;
 
 		if (locvar1 == 1 && actor->target->target)
