@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2024 by Sonic Team Junior.
+// Copyright (C) 2012-2026 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -2495,6 +2495,7 @@ enum mapheaderinfo_e
 	mapheaderinfo_sstimer,
 	mapheaderinfo_ssspheres,
 	mapheaderinfo_gravity,
+	mapheaderinfo_mobj_scale,
 };
 
 static const char *const mapheaderinfo_opt[] = {
@@ -2543,6 +2544,7 @@ static const char *const mapheaderinfo_opt[] = {
 	"sstimer",
 	"ssspheres",
 	"gravity",
+	"mobj_scale",
 	NULL,
 };
 
@@ -2693,6 +2695,9 @@ static int mapheaderinfo_get(lua_State *L)
 		break;
 	case mapheaderinfo_gravity:
 		lua_pushfixed(L, header->gravity);
+		break;
+	case mapheaderinfo_mobj_scale:
+		lua_pushfixed(L, header->mobj_scale);
 		break;
 	// TODO add support for reading numGradedMares and grades
 	default:

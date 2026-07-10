@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2024 by Sonic Team Junior.
+// Copyright (C) 1999-2026 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -4893,6 +4893,7 @@ static void P_NetArchiveMisc(save_t *save_p, boolean resending)
 	P_WriteUINT32(save_p, countdown2);
 
 	P_WriteFixed(save_p, gravity);
+	P_WriteFixed(save_p, mapobjectscale);
 
 	P_WriteUINT32(save_p, countdowntimer);
 	P_WriteUINT8(save_p, countdowntimeup);
@@ -4999,6 +5000,7 @@ FUNCINLINE static ATTRINLINE boolean P_NetUnArchiveMisc(save_t *save_p, boolean 
 	countdown2 = P_ReadUINT32(save_p);
 
 	gravity = P_ReadFixed(save_p);
+	mapobjectscale = P_ReadFixed(save_p);
 
 	countdowntimer = (tic_t)P_ReadUINT32(save_p);
 	countdowntimeup = P_ReadUINT8(save_p);

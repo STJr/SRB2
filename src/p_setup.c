@@ -402,6 +402,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	P_DeleteFlickies(num);
 #endif
 	P_DeleteGrades(num);
+	mapheaderinfo[num]->mobj_scale = FRACUNIT;
 	mapheaderinfo[num]->customopts = NULL;
 	mapheaderinfo[num]->numCustomOptions = 0;
 }
