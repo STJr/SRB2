@@ -11982,6 +11982,7 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 {
 	fixed_t dz = mthing->z << FRACBITS; // Base offset from the floor.
 	fixed_t offset = 0; // Specific scaling object offset.
+	const fixed_t zScale = FixedMul(mapobjectscale, mthing->scale);
 	boolean flip = (!!(mobjinfo[mobjtype].flags & MF_SPAWNCEILING) ^ !!(mthing->options & MTF_OBJECTFLIP));
 	boolean absolutez = !!(mthing->options & MTF_ABSOLUTEZ);
 
@@ -11994,16 +11995,16 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 	case MT_JETTGUNNER:
 	case MT_EGGMOBILE2:
 		if (!dz)
-			dz = 33*FRACUNIT;
+			dz = FixedMul(33*FRACUNIT, zScale);
 		break;
 	case MT_EGGMOBILE:
 		if (!dz)
-			dz = 128*FRACUNIT;
+			dz = FixedMul(128*FRACUNIT, zScale);
 		break;
 	case MT_GOLDBUZZ:
 	case MT_REDBUZZ:
 		if (!dz)
-			dz = 288*FRACUNIT;
+			dz = FixedMul(288*FRACUNIT, zScale);
 		break;
 
 	// Horizontal springs, float additional units unless args[0] is set.
@@ -13642,6 +13643,7 @@ void P_SpawnHoop(mapthing_t *mthing)
 	mobj_t *nextmobj = NULL;
 	mobj_t *hoopcenter;
 	oldmatrix_t pitchmatrix, yawmatrix;
+	const fixed_t finalScale = FixedMul(mapobjectscale, mthing->scale);
 	fixed_t radius = mthing->args[0] << FRACBITS;
 	fixed_t sizefactor = 4*FRACUNIT;
 	fixed_t hoopsize = radius/sizefactor;
@@ -13656,6 +13658,7 @@ void P_SpawnHoop(mapthing_t *mthing)
 	if (P_MobjWasRemoved(hoopcenter))
 		return;
 
+	P_SetScale(hoopcenter, finalScale, true);
 	hoopcenter->spawnpoint = mthing;
 	hoopcenter->z -= hoopcenter->height/2;
 
@@ -13677,9 +13680,9 @@ void P_SpawnHoop(mapthing_t *mthing)
 	for (i = 0; i < hoopsize; i++)
 	{
 		fa = i*(FINEANGLES/hoopsize);
-		v.x = FixedMul(FINECOSINE(fa), radius);
+		v.x = FixedMul(FINECOSINE(fa), FixedMul(radius, finalScale));
 		v.y = 0;
-		v.z = FixedMul(FINESINE(fa), radius);
+		v.z = FixedMul(FINESINE(fa), FixedMul(radius, finalScale));
 		v.a = FRACUNIT;
 
 		FV4_Copy(&v, FM_MultMatrixVec4(&pitchmatrix, &v, &res));
@@ -13688,6 +13691,7 @@ void P_SpawnHoop(mapthing_t *mthing)
 		mobj = P_SpawnMobj(x + v.x, y + v.y, z + v.z, MT_HOOP);
 		if (P_MobjWasRemoved(mobj))
 			continue;
+		P_SetScale(mobj, hoopcenter->scale, true);
 		mobj->z -= mobj->height/2;
 
 		if (maptol & TOL_XMAS)
