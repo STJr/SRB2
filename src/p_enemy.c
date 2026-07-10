@@ -1380,6 +1380,9 @@ void A_PointyThink(void *data)
 		ball->x = actor->x + v.x;
 		ball->y = actor->y + v.y;
 		ball->z = actor->z + (actor->height>>1) + v.z;
+		P_SetScale(ball, actor->scale, false);
+		ball->destscale = actor->scale;
+		ball->old_scale = actor->old_scale;
 		P_SetThingPosition(ball);
 
 		ball = ball->tracer;
@@ -2112,7 +2115,7 @@ static void P_VultureHoverParticle(mobj_t *actor)
 {
 	fixed_t fdist = actor->z - P_FloorzAtPos(actor->x, actor->y, actor->z, actor->height);
 
-	if (fdist < 128*FRACUNIT)
+	if (fdist < FixedMul(128*FRACUNIT, actor->scale))
 	{
 		mobj_t *dust;
 		UINT8 i;
@@ -2121,8 +2124,8 @@ static void P_VultureHoverParticle(mobj_t *actor)
 		for (i = 0; i <= 7; i++)
 		{
 			angle_t fa = (angle >> ANGLETOFINESHIFT) & FINEMASK;
-			fixed_t px = actor->x + FixedMul(fdist + 64*FRACUNIT, FINECOSINE(fa));
-			fixed_t py = actor->y + FixedMul(fdist + 64*FRACUNIT, FINESINE(fa));
+			fixed_t px = actor->x + FixedMul(fdist + FixedMul(64*FRACUNIT, actor->scale), FINECOSINE(fa));
+			fixed_t py = actor->y + FixedMul(fdist + FixedMul(64*FRACUNIT, actor->scale), FINESINE(fa));
 			fixed_t pz = P_FloorzAtPos(px, py, actor->z, actor->height);
 
 			dust = P_SpawnMobj(px, py, pz, MT_ARIDDUST);
@@ -2132,6 +2135,7 @@ static void P_VultureHoverParticle(mobj_t *actor)
 				P_Thrust(dust, angle, FixedDiv(12*FRACUNIT, max(FRACUNIT, fdist/2)));
 				dust->momx += actor->momx;
 				dust->momy += actor->momy;
+				P_SetScale(dust, actor->scale, true);
 			}
 			angle += ANGLE_45;
 		}
@@ -2176,10 +2180,10 @@ void A_VultureHover(void *data)
 	targetz = actor->target->z + actor->target->height / 2;
 	for (i = -1; i <= 1; i++)
 	{
-		actor->z = targetz - i * 128 * FRACUNIT;
+		actor->z = targetz - FixedMul(i * 128 * FRACUNIT, actor->scale);
 		if (P_CheckSight(actor, actor->target))
 		{
-			targetz -= i * 128 * FRACUNIT;
+			targetz -= FixedMul(i * 128 * FRACUNIT, actor->scale);
 			break;
 		}
 	}
@@ -2190,11 +2194,11 @@ void A_VultureHover(void *data)
 	if (abs(actor->momz*16) > abs(distdif))
 		actor->momz -= actor->momz/16;
 	else if (distdif < 0)
-		actor->momz = min(actor->momz+FRACUNIT/8, actor->info->speed*FRACUNIT);
+		actor->momz = min(actor->momz+FixedMul(FRACUNIT/8, actor->scale), FixedMul(actor->info->speed*FRACUNIT, actor->scale));
 	else
-		actor->momz = max(actor->momz-FRACUNIT/8, -actor->info->speed*FRACUNIT);
+		actor->momz = max(actor->momz-FixedMul(FRACUNIT/8, actor->scale), -FixedMul(actor->info->speed*FRACUNIT, actor->scale));
 
-	if (abs(distdif) < 128*FRACUNIT && abs(actor->momz) < FRACUNIT && P_CheckSight(actor, actor->target))
+	if (abs(distdif) < FixedMul(128*FRACUNIT, actor->scale) && abs(actor->momz) < actor->scale && P_CheckSight(actor, actor->target))
 	{
 		P_SetMobjState(actor, actor->info->missilestate);
 		actor->momx = 0;
@@ -2231,17 +2235,17 @@ void A_VultureBlast(void *data)
 	for (i = 0; i <= 7; i++)
 	{
 		angle_t fa = ((i*(angle_t)ANGLE_45) >> ANGLETOFINESHIFT) & FINEMASK;
-		dust = P_SpawnMobj(actor->x + 48*FixedMul(FINECOSINE(fa), -faasin), actor->y + 48*FixedMul(FINECOSINE(fa), faacos), actor->z + actor->height/2 + 48*FINESINE(fa), MT_PARTICLE);
+		dust = P_SpawnMobj(actor->x + FixedMul(48*FixedMul(FINECOSINE(fa), -faasin), actor->scale), actor->y + FixedMul(48*FixedMul(FINECOSINE(fa), faacos), actor->scale), actor->z + actor->height/2 + FixedMul(48*FINESINE(fa), actor->scale), MT_PARTICLE);
 		if (P_MobjWasRemoved(dust))
 			continue;
 
-		P_SetScale(dust, 4*FRACUNIT, true);
-		dust->destscale = FRACUNIT;
-		dust->scalespeed = 4*FRACUNIT/TICRATE;
+		P_SetScale(dust, FixedMul(4*FRACUNIT, actor->scale), true);
+		dust->destscale = FixedMul(FRACUNIT, actor->scale);
+		dust->scalespeed = FixedMul(4*FRACUNIT, actor->scale)/TICRATE;
 		dust->fuse = TICRATE;
-		dust->momx = FixedMul(FINECOSINE(fa), -faasin)*3;
-		dust->momy = FixedMul(FINECOSINE(fa), faacos)*3;
-		dust->momz = FINESINE(fa)*6;
+		dust->momx = FixedMul(FixedMul(FINECOSINE(fa), -faasin)*3, actor->scale);
+		dust->momy = FixedMul(FixedMul(FINECOSINE(fa), faacos)*3, actor->scale);
+		dust->momz = FixedMul(FINESINE(fa)*6, actor->scale);
 	}
 }
 
@@ -2255,7 +2259,7 @@ void A_VultureBlast(void *data)
 void A_VultureFly(void *data)
 {
 	mobj_t *actor = data;
-	fixed_t speedmax = 18*FRACUNIT;
+	fixed_t speedmax = FixedMul(18*FRACUNIT, actor->scale);
 	angle_t angledif;
 	fixed_t dx, dy, dz, dxy, dm;
 	mobj_t *dust;
@@ -2286,29 +2290,29 @@ void A_VultureFly(void *data)
 	if (angledif < ANGLE_45) // Centered?
 	{
 		actor->reactiontime = actor->info->reactiontime;
-		if (dxy > 768*FRACUNIT)
-			dz = max(P_FloorzAtPos(actor->target->x, actor->target->y, actor->target->z, 0) - actor->z + min(dxy/8, 128*FRACUNIT), dz);
+		if (dxy > FixedMul(768*FRACUNIT, actor->scale))
+			dz = max(P_FloorzAtPos(actor->target->x, actor->target->y, actor->target->z, 0) - actor->z + min(dxy/8, FixedMul(128*FRACUNIT, actor->scale)), dz);
 	}
 	else
 	{
 		actor->reactiontime--;
 
 		if (angledif < ANGLE_90)
-			dz = max(P_FloorzAtPos(actor->target->x, actor->target->y, actor->target->z, 0) - actor->z + min(dxy/2, 192*FRACUNIT), dz);
+			dz = max(P_FloorzAtPos(actor->target->x, actor->target->y, actor->target->z, 0) - actor->z + min(dxy/2, FixedMul(192*FRACUNIT, actor->scale)), dz);
 		else
-			dz = max(P_FloorzAtPos(actor->target->x, actor->target->y, actor->target->z, 0) - actor->z + 232*FRACUNIT, dz);
+			dz = max(P_FloorzAtPos(actor->target->x, actor->target->y, actor->target->z, 0) - actor->z + FixedMul(232*FRACUNIT, actor->scale), dz);
 	}
 
 	dm = GetDistance2D(0, 0, dz, dxy);
 
 	P_VultureHoverParticle(actor);
 
-	dust = P_SpawnMobj(actor->x + P_RandomFixed() - FRACUNIT/2, actor->y + P_RandomFixed() - FRACUNIT/2, actor->z + actor->height/2 + P_RandomFixed() - FRACUNIT/2, MT_PARTICLE);
+	dust = P_SpawnMobj(actor->x + FixedMul(P_RandomFixed() - FRACUNIT/2, actor->scale), actor->y + FixedMul(P_RandomFixed() - FRACUNIT/2, actor->scale), actor->z + actor->height/2 + FixedMul(P_RandomFixed() - FRACUNIT/2, actor->scale), MT_PARTICLE);
 	if (!P_MobjWasRemoved(dust))
 	{
-		P_SetScale(dust, 2*FRACUNIT, true);
-		dust->destscale = FRACUNIT/3;
-		dust->scalespeed = FRACUNIT/40;
+		P_SetScale(dust, FixedMul(2*FRACUNIT, actor->scale), true);
+		dust->destscale = FixedMul(FRACUNIT/3, dust->scale);
+		dust->scalespeed = FixedMul(FRACUNIT/40, dust->scale);
 		dust->fuse = TICRATE*2;
 	}
 
@@ -2907,6 +2911,7 @@ void A_Boss1Laser(void *data)
 		point = P_SpawnMobj(x + P_ReturnThrustX(actor, actor->angle, actor->radius), y + P_ReturnThrustY(actor, actor->angle, actor->radius), actor->z - actor->height / 2, MT_EGGMOBILE_TARGET);
 		if (!P_MobjWasRemoved(point))
 		{
+			P_SetScale(point, actor->scale, true);
 			point->angle = actor->angle;
 			point->fuse = dur+1;
 			P_SetTarget(&point->target, actor->target);
@@ -2920,6 +2925,7 @@ void A_Boss1Laser(void *data)
 	if (P_MobjWasRemoved(point))
 		return;
 
+	P_SetScale(point, actor->scale, true);
 	P_SetTarget(&point->target, actor);
 	point->angle = actor->angle;
 	speed = point->radius;
@@ -2936,6 +2942,7 @@ void A_Boss1Laser(void *data)
 		mo->angle = point->angle;
 		mo->color = LASERCOLORS[((UINT8)(i + 3*dur) >> 2) % sizeof(LASERCOLORS)]; // codeing
 		P_UnsetThingPosition(mo);
+		P_SetScale(mo, actor->scale, true);
 		mo->flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY;
 		P_SetThingPosition(mo);
 
@@ -5590,6 +5597,7 @@ void A_MinusDigging(void *data)
 	par = P_SpawnMobj(actor->x, actor->y, mz, MT_MINUSDIRT);
 	if (!P_MobjWasRemoved(par))
 	{
+		P_SetScale(par, actor->scale, true);
 		if (actor->eflags & MFE_VERTICALFLIP)
 			par->eflags |= MFE_VERTICALFLIP;
 		P_TryMove(par, x, y, false);
@@ -5674,10 +5682,7 @@ void A_MinusPopup(void *data)
 	if (LUA_CallAction(A_MINUSPOPUP, actor))
 		return;
 
-	if (actor->eflags & MFE_VERTICALFLIP)
-		actor->momz = -10*FRACUNIT;
-	else
-		actor->momz = 10*FRACUNIT;
+	P_SetObjectMomZ(actor, 10*FRACUNIT, false);
 
 	S_StartSoundFromMobj(actor, sfx_s3k82);
 	for (i = 1; i <= num; i++)
@@ -7264,7 +7269,6 @@ void A_Boss2Chase(void *data)
 		{
 			const fixed_t ns = FixedMul(3 * FRACUNIT, actor->scale);
 			mobj_t *goop;
-			fixed_t fz = actor->z+actor->height+FixedMul(24*FRACUNIT, actor->scale);
 			angle_t fa;
 			// actor->movedir is used to determine the last
 			// direction goo was sprayed in. There are 8 possible
@@ -7274,7 +7278,7 @@ void A_Boss2Chase(void *data)
 			actor->movedir %= NUMDIRS;
 			fa = (actor->movedir*FINEANGLES/8) & FINEMASK;
 
-			goop = P_SpawnMobj(actor->x, actor->y, fz, actor->info->painchance);
+			goop = P_SpawnMobjFromMobj(actor, 0, 0, 24*FRACUNIT, actor->info->painchance);
 			if (!P_MobjWasRemoved(goop))
 			{
 				goop->momx = FixedMul(FINECOSINE(fa),ns);
@@ -7325,7 +7329,6 @@ void A_Boss2Pogo(void *data)
 	{
 		const fixed_t ns = FixedMul(3 * FRACUNIT, actor->scale);
 		mobj_t *goop;
-		fixed_t fz = actor->z+actor->height+FixedMul(24*FRACUNIT, actor->scale);
 		angle_t fa;
 		INT32 i;
 		// spray in all 8 directions!
@@ -7335,7 +7338,7 @@ void A_Boss2Pogo(void *data)
 			actor->movedir %= NUMDIRS;
 			fa = (actor->movedir*FINEANGLES/8) & FINEMASK;
 
-			goop = P_SpawnMobj(actor->x, actor->y, fz, actor->info->painchance);
+			goop = P_SpawnMobjFromMobj(actor, 0, 0, 24*FRACUNIT, actor->info->painchance);
 			if (P_MobjWasRemoved(goop))
 				continue;
 			goop->momx = FixedMul(FINECOSINE(fa),ns);
@@ -7670,7 +7673,7 @@ void A_Boss2PogoTarget(void *data)
 
 	if (actor->info->missilestate) // spawn the pogo stick collision box
 	{
-		mobj_t *pogo = P_SpawnMobj(actor->x, actor->y, actor->z - mobjinfo[actor->info->missilestate].height, (mobjtype_t)actor->info->missilestate);
+		mobj_t *pogo = P_SpawnMobjFromMobj(actor, 0, 0, -mobjinfo[actor->info->missilestate].height, (mobjtype_t)actor->info->missilestate);
 		if (!P_MobjWasRemoved(pogo))
 			P_SetTarget(&pogo->target, actor);
 	}
@@ -12888,10 +12891,11 @@ void A_SpawnParticleRelative(void *data)
 	// NOTE: Doing actor->z + actor->height is the bottom of the object while the object has reverse gravity. - Flame
 	mo = P_SpawnMobj(actor->x + FixedMul(x<<FRACBITS, actor->scale),
 		actor->y + FixedMul(y<<FRACBITS, actor->scale),
-		(actor->eflags & MFE_VERTICALFLIP) ? ((actor->z + actor->height - mobjinfo[MT_PARTICLE].height) - FixedMul(z<<FRACBITS, actor->scale)) : (actor->z + FixedMul(z<<FRACBITS, actor->scale)), MT_PARTICLE);
+		(actor->eflags & MFE_VERTICALFLIP) ? ((actor->z + actor->height - FixedMul(mobjinfo[MT_PARTICLE].height, actor->scale)) - FixedMul(z<<FRACBITS, actor->scale)) : (actor->z + FixedMul(z<<FRACBITS, actor->scale)), MT_PARTICLE);
 	if (P_MobjWasRemoved(mo))
 		return;
 
+	P_SetScale(mo, actor->scale, true);
 	// Spawn objects with an angle matching the spawner's, rather than spawning Eastwards - Monster Iestyn
 	mo->angle = actor->angle;
 
@@ -14249,7 +14253,7 @@ static void P_SnapperLegPlace(mobj_t *mo)
 	INT32 necklen = (32*(mo->info->reactiontime - mo->reactiontime))/mo->info->reactiontime; // Not in FU
 
 	seg->z = mo->z + ((mo->eflags & MFE_VERTICALFLIP) ? (((mo->height<<1)/3) - seg->height) : mo->height/3);
-	P_TryMove(seg, mo->x + FixedMul(c, rad) + necklen*c, mo->y + FixedMul(s, rad) + necklen*s, true);
+	P_TryMove(seg, mo->x + FixedMul(c, rad) + FixedMul(necklen*c, seg->scale), mo->y + FixedMul(s, rad) + FixedMul(necklen*s, seg->scale), true);
 	if (P_MobjWasRemoved(seg))
 		return;
 	seg->angle = a;
@@ -14269,8 +14273,8 @@ static void P_SnapperLegPlace(mobj_t *mo)
 
 		if (alt != side)
 		{
-			x = c*o2 + s*o1;
-			y = s*o2 - c*o1;
+			x = FixedMul(c*o2 + s*o1, mo->scale);
+			y = FixedMul(s*o2 - c*o1, mo->scale);
 			seg->z = mo->z + (((mo->eflags & MFE_VERTICALFLIP) ? (mo->height - seg->height) : 0));
 			P_TryMove(seg, mo->x + x, mo->y + y, true);
 			if (P_MobjWasRemoved(seg))
@@ -14378,9 +14382,9 @@ void A_SnapperThinker(void *data)
 	}
 
 	// Look for nearby, valid players to chase angrily at.
-	if ((actor->target || P_LookForPlayers(actor, true, false, 1024*FRACUNIT))
-		&& ArePointsClose2D(xs, ys, actor->target->x, actor->target->y, 2048*FRACUNIT)
-		&& abs(actor->target->z - actor->z) < 80*FRACUNIT
+	if ((actor->target || P_LookForPlayers(actor, true, false, FixedMul(1024*FRACUNIT, actor->scale)))
+		&& ArePointsClose2D(xs, ys, actor->target->x, actor->target->y, FixedMul(2048*FRACUNIT, actor->scale))
+		&& abs(actor->target->z - actor->z) < FixedMul(80*FRACUNIT, actor->scale)
 		&& P_CheckSight(actor, actor->target))
 	{
 		chasing = true;
@@ -14397,7 +14401,7 @@ void A_SnapperThinker(void *data)
 	dist = GetDistance2D(x0, y0, x1, y1);
 
 	// The snapper either chases what it considers to be a nearby player, or instead decides to go back to its spawnpoint.
-	if (chasing || dist > 32*FRACUNIT)
+	if (chasing || dist > FixedMul(32*FRACUNIT, actor->scale))
 	{
 		INT32 speed = actor->info->speed + actor->info->reactiontime - actor->reactiontime;
 
@@ -14419,7 +14423,7 @@ void A_SnapperThinker(void *data)
 		c = FINECOSINE(fa);
 		s = FINESINE(fa);
 
-		P_TryMove(actor, actor->x + c*speed, actor->y + s*speed, false);
+		P_TryMove(actor, actor->x + FixedMul(c*speed, actor->scale), actor->y + FixedMul(s*speed, actor->scale), false);
 		if (P_MobjWasRemoved(actor))
 			return;
 
@@ -14428,7 +14432,10 @@ void A_SnapperThinker(void *data)
 		{
 			mobj_t *dust = P_SpawnMobj(x0, y0, actor->z, MT_SPINDUST);
 			if (!P_MobjWasRemoved(dust))
-				P_Thrust(dust, ang + ANGLE_180 + FixedAngle(P_RandomRange(-20, 20)*FRACUNIT), speed*FRACUNIT);
+			{
+				P_Thrust(dust, ang + ANGLE_180 + FixedAngle(P_RandomRange(-20, 20)*FRACUNIT), FixedMul(speed*FRACUNIT, actor->scale));
+				P_SetScale(dust, actor->scale, true);
+			}
 		}
 
 		if (actor->extravalue2 == 0)
@@ -14700,7 +14707,7 @@ void A_SpawnPterabytes(void *data)
 	mobj_t *actor = data;
 	mobj_t *waypoint, *ptera;
 	fixed_t c, s;
-	fixed_t rad = 280*FRACUNIT;
+	fixed_t rad = FixedMul(280*FRACUNIT, actor->scale);
 	angle_t ang = 0;
 	angle_t interval, fa;
 	UINT8 amount = 1;
@@ -14754,12 +14761,12 @@ void A_PterabyteHover(void *data)
 	if (LUA_CallAction(A_PTERABYTEHOVER, actor))
 		return;
 
-	P_InstaThrust(actor, actor->angle, actor->info->speed);
+	P_InstaThrust(actor, actor->angle, FixedMul(actor->info->speed, actor->scale));
 	actor->angle += ANG1;
 	actor->extravalue1 = (actor->extravalue1 + 3) % 360;
 	ang = actor->extravalue1*ANG1;
 	fa = (ang >> ANGLETOFINESHIFT) & FINEMASK;
-	actor->z += FINESINE(fa);
+	actor->z += FixedMul(FINESINE(fa), actor->scale);
 }
 // Function: A_RolloutSpawn
 //

@@ -8459,7 +8459,7 @@ static boolean P_HangsterThink(mobj_t *mobj)
 	{
 		P_SpawnGhostMobj(mobj);
 		//curve when in line with target, otherwise curve to avoid crashing into floor
-		if ((mobj->z - mobj->floorz <= 80*FRACUNIT) || (mobj->target && (mobj->z - mobj->target->z <= 80*FRACUNIT)))
+		if ((mobj->z - mobj->floorz <= FixedMul(80*FRACUNIT, mobj->scale)) || (mobj->target && (mobj->z - mobj->target->z <= FixedMul(80*FRACUNIT, mobj->scale))))
 			P_SetMobjState(mobj, (st = S_HANGSTER_ARC1));
 	}
 
@@ -8467,12 +8467,12 @@ static boolean P_HangsterThink(mobj_t *mobj)
 	if (st == S_HANGSTER_ARC1)
 	{
 		A_FaceTarget(mobj);
-		P_Thrust(mobj, mobj->angle, 1*FRACUNIT);
+		P_Thrust(mobj, mobj->angle, mobj->scale);
 	}
 	else if (st == S_HANGSTER_ARC2)
-		P_Thrust(mobj, mobj->angle, 2*FRACUNIT);
+		P_Thrust(mobj, mobj->angle, FixedMul(2*FRACUNIT, mobj->scale));
 	else if (st == S_HANGSTER_ARC3)
-		P_Thrust(mobj, mobj->angle, 4*FRACUNIT);
+		P_Thrust(mobj, mobj->angle, FixedMul(4*FRACUNIT, mobj->scale));
 	//if movement has stopped while flying (like hitting a wall), fly up immediately
 	else if (st == S_HANGSTER_FLY1 && !mobj->momx && !mobj->momy)
 	{
@@ -9083,14 +9083,14 @@ static void P_PyreFlyThink(mobj_t *mobj)
 
 	hdist = P_GetMobjDistance2D(mobj, mobj->target);
 
-	if (hdist > 1500*FRACUNIT)
+	if (hdist > FixedMul(1500*FRACUNIT, mobj->scale))
 	{
 		mobj->flags2 &= ~MF2_BOSSNOTRAP;
 		P_SetTarget(&mobj->target, NULL);
 		return;
 	}
 
-	if (!(mobj->flags2 & MF2_BOSSNOTRAP) && hdist <= 450*FRACUNIT)
+	if (!(mobj->flags2 & MF2_BOSSNOTRAP) && hdist <= FixedMul(450*FRACUNIT, mobj->scale))
 		mobj->flags2 |= MF2_BOSSNOTRAP;
 
 	if (!(mobj->flags2 & MF2_BOSSNOTRAP))
@@ -9101,7 +9101,7 @@ static void P_PyreFlyThink(mobj_t *mobj)
 		//Aim for player z position. If too close to floor/ceiling, aim just above/below them.
 		fixed_t destz = min(max(mobj->target->z, mobj->target->floorz + 70*FRACUNIT), mobj->target->ceilingz - 80*FRACUNIT - mobj->height);
 		fixed_t dist = GetDistance3D(mobj->x, mobj->y, mobj->z, destz, mobj->target->x, mobj->target->y);
-		P_InstaThrust(mobj, R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y), 2*FRACUNIT);
+		P_InstaThrust(mobj, R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y), FixedMul(2*FRACUNIT, mobj->scale));
 		mobj->momz = FixedMul(FixedDiv(destz - mobj->z, dist), 2*FRACUNIT);
 	}
 	else
@@ -9157,20 +9157,21 @@ static void P_PterabyteThink(mobj_t *mobj)
 		}
 
 		hdist = P_GetMobjDistance2D(mobj, mobj->target);
-		if (hdist > 450*FRACUNIT)
+		if (hdist > FixedMul(450*FRACUNIT, mobj->scale))
 		{
 			P_SetTarget(&mobj->target, NULL);
 			return;
 		}
 
+		const fixed_t scaledHspeed = FixedMul(hspeed, mobj->scale);
 		P_SetMobjState(mobj, S_PTERABYTE_SWOOPDOWN);
 		mobj->extravalue1++;
 		S_StartSoundFromMobj(mobj, mobj->info->attacksound);
 		time = FixedDiv(hdist, hspeed);
 		mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
 		fa = (mobj->angle >> ANGLETOFINESHIFT) & FINEMASK;
-		mobj->momx = FixedMul(FINECOSINE(fa), hspeed);
-		mobj->momy = FixedMul(FINESINE(fa), hspeed);
+		mobj->momx = FixedMul(FINECOSINE(fa), scaledHspeed);
+		mobj->momy = FixedMul(FINESINE(fa), scaledHspeed);
 		mobj->momz = -2*FixedDiv(vdist, time);
 		mobj->extravalue2 = -FixedDiv(mobj->momz, time); //Z accel
 		mobj->movecount = time >> FRACBITS;
@@ -9202,7 +9203,7 @@ static void P_PterabyteThink(mobj_t *mobj)
 		var1 = 2*mobj->info->speed;
 		var2 = 1;
 		A_HomingChase(mobj);
-		if (P_AreMobjsClose2D(mobj, mobj->tracer, mobj->info->speed))
+		if (P_AreMobjsClose2D(mobj, mobj->tracer, FixedMul(mobj->info->speed, mobj->scale)))
 		{
 			mobj->extravalue1 -= 2;
 			mobj->momx = mobj->momy = mobj->momz = 0;
@@ -13442,7 +13443,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		break;
 	case MT_CRUSHSTACEAN:
 	case MT_BANPYURA:
-		// Make sure mthing->scale actually gets applied to the Crushtacean and Banpyura
+		// Make sure the Crushtacean's tracer gets scaled properly
 		if (!P_MobjWasRemoved(mobj->tracer))
 			P_SetScale(mobj->tracer, FixedMul(mobj->tracer->scale, mthing->scale), true);
 		if (mthing->args[0])
@@ -13451,6 +13452,13 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	case MT_EGGGUARD:
 		if (mthing->args[1])
 			mobj->flags2 |= MF2_AMBUSH;
+		break;
+	case MT_SPINBOBERT:
+		// Make sure the Spinbobert's rotating skulls get scaled properly
+		if (!P_MobjWasRemoved(mobj->hnext))
+			P_SetScale(mobj->hnext, FixedMul(mobj->hnext->scale, mthing->scale), true);
+		if (!P_MobjWasRemoved(mobj->hprev))
+			P_SetScale(mobj->hprev, FixedMul(mobj->hprev->scale, mthing->scale), true);
 		break;
 	case MT_STEAM:
 		if (mthing->args[0])
