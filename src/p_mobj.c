@@ -12500,6 +12500,7 @@ static boolean P_SetupMace(mapthing_t *mthing, mobj_t *mobj, boolean *doangle)
 	spawnee = P_SpawnMobj(mobj->x, mobj->y, mobj->z, mobjtype);\
 	if (P_MobjWasRemoved(spawnee))\
 		break;\
+	P_SetScale(spawnee, mobj->scale, true);\
 	P_SetTarget(&spawnee->tracer, mobj);\
 	spawnee->threshold = mphase;\
 	spawnee->friction = mroll;\
@@ -13766,6 +13767,7 @@ static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 numi
 	INT32 r;
 	angle_t angle = FixedAngle(fixedangle << FRACBITS);
 	angle_t fineangle = (angle >> ANGLETOFINESHIFT) & FINEMASK;
+	const fixed_t finalScale = FixedMul(mapobjectscale, mthing->scale);
 
 	for (r = 0; r < numitemtypes; r++)
 	{
@@ -13784,8 +13786,8 @@ static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 numi
 		}
 	}
 	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, 0, mthing->options & MTF_OBJECTFLIP, mthing->scale, mthing->options & MTF_ABSOLUTEZ);
-	horizontalspacing = FixedMul(horizontalspacing, mthing->scale);
-	verticalspacing = FixedMul(verticalspacing, mthing->scale);
+	horizontalspacing = FixedMul(horizontalspacing, finalScale);
+	verticalspacing = FixedMul(verticalspacing, finalScale);
 
 	for (r = 0; r < numitems; r++)
 	{
@@ -13845,7 +13847,7 @@ static void P_SpawnItemCircle(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 n
 		}
 	}
 	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, 0, false, mthing->scale, mthing->options & MTF_ABSOLUTEZ);
-	size = FixedMul(size, mthing->scale);
+	size = FixedMul(size, FixedMul(mapobjectscale, mthing->scale));
 
 	for (i = 0; i < numitems; i++)
 	{
