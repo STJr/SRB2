@@ -5428,14 +5428,14 @@ static void P_Boss9Thinker(mobj_t *mobj)
 
 	if ((statenum_t)(mobj->state-states) == mobj->info->meleestate)
 	{
-		P_InstaThrust(mobj, mobj->angle, -FixedMul(4*FRACUNIT, mobj->scale));
+		P_InstaThrust(mobj, mobj->angle, -4*FRACUNIT);
 		P_TryMove(mobj, mobj->x+mobj->momx, mobj->y+mobj->momy, true);
 		if (P_MobjWasRemoved(mobj))
 			return;
 		mobj->momz -= gravity;
-		if (mobj->z < mobj->watertop || mobj->z < (mobj->floorz + FixedMul(16*FRACUNIT, mobj->scale)))
+		if (mobj->z < mobj->watertop || mobj->z < (mobj->floorz + 16*FRACUNIT))
 		{
-			mobj->watertop = mobj->floorz + FixedMul(32*FRACUNIT, mobj->scale);
+			mobj->watertop = mobj->floorz + 32*FRACUNIT;
 			P_SetMobjState(mobj, mobj->info->spawnstate);
 		}
 		return;
@@ -5461,11 +5461,10 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			}
 			P_SetMobjState(mobj, mobj->info->spawnstate);
 			mobj->fuse = 0;
-			// TODO: Do we need to account for scale here?
 			mobj->momx = FixedDiv(mobj->momx, FRACUNIT + (FRACUNIT>>2));
 			mobj->momy = FixedDiv(mobj->momy, FRACUNIT + (FRACUNIT>>2));
 			mobj->momz = FixedDiv(mobj->momz, FRACUNIT + (FRACUNIT>>2));
-			mobj->watertop = mobj->floorz + FixedMul(32*FRACUNIT, mobj->scale);
+			mobj->watertop = mobj->floorz + 32*FRACUNIT;
 			mobj->momz = (mobj->watertop - mobj->z)>>3;
 			mobj->threshold = 0;
 			mobj->movecount = 0;
@@ -5504,7 +5503,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			{
 				if (mobj->hprev)
 				{
-					mobj->hprev->destscale = FixedMul(FRACUNIT + (2*TICRATE - mobj->fuse)*(FRACUNIT/2)/TICRATE + FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT),FRACUNIT/2), mobj->scale);
+					mobj->hprev->destscale = FRACUNIT + (2*TICRATE - mobj->fuse)*(FRACUNIT/2)/TICRATE + FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT),FRACUNIT/2);
 					P_SetScale(mobj->hprev, mobj->hprev->destscale, false);
 
 					P_MoveOrigin(mobj->hprev, mobj->x, mobj->y, mobj->z + mobj->height/2 - mobj->hprev->height/2);
@@ -5531,7 +5530,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 						{
 							S_StopSound(missile);
 							if (mobj->extravalue1 >= 2)
-								P_SetScale(missile, mobj->scale/2, true);
+								P_SetScale(missile, FRACUNIT/2, true);
 							missile->destscale = missile->scale/2;
 							missile->fuse = TICRATE/2;
 							missile->scalespeed = abs(missile->destscale - missile->scale)/missile->fuse;
@@ -5553,7 +5552,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 										continue;
 
 									spread->angle = missile->angle+(ANGLE_11hh/2)*(i-2);
-									P_InstaThrust(spread,spread->angle,-FixedMul(spread->info->speed, missile->scale));
+									P_InstaThrust(spread,spread->angle,-spread->info->speed);
 									spread->momz = missile->momz;
 									P_SetScale(spread, missile->scale, true);
 									spread->destscale = missile->destscale;
@@ -5565,7 +5564,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 									spread->z -= spread->fuse*spread->momz;
 									P_SetThingPosition(spread);
 								}
-								P_InstaThrust(missile,missile->angle,-FixedMul(missile->info->speed, mobj->scale));
+								P_InstaThrust(missile,missile->angle,-missile->info->speed);
 							}
 							else if (mobj->extravalue1 >= 3)
 							{
@@ -5616,7 +5615,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			for (spawner = mobj->hnext; spawner; spawner = spawner->hnext)
 			{
 				dist = P_GetMobjDistance2D(spawner, mobj);
-				if (P_RandomRange(1,(dist/mobj->scale)/16) == 1)
+				if (P_RandomRange(1,(dist>>FRACBITS)/16) == 1)
 					break;
 			}
 			if (spawner && dist)
@@ -5636,12 +5635,12 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					{
 						if (mobj->health > mobj->info->damage)
 						{
-							P_SetScale(missile, mobj->scale/3, true);
+							P_SetScale(missile, FRACUNIT/3, true);
 							missile->color = SKINCOLOR_MAGENTA; // sonic OVA/4 purple power
 						}
 						else
 						{
-							P_SetScale(missile, mobj->scale/5, true);
+							P_SetScale(missile, FRACUNIT/5, true);
 							missile->color = SKINCOLOR_SUNSET; // sonic cd electric power
 						}
 						missile->destscale = missile->scale*2;
@@ -5664,9 +5663,9 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				if (mobj->target->player->powers[pw_tailsfly]) // Trying to escape, eh?
 					mobj->watertop = mobj->target->z + mobj->target->momz*6; // Readjust your aim. >:3
 				else if (mobj->target->floorz > mobj->floorz)
-					mobj->watertop = mobj->target->floorz + FixedMul(16*FRACUNIT, mobj->scale);
+					mobj->watertop = mobj->target->floorz + 16*FRACUNIT;
 				else
-					mobj->watertop = mobj->floorz + FixedMul(16*FRACUNIT, mobj->scale);
+					mobj->watertop = mobj->floorz + 16*FRACUNIT;
 
 				if (!(mobj->threshold%4)) {
 					mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x + mobj->target->momx*4, mobj->target->y + mobj->target->momy*4);
@@ -5682,7 +5681,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 		// threshold is used for attacks/maneuvers.
 		if (mobj->threshold && mobj->movecount != 2) {
 			mobj_t *ghost;
-			fixed_t speed = FixedMul(20*FRACUNIT + FixedMul(40*FRACUNIT, FixedDiv((mobj->info->spawnhealth - mobj->health)<<FRACBITS, mobj->info->spawnhealth<<FRACBITS)), mobj->scale);
+			fixed_t speed = 20*FRACUNIT + FixedMul(40*FRACUNIT, FixedDiv((mobj->info->spawnhealth - mobj->health)<<FRACBITS, mobj->info->spawnhealth<<FRACBITS));
 			UINT8 tries = 0;
 
 			// Firin' mah lazors
@@ -5704,7 +5703,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					if (!P_MobjWasRemoved(missile))
 					{
 						if (mobj->extravalue1 >= 2)
-							P_SetScale(missile, mobj->scale/2, true);
+							P_SetScale(missile, FRACUNIT/2, true);
 						missile->fuse = 3*TICRATE;
 						missile->z -= missile->height/2;
 
@@ -5721,12 +5720,12 @@ static void P_Boss9Thinker(mobj_t *mobj)
 									continue;
 
 								spread->angle = missile->angle+(ANGLE_11hh/2)*(i-2);
-								P_InstaThrust(spread,spread->angle,FixedMul(spread->info->speed, mobj->scale));
+								P_InstaThrust(spread,spread->angle,spread->info->speed);
 								spread->momz = missile->momz;
-								P_SetScale(spread, mobj->scale/2, true);
+								P_SetScale(spread, FRACUNIT/2, true);
 								spread->fuse = missile->fuse;
 							}
-							P_InstaThrust(missile,missile->angle,FixedMul(missile->info->speed, mobj->scale));
+							P_InstaThrust(missile,missile->angle,missile->info->speed);
 						}
 						else if (mobj->extravalue1 >= 3)
 						{
@@ -5740,7 +5739,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 									spread = P_SpawnMissile(mobj, mobj->target, missile->type);
 									if (!P_MobjWasRemoved(spread))
 									{
-										P_SetScale(spread, mobj->scale/2, true);
+										P_SetScale(spread, FRACUNIT/2, true);
 										spread->fuse = missile->fuse;
 										spread->z -= spread->height/2;
 									}
@@ -5769,11 +5768,11 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				if ((statenum_t)(mobj->state-states) != mobj->info->seestate)
 					P_SetMobjState(mobj, mobj->info->seestate);
 				if (mobj->movedir == 0) // mobj health == 1
-					P_InstaThrust(mobj, mobj->angle, FixedMul(38*FRACUNIT, mobj->scale));
+					P_InstaThrust(mobj, mobj->angle, 38*FRACUNIT);
 				else if (mobj->health == 3)
-					P_InstaThrust(mobj, mobj->angle, FixedMul(22*FRACUNIT, mobj->scale));
+					P_InstaThrust(mobj, mobj->angle, 22*FRACUNIT);
 				else // mobj health == 2
-					P_InstaThrust(mobj, mobj->angle, FixedMul(30*FRACUNIT, mobj->scale));
+					P_InstaThrust(mobj, mobj->angle, 30*FRACUNIT);
 				if (!P_TryMove(mobj, mobj->x+mobj->momx, mobj->y+mobj->momy, true))
 				{ // Hit a wall? Find a direction to bounce
 					if (P_MobjWasRemoved(mobj))
@@ -5783,7 +5782,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 						S_StartSoundFromMobj(mobj, sfx_mspogo);
 						P_BounceMove(mobj);
 						mobj->angle = R_PointToAngle2(mobj->momx, mobj->momy,0,0);
-						mobj->momz = FixedMul(4*FRACUNIT, mobj->scale);
+						mobj->momz = 4*FRACUNIT;
 						mobj->flags &= ~MF_PAIN;
 						mobj->fuse = 8*TICRATE;
 						mobj->movecount = 0;
@@ -5839,7 +5838,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 		}
 
 		angle = 0x06000000*leveltime;
-		mobj->momz += FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT),FixedMul(2*FRACUNIT, mobj->scale)); // Use that "angle" to bob gently in the air
+		mobj->momz += FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT),2*FRACUNIT); // Use that "angle" to bob gently in the air
 		// This is below threshold because we don't want to bob while zipping around
 
 		// Ohh you're in for it now..
@@ -5882,7 +5881,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				if (abs(mobj->momx)+abs(mobj->momy) < FRACUNIT)
 					mobj->momx = mobj->momy = 0;
 				else
-					P_Thrust(mobj, R_PointToAngle2(0, 0, mobj->momx, mobj->momy), -FixedMul(6*FRACUNIT/8, mobj->scale));
+					P_Thrust(mobj, R_PointToAngle2(0, 0, mobj->momx, mobj->momy), -6*FRACUNIT/8);
 			}
 			if (mobj->state == states+mobj->info->raisestate)
 				return;
@@ -5901,9 +5900,9 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				S_StartSoundFromMobj(mobj, sfx_beflap);
 				P_SetMobjState(mobj, mobj->info->raisestate);
 				if (mobj->floorz >= mobj->target->floorz)
-					mobj->watertop = mobj->floorz + FixedMul(256*FRACUNIT, mobj->scale);
+					mobj->watertop = mobj->floorz + 256*FRACUNIT;
 				else
-					mobj->watertop = mobj->target->floorz + FixedMul(256*FRACUNIT, mobj->scale);
+					mobj->watertop = mobj->target->floorz + 256*FRACUNIT;
 				break;
 
 			case 1:
@@ -5985,9 +5984,9 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					else
 						mobj->threshold = 24; // bounce 24 times
 					if (mobj->floorz >= mobj->target->floorz)
-						mobj->watertop = mobj->floorz + FixedMul(16*FRACUNIT, mobj->scale);
+						mobj->watertop = mobj->floorz + 16*FRACUNIT;
 					else
-						mobj->watertop = mobj->target->floorz + FixedMul(16*FRACUNIT, mobj->scale);
+						mobj->watertop = mobj->target->floorz + 16*FRACUNIT;
 					if (mobj->spawnpoint)
 						P_LinedefExecute(mobj->spawnpoint->args[4], mobj, NULL);
 
@@ -6022,9 +6021,9 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			case 3:
 				// Return to idle.
 				if (mobj->floorz >= mobj->target->floorz)
-					mobj->watertop = mobj->floorz + FixedMul(32*FRACUNIT, mobj->scale);
+					mobj->watertop = mobj->floorz + 32*FRACUNIT;
 				else
-					mobj->watertop = mobj->target->floorz + FixedMul(32*FRACUNIT, mobj->scale);
+					mobj->watertop = mobj->target->floorz + 32*FRACUNIT;
 				P_SetMobjState(mobj, mobj->info->spawnstate);
 				mobj->flags &= ~MF_PAIN;
 				mobj->fuse = 8*TICRATE;
@@ -6083,13 +6082,13 @@ nodanger:
 
 			// Move normally: Approach the player using normal thrust and simulated friction.
 			dist = P_GetMobjDistance2D(mobj, mobj->target);
-			P_Thrust(mobj, R_PointToAngle2(0, 0, mobj->momx, mobj->momy), -FixedMul(3*FRACUNIT/8, mobj->scale));
-			if (dist < FixedMul(64*FRACUNIT, mobj->scale) && !(mobj->target->player && mobj->target->player->homing))
-				P_Thrust(mobj, mobj->angle, -FixedMul(4*FRACUNIT, mobj->scale));
-			else if (dist > FixedMul(180*FRACUNIT, mobj->scale))
-				P_Thrust(mobj, mobj->angle, mobj->scale);
+			P_Thrust(mobj, R_PointToAngle2(0, 0, mobj->momx, mobj->momy), -3*FRACUNIT/8);
+			if (dist < 64*FRACUNIT && !(mobj->target->player && mobj->target->player->homing))
+				P_Thrust(mobj, mobj->angle, -4*FRACUNIT);
+			else if (dist > 180*FRACUNIT)
+				P_Thrust(mobj, mobj->angle, FRACUNIT);
 			else
-				P_Thrust(mobj, mobj->angle + ANGLE_90, FixedMul(FINECOSINE((((angle_t)(leveltime*ANG1))>>ANGLETOFINESHIFT) & FINEMASK)>>1, mobj->scale));
+				P_Thrust(mobj, mobj->angle + ANGLE_90, FINECOSINE((((angle_t)(leveltime*ANG1))>>ANGLETOFINESHIFT) & FINEMASK)>>1);
 			mobj->momz += P_GetMobjMomentum2D(mobj)/12; // Move up higher the faster you're going.
 		}
 	}
