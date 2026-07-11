@@ -1862,7 +1862,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 
 	leftmostvertex = rightmostvertex = topmostvertex = bottommostvertex = 0;
 	widthfactor = heightfactor = FRACUNIT;
-	spacing = (32<<FRACBITS);
+	spacing = FixedMul(32<<FRACBITS, mapobjectscale); // Account for the MobjScale level header parameter
 	type = MT_ROCKCRUMBLE1;
 	lifetime = 3*TICRATE;
 	fromcenter = false;

@@ -4339,10 +4339,9 @@ static void P_Boss3Thinker(mobj_t *mobj)
 					way1++;
 			}
 
-			dummy = P_SpawnMobj(mobj->x, mobj->y, mobj->z, mobj->info->mass);
+			dummy = P_SpawnMobjFromMobj(mobj, 0, 0, 0, mobj->info->mass);
 			if (!P_MobjWasRemoved(dummy))
 			{
-				dummy->angle = mobj->angle;
 				dummy->threshold = way1;
 				P_SetTarget(&dummy->tracer, mobj);
 				dummy->movefactor = mobj->movefactor;
@@ -4365,10 +4364,9 @@ static void P_Boss3Thinker(mobj_t *mobj)
 					way2++;
 			}
 
-			dummy = P_SpawnMobj(mobj->x, mobj->y, mobj->z, mobj->info->mass);
+			dummy = P_SpawnMobjFromMobj(mobj, 0, 0, 0, mobj->info->mass);
 			if (!P_MobjWasRemoved(dummy))
 			{
-				dummy->angle = mobj->angle;
 				dummy->threshold = way2;
 				P_SetTarget(&dummy->tracer, mobj);
 				dummy->movefactor = mobj->movefactor;
@@ -4448,9 +4446,9 @@ static void P_Boss3Thinker(mobj_t *mobj)
 		}
 
 		if ((mobj->movedir) || (mobj->health <= mobj->info->damage))
-			speed = mobj->info->speed * 2;
+			speed = FixedMul(mobj->info->speed * 2, mobj->scale);
 		else
-			speed = mobj->info->speed;
+			speed = FixedMul(mobj->info->speed, mobj->scale);
 
 		if (mobj->tracer->x == mobj->x && mobj->tracer->y == mobj->y)
 		{
@@ -4485,19 +4483,20 @@ static void P_Boss3Thinker(mobj_t *mobj)
 				mobj_t *shock = NULL, *sfirst = NULL, *sprev = NULL;
 
 				mobj->movecount = mobj->health+1;
-				mobj->movefactor = -512*FRACUNIT;
+				mobj->movefactor = -FixedMul(512*FRACUNIT, mobj->scale);
 
 				// shock the water!
 				for (i = 0; i < numtospawn; i++)
 				{
-					shock = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_SHOCKWAVE);
+					// shock = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_SHOCKWAVE);
+					shock = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_SHOCKWAVE);
 					if (P_MobjWasRemoved(shock))
 						continue;
 					P_SetTarget(&shock->target, mobj);
 					shock->fuse = shock->info->painchance;
 
 					if (i % 2 == 0)
-					P_SetMobjState(shock, shock->state->nextstate);
+						P_SetMobjState(shock, shock->state->nextstate);
 
 					if (!sprev)
 						sfirst = shock;
@@ -4508,7 +4507,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 						P_SetTarget(&sprev->hnext, shock);
 					}
 
-					P_Thrust(shock, ang, shock->info->speed);
+					P_Thrust(shock, ang, FixedMul(shock->info->speed, shock->scale));
 					ang += interval;
 					sprev = shock;
 				}
@@ -4547,6 +4546,8 @@ static boolean P_Boss4MoveCage(mobj_t *mobj, fixed_t delta)
 	if (!mobj->spawnpoint)
 		return false;
 
+	delta = FixedMul(delta, mobj->scale);
+
 	TAG_ITER_SECTORS(mobj->spawnpoint->args[4], snum)
 	{
 		sector = &sectors[snum];
@@ -4563,11 +4564,13 @@ static void P_Boss4MoveSpikeballs(mobj_t *mobj, angle_t angle, fixed_t fz)
 {
 	INT32 s;
 	mobj_t *base = mobj, *seg;
-	fixed_t dist, bz = mobj->watertop+(8<<FRACBITS);
+	fixed_t dist, bz = mobj->watertop+FixedMul((8<<FRACBITS), mobj->scale);
+	const fixed_t startDist = FixedMul(172*FRACUNIT, mobj->scale);
+	const fixed_t addDist = FixedMul(124*FRACUNIT, mobj->scale);
 	while ((base = base->tracer))
 	{
-		for (seg = base, dist = 172*FRACUNIT, s = 9; seg; seg = seg->hnext, dist += 124*FRACUNIT, --s)
-			P_MoveOrigin(seg, mobj->x + P_ReturnThrustX(mobj, angle, dist), mobj->y + P_ReturnThrustY(mobj, angle, dist), bz + FixedMul(fz, FixedDiv(s<<FRACBITS, 9<<FRACBITS)));
+		for (seg = base, dist = startDist, s = 9; seg; seg = seg->hnext, dist += addDist, --s)
+			P_MoveOrigin(seg, mobj->x + P_ReturnThrustX(mobj, angle, dist), mobj->y + P_ReturnThrustY(mobj, angle, dist), bz + FixedMul(FixedMul(fz, FixedDiv(s<<FRACBITS, 9<<FRACBITS)), mobj->scale));
 		angle += ANGLE_MAX/3;
 	}
 }
@@ -4579,8 +4582,8 @@ static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t dz)
 {
 	INT32 s;
 	mobj_t *base = mobj, *seg;
-	fixed_t workx, worky, dx, dy, bz = mobj->watertop+(8<<FRACBITS);
-	fixed_t rad = (9*132)<<FRACBITS;
+	fixed_t workx, worky, dx, dy, bz = mobj->watertop+FixedMul((8<<FRACBITS), mobj->scale);
+	fixed_t rad = FixedMul((9*132)<<FRACBITS, mobj->scale);
 #ifdef CEZ3TILT
 	fixed_t originx, originy;
 	if (mobj->spawnpoint)
@@ -4612,8 +4615,8 @@ static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t dz)
 		dx = P_ReturnThrustX(mobj, angle, rad)/9;
 		dy = P_ReturnThrustY(mobj, angle, rad)/9;
 #endif
-		workx = mobj->x + P_ReturnThrustX(mobj, angle, (112)<<FRACBITS);
-		worky = mobj->y + P_ReturnThrustY(mobj, angle, (112)<<FRACBITS);
+		workx = mobj->x + P_ReturnThrustX(mobj, angle, FixedMul((112)<<FRACBITS, mobj->scale));
+		worky = mobj->y + P_ReturnThrustY(mobj, angle, FixedMul((112)<<FRACBITS, mobj->scale));
 		for (seg = base, s = 9; seg; seg = seg->hnext, --s)
 		{
 			seg->z = bz + (dz*(9-s));
@@ -4761,10 +4764,10 @@ static void P_Boss4Thinker(mobj_t *mobj)
 			mobj_t *seg, *base = mobj;
 			// First frame init, spawn all the things.
 			mobj->watertop = mobj->z;
-			z = mobj->z + mobj->height/2 - mobjinfo[MT_EGGMOBILE4_MACE].height/2;
+			z = mobj->info->height/2 - mobjinfo[MT_EGGMOBILE4_MACE].height/2;
 			for (arm = 0; arm <3 ; arm++)
 			{
-				seg = P_SpawnMobj(mobj->x, mobj->y, z, MT_EGGMOBILE4_MACE);
+				seg = P_SpawnMobjFromMobj(mobj, 0, 0, z, MT_EGGMOBILE4_MACE);
 				if (P_MobjWasRemoved(seg))
 					continue;
 
@@ -4773,7 +4776,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 				P_SetTarget(&seg->target, mobj);
 				for (i = 0; i < 9; i++)
 				{
-					P_SetTarget(&seg->hnext, P_SpawnMobj(mobj->x, mobj->y, z, MT_EGGMOBILE4_MACE));
+					P_SetTarget(&seg->hnext, P_SpawnMobjFromMobj(mobj, 0, 0, z, MT_EGGMOBILE4_MACE));
 					if (P_MobjWasRemoved(seg->hnext))
 						continue;
 					P_SetTarget(&seg->hnext->hprev, seg);
@@ -4818,8 +4821,8 @@ static void P_Boss4Thinker(mobj_t *mobj)
 	case 3:
 	{
 		fixed_t z;
-		if (mobj->z < mobj->watertop+(400<<FRACBITS))
-			mobj->momz = 8*FRACUNIT;
+		if (mobj->z < mobj->watertop+FixedMul(400<<FRACBITS, mobj->scale))
+			mobj->momz = FixedMul(8*FRACUNIT, mobj->scale);
 		else
 		{
 			mobj->momz = mobj->movefactor = 0;
@@ -4828,8 +4831,8 @@ static void P_Boss4Thinker(mobj_t *mobj)
 			mobj->movedir++;
 		}
 
-		z = mobj->z - mobj->watertop - mobjinfo[MT_EGGMOBILE4_MACE].height - mobj->height/2;
-		if (z < (8<<FRACBITS)) // We haven't risen high enough to pull the spikeballs along yet
+		z = mobj->z - mobj->watertop - FixedMul(mobjinfo[MT_EGGMOBILE4_MACE].height, mobj->scale) - mobj->height/2;
+		if (z < FixedMul((8<<FRACBITS), mobj->scale)) // We haven't risen high enough to pull the spikeballs along yet
 			P_Boss4MoveSpikeballs(mobj, FixedAngle(mobj->movecount), 0); // So don't pull the spikeballs along yet.
 		else
 			P_Boss4PinchSpikeballs(mobj, FixedAngle(mobj->movecount), z);
@@ -4854,13 +4857,13 @@ static void P_Boss4Thinker(mobj_t *mobj)
 
 		if (mobj->spawnpoint)
 			P_TryMove(mobj,
-				(mobj->spawnpoint->x<<FRACBITS) - P_ReturnThrustX(mobj, mobj->angle, mobj->movefactor),
-				(mobj->spawnpoint->y<<FRACBITS) - P_ReturnThrustY(mobj, mobj->angle, mobj->movefactor),
+				(mobj->spawnpoint->x<<FRACBITS) - P_ReturnThrustX(mobj, mobj->angle, FixedMul(mobj->movefactor, mobj->scale)),
+				(mobj->spawnpoint->y<<FRACBITS) - P_ReturnThrustY(mobj, mobj->angle, FixedMul(mobj->movefactor, mobj->scale)),
 				true);
 		if (P_MobjWasRemoved(mobj))
 			return;
 
-		P_Boss4PinchSpikeballs(mobj, FixedAngle(mobj->movecount), mobj->z - mobj->watertop - mobjinfo[MT_EGGMOBILE4_MACE].height - mobj->height/2);
+		P_Boss4PinchSpikeballs(mobj, FixedAngle(mobj->movecount), mobj->z - mobj->watertop - FixedMul(mobjinfo[MT_EGGMOBILE4_MACE].height, mobj->scale) - mobj->height/2);
 
 		if (!mobj->target || !mobj->target->health)
 			P_SupermanLook4Players(mobj);
@@ -8195,9 +8198,9 @@ static boolean P_MobjDeadThink(mobj_t *mobj)
 		if (!mobj->reactiontime)
 		{
 			if (P_RandomChance(FRACUNIT/2))
-				mobj->movefactor = FRACUNIT;
+				mobj->movefactor = mobj->scale;
 			else
-				mobj->movefactor = -FRACUNIT;
+				mobj->movefactor = -mobj->scale;
 			if (P_RandomChance(FRACUNIT/2))
 				mobj->movedir = ANG20;
 			else
@@ -8206,7 +8209,7 @@ static boolean P_MobjDeadThink(mobj_t *mobj)
 		}
 		mobj->momz += mobj->movefactor;
 		mobj->angle += mobj->movedir;
-		P_InstaThrust(mobj, mobj->angle, -mobj->info->speed);
+		P_InstaThrust(mobj, mobj->angle, -FixedMul(mobj->info->speed, mobj->scale));
 		mobj->reactiontime--;
 		break;
 	case MT_EGGSHIELD:
@@ -10971,7 +10974,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 			mobj->watertop = mobj->info->speed;
 			break;
 		case MT_EGGMOBILE3:
-			mobj->movefactor = -512*FRACUNIT;
+			mobj->movefactor = -FixedMul(512*FRACUNIT, mobj->scale);
 			mobj->flags2 |= MF2_CLASSICPUSH;
 			break;
 		case MT_EGGMOBILE4:

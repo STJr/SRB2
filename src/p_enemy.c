@@ -3961,38 +3961,39 @@ static void P_DoBoss5Death(mobj_t *mo)
 		mo->momy = ((16 - 1)*mo->momy)/16;
 		{
 			const fixed_t time = P_GetMobjDistance2D(mo->tracer, mo)/P_GetMobjMomentum2D(mo);
-			const fixed_t speed = 64*FRACUNIT;
+			const fixed_t speed = FixedMul(64*FRACUNIT, mo->scale);
 			mobj_t *pole = P_SpawnMobj(
 				mo->tracer->x - P_ReturnThrustX(mo->tracer, mo->tracer->angle, speed*time),
 				mo->tracer->y - P_ReturnThrustY(mo->tracer, mo->tracer->angle, speed*time),
-				mo->tracer->floorz + (256+1)*FRACUNIT,
+				mo->tracer->floorz + FixedMul((256+1)*FRACUNIT, mo->scale),
 				MT_FSGNB);
 			if (!P_MobjWasRemoved(pole))
 			{
-				P_SetScale(pole, 2*FRACUNIT, true);
+				P_SetScale(pole, FixedMul(2*FRACUNIT, mo->scale), true);
 				pole->angle = mo->tracer->angle;
 				pole->momx = P_ReturnThrustX(pole, pole->angle, speed);
 				pole->momy = P_ReturnThrustY(pole, pole->angle, speed);
 
 				P_SetTarget(&pole->tracer, P_SpawnMobj(
 					pole->x, pole->y,
-					pole->z - 256*FRACUNIT,
+					pole->z - FixedMul(256*FRACUNIT, mo->scale),
 					MT_FSGNB));
 				if (!P_MobjWasRemoved(pole->tracer))
 				{
 					pole->tracer->flags |= MF_NOCLIPTHING;
-					P_SetScale(pole->tracer, 2*FRACUNIT, true);
+					P_SetScale(pole->tracer, FixedMul(2*FRACUNIT, mo->scale), true);
 					pole->tracer->angle = mo->tracer->angle;
 					pole->tracer->momx = pole->momx;
 					pole->tracer->momy = pole->momy;
 
 					P_SetTarget(&pole->tracer->tracer, P_SpawnMobj(
-						pole->x + P_ReturnThrustX(pole, mo->tracer->angle, FRACUNIT),
-						pole->y + P_ReturnThrustY(pole, mo->tracer->angle, FRACUNIT),
-						pole->z + 256*FRACUNIT,
+						pole->x + P_ReturnThrustX(pole, mo->tracer->angle, mo->scale),
+						pole->y + P_ReturnThrustY(pole, mo->tracer->angle, mo->scale),
+						pole->z + FixedMul(256*FRACUNIT, mo->scale),
 						MT_FSGNA));
 					if (!P_MobjWasRemoved(pole->tracer->tracer))
 					{
+						P_SetScale(pole->tracer->tracer, mo->scale, true);
 						pole->tracer->tracer->angle = pole->angle - ANGLE_90;
 						pole->tracer->tracer->momx = pole->momx;
 						pole->tracer->tracer->momy = pole->momy;
@@ -7278,7 +7279,7 @@ void A_Boss2Chase(void *data)
 			actor->movedir %= NUMDIRS;
 			fa = (actor->movedir*FINEANGLES/8) & FINEMASK;
 
-			goop = P_SpawnMobjFromMobj(actor, 0, 0, 24*FRACUNIT, actor->info->painchance);
+			goop = P_SpawnMobjFromMobj(actor, 0, 0, actor->info->height+24*FRACUNIT, actor->info->painchance);
 			if (!P_MobjWasRemoved(goop))
 			{
 				goop->momx = FixedMul(FINECOSINE(fa),ns);
@@ -7338,7 +7339,7 @@ void A_Boss2Pogo(void *data)
 			actor->movedir %= NUMDIRS;
 			fa = (actor->movedir*FINEANGLES/8) & FINEMASK;
 
-			goop = P_SpawnMobjFromMobj(actor, 0, 0, 24*FRACUNIT, actor->info->painchance);
+			goop = P_SpawnMobjFromMobj(actor, 0, 0, actor->info->height+24*FRACUNIT, actor->info->painchance);
 			if (P_MobjWasRemoved(goop))
 				continue;
 			goop->momx = FixedMul(FINECOSINE(fa),ns);
@@ -8208,7 +8209,7 @@ void A_Boss3TakeDamage(void *data)
 		return;
 
 	actor->movecount = var1;
-	actor->movefactor = -512*FRACUNIT;
+	actor->movefactor = -FixedMul(512*FRACUNIT, actor->scale);
 }
 
 // Function: A_Boss3Path
@@ -8282,9 +8283,9 @@ void A_Boss3Path(void *data)
 
 		if (actor->tracer && ((actor->tracer->movedir)
 		|| (actor->tracer->health <= actor->tracer->info->damage)))
-			speed = actor->info->speed * 2;
+			speed = FixedMul(actor->info->speed * 2, actor->scale);
 		else
-			speed = actor->info->speed;
+			speed = FixedMul(actor->info->speed, actor->scale);
 
 		if (actor->target->x == actor->x && actor->target->y == actor->y)
 		{
@@ -8314,13 +8315,13 @@ void A_Boss3Path(void *data)
 			if (!actor->movefactor) // firing mode
 			{
 				actor->movecount |= 2;
-				actor->movefactor = -512*FRACUNIT;
+				actor->movefactor = -FixedMul(512*FRACUNIT, actor->scale);
 				actor->flags2 &= ~MF2_STRONGBOX;
 			}
 			else if (!(actor->flags2 & MF2_STRONGBOX)) // just spawned or going down
 			{
 				actor->flags2 |= MF2_STRONGBOX;
-				actor->movefactor = -512*FRACUNIT;
+				actor->movefactor = -FixedMul(512*FRACUNIT, actor->scale);
 			}
 			else if (!(actor->flags2 & MF2_AMBUSH)) // just shifted tube
 			{
@@ -8654,7 +8655,6 @@ void A_SpawnObjectRelative(void *data)
 	mobj_t *actor = data;
 	INT16 x, y, z; // Want to be sure we can use negative values
 	mobjtype_t type;
-	mobj_t *mo;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
 
@@ -8668,20 +8668,7 @@ void A_SpawnObjectRelative(void *data)
 	z = (INT16)(locvar2>>16);
 	type = (mobjtype_t)(locvar2&65535);
 
-	// Spawn objects correctly in reverse gravity.
-	// NOTE: Doing actor->z + actor->height is the bottom of the object while the object has reverse gravity. - Flame
-	mo = P_SpawnMobj(actor->x + FixedMul(x<<FRACBITS, actor->scale),
-		actor->y + FixedMul(y<<FRACBITS, actor->scale),
-		(actor->eflags & MFE_VERTICALFLIP) ? ((actor->z + actor->height - mobjinfo[type].height) - FixedMul(z<<FRACBITS, actor->scale)) : (actor->z + FixedMul(z<<FRACBITS, actor->scale)), type);
-	if (P_MobjWasRemoved(mo))
-		return;
-
-	// Spawn objects with an angle matching the spawner's, rather than spawning Eastwards - Monster Iestyn
-	mo->angle = actor->angle;
-
-	if (actor->eflags & MFE_VERTICALFLIP)
-		mo->flags2 |= MF2_OBJECTFLIP;
-
+	P_SpawnMobjFromMobj(actor, x<<FRACBITS, y<<FRACBITS, z<<FRACBITS, type);	
 }
 
 // Function: A_ChangeAngleRelative
@@ -11771,7 +11758,8 @@ void A_BrakLobShot(void *data)
 		return; // Don't even bother if we've got nothing to aim at.
 
 	// Look up actor's current gravity situation
-	g = FixedMul(gravity, P_GetSectorGravityFactor(actor->subsector->sector));
+	// TODO: Use P_GetMobjGravity here?
+	g = FixedMul(FixedMul(gravity, P_GetSectorGravityFactor(actor->subsector->sector)), actor->scale);
 
 	// Look up distance between actor and its target
 	x = P_GetMobjDistance2D(actor->target, actor);
@@ -11834,6 +11822,9 @@ void A_BrakLobShot(void *data)
 	shot = P_SpawnMobj(actor->x, actor->y, actor->z + FixedMul(locvar2*FRACUNIT, actor->scale), typeOfShot);
 	if (P_MobjWasRemoved(shot))
 		return;
+
+	P_SetScale(shot, actor->scale, true);
+
 	if (shot->info->seesound)
 		S_StartSoundFromMobj(shot, shot->info->seesound);
 	P_SetTarget(&shot->target, actor); // where it came from
@@ -12632,7 +12623,8 @@ void A_Boss5Jump(void *data)
 		return; // Don't even bother if we've got nothing to aim at.
 
 	// Look up actor's current gravity situation
-	g = FixedMul(gravity, P_GetSectorGravityFactor(actor->subsector->sector));
+	// TODO: Use P_GetMobjGravity here?
+	g = FixedMul(FixedMul(gravity, P_GetSectorGravityFactor(actor->subsector->sector)), actor->scale);
 
 	// Look up distance between actor and its tracer
 	x = P_GetMobjDistance2D(actor->tracer, actor);
@@ -12889,18 +12881,21 @@ void A_SpawnParticleRelative(void *data)
 
 	// Spawn objects correctly in reverse gravity.
 	// NOTE: Doing actor->z + actor->height is the bottom of the object while the object has reverse gravity. - Flame
-	mo = P_SpawnMobj(actor->x + FixedMul(x<<FRACBITS, actor->scale),
-		actor->y + FixedMul(y<<FRACBITS, actor->scale),
-		(actor->eflags & MFE_VERTICALFLIP) ? ((actor->z + actor->height - FixedMul(mobjinfo[MT_PARTICLE].height, actor->scale)) - FixedMul(z<<FRACBITS, actor->scale)) : (actor->z + FixedMul(z<<FRACBITS, actor->scale)), MT_PARTICLE);
+	// mo = P_SpawnMobj(actor->x + FixedMul(x<<FRACBITS, actor->scale),
+	// 	actor->y + FixedMul(y<<FRACBITS, actor->scale),
+	// 	(actor->eflags & MFE_VERTICALFLIP) ? ((actor->z + actor->height - FixedMul(mobjinfo[MT_PARTICLE].height, actor->scale)) - FixedMul(z<<FRACBITS, actor->scale)) : (actor->z + FixedMul(z<<FRACBITS, actor->scale)), MT_PARTICLE);
+	// if (P_MobjWasRemoved(mo))
+	// 	return;
+
+	// P_SetScale(mo, actor->scale, true);
+	// // Spawn objects with an angle matching the spawner's, rather than spawning Eastwards - Monster Iestyn
+	// mo->angle = actor->angle;
+
+	// if (actor->eflags & MFE_VERTICALFLIP)
+	// 	mo->flags2 |= MF2_OBJECTFLIP;
+	mo = P_SpawnMobjFromMobj(actor, x<<FRACBITS, y<<FRACBITS, z<<FRACBITS, MT_PARTICLE);
 	if (P_MobjWasRemoved(mo))
 		return;
-
-	P_SetScale(mo, actor->scale, true);
-	// Spawn objects with an angle matching the spawner's, rather than spawning Eastwards - Monster Iestyn
-	mo->angle = actor->angle;
-
-	if (actor->eflags & MFE_VERTICALFLIP)
-		mo->flags2 |= MF2_OBJECTFLIP;
 
 	P_SetMobjState(mo, state);
 }
@@ -13533,7 +13528,7 @@ void A_Boss5PinchShot(void *data)
 		return;
 
 	missile->momx = missile->momy = 0;
-	missile->momz = P_MobjFlip(actor)*missile->info->speed/2;
+	missile->momz = P_MobjFlip(actor)*FixedMul(missile->info->speed, missile->scale)/2;
 }
 
 // Function: A_Boss5MakeItRain
