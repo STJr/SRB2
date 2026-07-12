@@ -16,6 +16,7 @@
 #include "doomdef.h"
 #include "g_game.h"
 #include "p_local.h"
+#include "p_mobj.h"
 #include "p_setup.h"
 #include "r_main.h"
 #include "r_state.h"
@@ -3943,7 +3944,7 @@ static void P_DoCybrakdemonDeath(mobj_t *mo)
 	P_SetObjectMomZ(mo, 12*FRACUNIT, false);
 	S_StartSoundFromMobj(mo, sfx_bgxpld);
 	if (mo->spawnpoint && !(mo->spawnpoint->args[6] & TMB_NODEATHFLING))
-		P_InstaThrust(mo, R_PointToAngle2(0, 0, mo->x, mo->y), 14*FRACUNIT);
+		P_InstaThrust(mo, R_PointToAngle2(0, 0, mo->x, mo->y), FixedMul(14*FRACUNIT, mo->scale));
 }
 
 static void P_DoBoss5Death(mobj_t *mo)
@@ -6053,6 +6054,9 @@ void A_CapeChase(void *data)
 	boffsety = P_ReturnThrustY(chaser, angle-ANGLE_90, FixedMul((locvar2 & 65535)*FRACUNIT, actor->scale));
 
 	P_UnsetThingPosition(actor);
+	P_SetScale(actor, chaser->scale, false);
+	actor->destscale = chaser->destscale;
+	actor->old_scale = chaser->old_scale;
 	actor->x = chaser->x + foffsetx + boffsetx;
 	actor->y = chaser->y + foffsety + boffsety;
 	if (chaser->eflags & MFE_VERTICALFLIP)
@@ -11353,6 +11357,7 @@ void A_VileAttack(void *data)
 	mobjtype_t explosionType = MT_NULL;
 	mobj_t *fire;
 	INT32 i;
+	mobj_t *explosion;
 
 	if (LUA_CallAction(A_VILEATTACK, actor))
 		return;
@@ -11385,7 +11390,9 @@ void A_VileAttack(void *data)
 		actor->target->momz += FixedMul(10*FRACUNIT, actor->scale)*P_MobjFlip(actor->target); // How we're doing it
 		if (explosionType != MT_NULL)
 		{
-			P_SpawnMobj(actor->target->x, actor->target->y, actor->target->z, explosionType);
+			explosion = P_SpawnMobj(actor->target->x, actor->target->y, actor->target->z, explosionType);
+			if (!P_MobjWasRemoved(explosion))
+				P_SetScale(explosion, actor->target->scale, true);
 		}
 
 		// Extra attack. This was for additional damage in Doom. Doesn't really belong in SRB2, but the heck with it, it's here anyway.
@@ -11426,7 +11433,9 @@ void A_VileAttack(void *data)
 			players[i].mo->momz += FixedMul(10*FRACUNIT, actor->scale)*P_MobjFlip(players[i].mo); // How we're doing it
 			if (explosionType != MT_NULL)
 			{
-				P_SpawnMobj(players[i].mo->x, players[i].mo->y, players[i].mo->z, explosionType);
+				explosion = P_SpawnMobj(players[i].mo->x, players[i].mo->y, players[i].mo->z, explosionType);
+				if (!P_MobjWasRemoved(explosion))
+					P_SetScale(explosion, actor->target->scale, true);
 			}
 
 			// Extra attack. This was for additional damage in Doom. Doesn't really belong in SRB2, but the heck with it, it's here anyway.
@@ -11508,14 +11517,15 @@ void A_VileFire(void *data)
 	// Now draw the line to the actor's target
 	if (locvar2 & 0xFFFF)
 	{
-		mobjtype_t lineMobj;
+		mobjtype_t lineMobjType;
 		UINT16 numLineMobjs;
 		fixed_t distX;
 		fixed_t distY;
 		fixed_t distZ;
 		UINT16 i;
+		mobj_t *lineMobj;
 
-		lineMobj = (mobjtype_t)(locvar2 & 0xFFFF);
+		lineMobjType = (mobjtype_t)(locvar2 & 0xFFFF);
 		numLineMobjs = (UINT16)(locvar2 >> 16);
 		if (numLineMobjs == 0)
 		{
@@ -11529,7 +11539,13 @@ void A_VileFire(void *data)
 
 		for (i = 1; i <= numLineMobjs; i++)
 		{
-			P_SpawnMobj(actor->x + (distX * i), actor->y + (distY * i), actor->z + (distZ * i) + FixedMul(actor->height/2, actor->scale), lineMobj);
+			lineMobj = P_SpawnMobj(actor->x + (distX * i), actor->y + (distY * i), actor->z + (distZ * i) + FixedMul(actor->height/2, actor->scale), lineMobjType);
+			if (!P_MobjWasRemoved(lineMobj))
+			{
+				if (actor->eflags & MFE_VERTICALFLIP)
+					lineMobj->eflags |= MFE_VERTICALFLIP;
+				P_SetScale(lineMobj, actor->scale, true);
+			}
 		}
 	}
 }
@@ -11895,11 +11911,12 @@ void A_NapalmScatter(void *data)
 		if (P_MobjWasRemoved(mo))
 			continue;
 		P_SetTarget(&mo->target, actor->target); // Transfer target so Brak doesn't hit himself like an idiot
+		P_SetScale(mo, actor->scale, true);
 
 		mo->angle = fa << ANGLETOFINESHIFT;
-		mo->momx = FixedMul(FINECOSINE(fa),vx);
-		mo->momy = FixedMul(FINESINE(fa),vx);
-		mo->momz = vy;
+		mo->momx = FixedMul(FINECOSINE(fa),FixedMul(vx, actor->scale));
+		mo->momy = FixedMul(FINESINE(fa),FixedMul(vx, actor->scale));
+		P_SetObjectMomZ(mo, vy, false);
 	}
 }
 
