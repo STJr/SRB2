@@ -11048,12 +11048,12 @@ static void P_SpawnSparks(mobj_t *mo, angle_t maindir)
 	spark = P_SpawnMobj(mo->x - b2*s + b1*c, mo->y + b2*c + b1*s, mo->z, MT_MINECARTSPARK);
 	if (P_MobjWasRemoved(spark))
 		return;
-	spark->momx = mo->momx + r1 + 8*FINECOSINE(fm);
-	spark->momy = mo->momy + r2 + 8*FINESINE(fm);
-	spark->momz = mo->momz + r3;
+	spark->momx = mo->momx + FixedMul(r1 + 8*FINECOSINE(fm), mo->scale);
+	spark->momy = mo->momy + FixedMul(r2 + 8*FINESINE(fm), mo->scale);
+	spark->momz = mo->momz + FixedMul(r3, mo->scale);
 
-	P_Thrust(spark, R_PointToAngle2(mo->x, mo->y, spark->x, spark->y), 8*FRACUNIT);
-	P_SetScale(spark, FRACUNIT/4, true);
+	P_Thrust(spark, R_PointToAngle2(mo->x, mo->y, spark->x, spark->y), FixedMul(8*FRACUNIT, mo->scale));
+	P_SetScale(spark, mo->scale/4, true);
 	spark->fuse = TICRATE/3;
 }
 
@@ -11061,7 +11061,7 @@ static void P_SpawnSparks(mobj_t *mo, angle_t maindir)
 static mobj_t *P_LookForRails(mobj_t* mobj, fixed_t c, fixed_t s, angle_t targetangle, fixed_t xcom, fixed_t ycom)
 {
 	INT16 interval = 16;
-	INT16 fwooffset = P_GetMobjMomentum2D(mobj) >> FRACBITS;
+	INT16 fwooffset = P_GetMobjMomentum2D(mobj)/mobj->scale;
 	fixed_t x = mobj->x;
 	fixed_t y = mobj->y;
 	fixed_t z = mobj->z;
@@ -11072,8 +11072,8 @@ static mobj_t *P_LookForRails(mobj_t* mobj, fixed_t c, fixed_t s, angle_t target
 		fixed_t nz;
 		INT32 lline;
 
-		x += interval*xcom*i + fwooffset*c*i;
-		y += interval*ycom*i + fwooffset*s*i;
+		x += FixedMul(interval*xcom*i, mobj->scale) + FixedMul(fwooffset*c*i, mobj->scale);
+		y += FixedMul(interval*ycom*i, mobj->scale) + FixedMul(fwooffset*s*i, mobj->scale);
 
 		lline = P_GetMinecartSpecialLine(P_GetMinecartSector(x, y, z, &nz));
 		if (lline != -1)
@@ -11109,7 +11109,8 @@ static void P_ParabolicMove(mobj_t *mo, fixed_t x, fixed_t y, fixed_t z, fixed_t
 
 	mo->momx = FixedMul(c, speed);
 	mo->momy = FixedMul(s, speed);
-	mo->momz = FixedDiv(dh, 2*fixConst) + FixedDiv(dz, FixedDiv(dh, fixConst/2));
+	dh = FixedDiv(dh, mo->scale), dz = FixedDiv(dz, mo->scale); // This is a hacky way of accounting for scale, but fixConst has forced my hand
+	mo->momz = FixedMul(FixedDiv(dh, 2*fixConst) + FixedDiv(dz, FixedDiv(dh, fixConst/2)), mo->scale);
 }
 
 static void P_MinecartThink(player_t *player)
@@ -11257,9 +11258,9 @@ static void P_MinecartThink(player_t *player)
 					minecart->eflags &= ~MFE_ONGROUND;
 				minecart->z += P_MobjFlip(minecart);
 				if (sidelock)
-					P_ParabolicMove(minecart, sidelock->x, sidelock->y, sidelock->z, gravity, max(currentSpeed, 10 * FRACUNIT));
+					P_ParabolicMove(minecart, sidelock->x, sidelock->y, sidelock->z, FixedMul(gravity, minecart->scale), max(currentSpeed, FixedMul(10 * FRACUNIT, minecart->scale)));
 				else
-					minecart->momz = 10 * FRACUNIT;
+					minecart->momz = FixedMul(10 * FRACUNIT, minecart->scale);
 
 				S_StartSoundFromMobj(minecart, sfx_s3k51);
 				jumped = true;
@@ -11268,16 +11269,16 @@ static void P_MinecartThink(player_t *player)
 			if (!jumped)
 			{
 				// Natural acceleration and boosters
-				if (currentSpeed < minecart->info->speed)
-					currentSpeed += FRACUNIT/4;
+				if (currentSpeed < FixedMul(minecart->info->speed, minecart->scale))
+					currentSpeed += minecart->scale/4;
 
 				if (minecart->standingslope)
 				{
 					fixed_t fa2 = (minecart->angle >> ANGLETOFINESHIFT) & FINEMASK;
 					fixed_t front = P_GetSlopeZAt(minecart->standingslope, minecart->x, minecart->y);
-					fixed_t back = P_GetSlopeZAt(minecart->standingslope, minecart->x - FINECOSINE(fa2), minecart->y - FINESINE(fa2));
+					fixed_t back = P_GetSlopeZAt(minecart->standingslope, minecart->x - FixedMul(FINECOSINE(fa2), minecart->scale), minecart->y - FixedMul(FINESINE(fa2), minecart->scale));
 
-					if (abs(front - back) < 3*FRACUNIT)
+					if (abs(front - back) < FixedMul(3*FRACUNIT, minecart->scale))
 						currentSpeed += (back - front)/3;
 				}
 
@@ -11286,9 +11287,9 @@ static void P_MinecartThink(player_t *player)
 
 				// On-track ka-klong sound FX.
 				minecart->movecount += abs(currentSpeed);
-				if (minecart->movecount > 128*FRACUNIT)
+				if (minecart->movecount > FixedMul(128*FRACUNIT, minecart->scale))
 				{
-					minecart->movecount %= 128*FRACUNIT;
+					minecart->movecount %= FixedMul(128*FRACUNIT, minecart->scale);
 					S_StartSoundFromMobj(minecart, minecart->info->activesound);
 				}
 			}
@@ -11300,6 +11301,9 @@ static void P_MinecartThink(player_t *player)
 			{
 				if (P_IsLocalPlayer(player))
 				{
+					P_SetScale(detleft, minecart->scale, false);
+					detleft->destscale = minecart->scale;
+					detleft->old_scale = minecart->old_scale;
 					detleft->old_x = detleft->x - (minecart->old_x - minecart->old_x2);
 					detleft->old_y = detleft->y - (minecart->old_y - minecart->old_y2);
 					detleft->old_z = detleft->z - (minecart->old_z - minecart->old_z2);
@@ -11312,6 +11316,9 @@ static void P_MinecartThink(player_t *player)
 			{
 				if (P_IsLocalPlayer(player))
 				{
+					P_SetScale(detright, minecart->scale, false);
+					detright->destscale = minecart->scale;
+					detright->old_scale = minecart->old_scale;
 					detright->old_x = detright->x - (minecart->old_x - minecart->old_x2);
 					detright->old_y = detright->y - (minecart->old_y - minecart->old_y2);
 					detright->old_z = detright->z - (minecart->old_z - minecart->old_z2);

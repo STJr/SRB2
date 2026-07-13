@@ -2304,7 +2304,7 @@ void A_VultureFly(void *data)
 			dz = max(P_FloorzAtPos(actor->target->x, actor->target->y, actor->target->z, 0) - actor->z + FixedMul(232*FRACUNIT, actor->scale), dz);
 	}
 
-	dm = GetDistance2D(0, 0, dz, dxy);
+	dm = FixedDiv(GetDistance2D(0, 0, dz, dxy), actor->scale);
 
 	P_VultureHoverParticle(actor);
 
@@ -5581,9 +5581,9 @@ void A_MinusDigging(void *data)
 	INT32 locvar1 = var1;
 	INT32 rad = 32;
 	angle_t fa = (actor->angle >> ANGLETOFINESHIFT) & FINEMASK;
-	fixed_t dis = actor->info->speed*4;
-	fixed_t x = FINECOSINE(fa)*dis + actor->x + FRACUNIT*P_RandomRange(-rad, rad);
-	fixed_t y = FINESINE(fa)*dis + actor->y + FRACUNIT*P_RandomRange(-rad, rad);
+	fixed_t dis = FixedMul(actor->info->speed*4, actor->scale);
+	fixed_t x = FINECOSINE(fa)*dis + actor->x + FixedMul(FRACUNIT*P_RandomRange(-rad, rad), actor->scale);
+	fixed_t y = FINESINE(fa)*dis + actor->y + FixedMul(FRACUNIT*P_RandomRange(-rad, rad), actor->scale);
 	fixed_t mz = (actor->eflags & MFE_VERTICALFLIP) ? actor->ceilingz : actor->floorz;
 	mobj_t *par;
 
@@ -5625,6 +5625,7 @@ void A_MinusDigging(void *data)
 			return;
 		P_SetScale(par, actor->scale*2, false);
 		par->old_scale = par->scale;
+		par->destscale = par->scale/2;
 		if (actor->eflags & MFE_VERTICALFLIP)
 			par->eflags |= MFE_VERTICALFLIP;
 		return;
@@ -6259,12 +6260,13 @@ void A_RockSpawn(void *data)
 	if (actor->spawnpoint->args[2])
 		dist += actor->spawnpoint->args[2] ? P_RandomByte() * (FRACUNIT/32) : 0; // random oomph
 
-	mo = P_SpawnMobj(actor->x, actor->y, actor->z, MT_FALLINGROCK);
+	mo = P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_FALLINGROCK);
 	if (P_MobjWasRemoved(mo))
 		return;
 	P_SetMobjState(mo, mobjinfo[type].spawnstate);
 	mo->angle = FixedAngle(actor->spawnpoint->angle << FRACBITS);
 
+	dist = FixedMul(dist, actor->scale);
 	P_InstaThrust(mo, mo->angle, dist);
 	mo->momz = dist;
 
@@ -12712,19 +12714,19 @@ void A_LightBeamReset(void *data)
 	if (LUA_CallAction(A_LIGHTBEAMRESET, actor))
 		return;
 
-	P_SetScale(actor, FRACUNIT + P_SignedRandom()*FRACUNIT/256, true);
+	P_SetScale(actor, FixedMul(FRACUNIT + P_SignedRandom()*FRACUNIT/256, actor->scale), true);
 
 	if (!actor->spawnpoint)
 		return; // this can't work properly welp
 
-	actor->momx = -(P_SignedRandom()*FINESINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/128;
-	actor->momy = (P_SignedRandom()*FINECOSINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/128;
-	actor->momz = (P_SignedRandom()*FRACUNIT)/128;
+	actor->momx = -FixedMul((P_SignedRandom()*FINESINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/128, actor->scale);
+	actor->momy = FixedMul((P_SignedRandom()*FINECOSINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/128, actor->scale);
+	actor->momz = FixedMul((P_SignedRandom()*FRACUNIT)/128, actor->scale);
 
 	P_SetOrigin(actor,
-		actor->spawnpoint->x*FRACUNIT - (P_SignedRandom()*FINESINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/2,
-		actor->spawnpoint->y*FRACUNIT + (P_SignedRandom()*FINECOSINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/2,
-		actor->spawnpoint->z*FRACUNIT + (P_SignedRandom()*FRACUNIT)/2);
+		actor->spawnpoint->x*FRACUNIT - FixedMul((P_SignedRandom()*FINESINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/2, actor->scale),
+		actor->spawnpoint->y*FRACUNIT + FixedMul((P_SignedRandom()*FINECOSINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/2, actor->scale),
+		actor->spawnpoint->z*FRACUNIT + FixedMul((P_SignedRandom()*FRACUNIT)/2, actor->scale));
 }
 
 // Function: A_MineExplode
@@ -12746,7 +12748,7 @@ void A_MineExplode(void *data)
 	actor->flags = MF_NOGRAVITY|MF_NOCLIP;
 
 	quake.epicenter = NULL;
-	quake.radius = 512*FRACUNIT;
+	quake.radius = FixedMul(512*FRACUNIT, actor->scale);
 	quake.intensity = 8*FRACUNIT;
 	quake.time = TICRATE/3;
 
@@ -12758,17 +12760,20 @@ void A_MineExplode(void *data)
 		UINT8 i;
 		mobjtype_t type = ((actor->eflags & MFE_UNDERWATER) ? MT_UWEXPLODE : MT_SONIC3KBOSSEXPLODE);
 		S_StartSoundFromMobj(actor, ((actor->eflags & MFE_UNDERWATER) ? sfx_s3k57 : sfx_s3k4e));
-		P_SpawnMobj(actor->x, actor->y, actor->z, type);
+		mobj_t *b = P_SpawnMobj(actor->x, actor->y, actor->z, type);
+		if (!P_MobjWasRemoved(b))
+			P_SetScale(b, actor->scale, true);
 		for (i = 0; i < 16; i++)
 		{
-			mobj_t *b = P_SpawnMobj(actor->x+P_RandomRange(-dist, dist)*FRACUNIT,
-				actor->y+P_RandomRange(-dist, dist)*FRACUNIT,
-				actor->z+P_RandomRange(((actor->eflags & MFE_UNDERWATER) ? -dist : 0), dist)*FRACUNIT,
+			b = P_SpawnMobj(actor->x+FixedMul(P_RandomRange(-dist, dist)*FRACUNIT, actor->scale),
+				actor->y+FixedMul(P_RandomRange(-dist, dist)*FRACUNIT, actor->scale),
+				actor->z+FixedMul(P_RandomRange(((actor->eflags & MFE_UNDERWATER) ? -dist : 0), dist)*FRACUNIT, actor->scale),
 				type);
 			if (P_MobjWasRemoved(b))
 				continue;
+			P_SetScale(b, actor->scale, true);
 			fixed_t dx = b->x - actor->x, dy = b->y - actor->y, dz = b->z - actor->z;
-			fixed_t dm = GetDistance3D(0, 0, 0, dx, dy, dz);
+			fixed_t dm = FixedDiv(GetDistance3D(0, 0, 0, dx, dy, dz), actor->scale);
 			b->momx = FixedDiv(dx, dm)*3;
 			b->momy = FixedDiv(dy, dm)*3;
 			b->momz = FixedDiv(dz, dm)*3;
@@ -12802,7 +12807,7 @@ void A_MineRange(void *data)
 		return;
 
 	dm = P_GetMobjDistance3D(actor, actor->target);
-	if ((dm>>FRACBITS) < locvar1)
+	if ((dm/actor->scale) < locvar1)
 		P_SetMobjState(actor, actor->info->meleestate);
 }
 
@@ -14055,8 +14060,8 @@ void A_TNTExplode(void *data)
 	if (actor->info->deathsound)
 		S_StartSoundFromMobj(actor, actor->info->deathsound);
 
-	explodethrust = 32*FRACUNIT;
-	exploderadius = 256*FRACUNIT;
+	explodethrust = FixedMul(32*FRACUNIT, actor->scale);
+	exploderadius = FixedMul(256*FRACUNIT, actor->scale);
 
 	xl = (unsigned)(actor->x - exploderadius - bmaporgx)>>MAPBLOCKSHIFT;
 	xh = (unsigned)(actor->x + exploderadius - bmaporgx)>>MAPBLOCKSHIFT;
@@ -14076,7 +14081,7 @@ void A_TNTExplode(void *data)
 	quake.intensity = 9*FRACUNIT;
 	quake.time = TICRATE/6;
 	quake.epicenter = &epicenter;
-	quake.radius = 512*FRACUNIT;
+	quake.radius = FixedMul(512*FRACUNIT, actor->scale);
 
 	if (locvar1)
 	{
@@ -14106,7 +14111,7 @@ void A_DebrisRandom(void *data)
 	var1 = 0;
 	var2 = 359;
 	A_ChangeAngleAbsolute(actor);
-	P_Thrust(actor, actor->angle, FRACUNIT * 2);
+	P_Thrust(actor, actor->angle, FixedMul(FRACUNIT * 2, actor->scale));
 }
 
 static mobj_t *P_TrainSeg(mobj_t *src, fixed_t x, fixed_t y, fixed_t z, angle_t ang, spritenum_t spr, UINT32 frame)
@@ -14552,7 +14557,7 @@ void A_MinecartSparkThink(void *data)
 		return;
 
 	if (actor->momz == 0 && P_IsObjectOnGround(actor))
-		actor->momz = P_RandomRange(2, 4)*FRACUNIT;
+		actor->momz = FixedMul(P_RandomRange(2, 4)*FRACUNIT, actor->scale);
 
 	dz = actor->momz;
 	dm = GetDistance3D(0, 0, 0, dx, dy, dz);
@@ -14567,7 +14572,7 @@ void A_MinecartSparkThink(void *data)
 			continue;
 		trail->tics = 2;
 		trail->sprite = actor->sprite;
-		P_SetScale(trail, trail->scale/4, true);
+		P_SetScale(trail, actor->scale, true);
 	}
 }
 

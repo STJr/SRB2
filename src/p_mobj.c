@@ -5462,7 +5462,6 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			}
 			P_SetMobjState(mobj, mobj->info->spawnstate);
 			mobj->fuse = 0;
-			// TODO: Do we need to account for scale here?
 			mobj->momx = FixedDiv(mobj->momx, FRACUNIT + (FRACUNIT>>2));
 			mobj->momy = FixedDiv(mobj->momy, FRACUNIT + (FRACUNIT>>2));
 			mobj->momz = FixedDiv(mobj->momz, FRACUNIT + (FRACUNIT>>2));
@@ -7003,6 +7002,7 @@ static void P_SpawnMinecartSegments(mobj_t *mobj, boolean mode)
 		if (P_MobjWasRemoved(seg))
 			continue;
 
+		P_SetScale(seg, mobj->scale, true);
 		P_SetMobjState(seg, (statenum_t)(S_MINECARTSEG_FRONT + i));
 		if (i >= 2)
 			seg->extravalue1 = (i == 2) ? -18 : 18; // make -20/20 when papersprite projection fixed
@@ -7037,7 +7037,7 @@ static void P_UpdateMinecartSegments(mobj_t *mobj)
 		dx = seg->extravalue1;
 		dy = seg->extravalue2;
 		sang = seg->cusval;
-		P_MoveOrigin(seg, x + s*dx + c*dy, y - c*dx + s*dy, z);
+		P_MoveOrigin(seg, x + FixedMul(s*dx, mobj->scale) + FixedMul(c*dy, mobj->scale), y - FixedMul(c*dx, mobj->scale) + FixedMul(s*dy, mobj->scale), z);
 		seg->angle = ang + FixedAngle(FRACUNIT*sang);
 		seg->flags2 = (seg->flags2 & ~MF2_DONTDRAW) | (mobj->flags2 & MF2_DONTDRAW);
 		seg = seg->tracer;
@@ -9061,7 +9061,7 @@ static void P_SaloonDoorThink(mobj_t *mobj)
 	fma = (mobj->angle >> ANGLETOFINESHIFT) & FINEMASK;
 	c = 48*FINECOSINE(fma);
 	s = 48*FINESINE(fma);
-	P_MoveOrigin(mobj, x + c0 + c, y + s0 + s, z);
+	P_MoveOrigin(mobj, x + FixedMul(c0 + c, mobj->scale), y + FixedMul(s0 + s, mobj->scale), z);
 }
 
 static void P_PyreFlyThink(mobj_t *mobj)
@@ -9505,7 +9505,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		mobj->extravalue1 += 3;
 		mobj->extravalue1 %= 360;
 		P_UnsetThingPosition(mobj);
-		mobj->z += FINESINE(mobj->extravalue1*(FINEMASK + 1)/360);
+		mobj->z += FixedMul(FINESINE(mobj->extravalue1*(FINEMASK + 1)/360), mobj->scale);
 		P_SetThingPosition(mobj);
 		break;
 	case MT_FLAME:
@@ -13213,6 +13213,24 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			banner->angle = mobjangle + ANGLE_90;
 	}
 	break;
+	case MT_WAVINGFLAG1:
+	case MT_WAVINGFLAG2:
+	{ // Scale the segments
+		mobj_t *seg = mobj->tracer;
+		while (seg)
+		{
+			P_SetScale(seg, mobj->scale, true);
+			seg = seg->tracer;
+		}
+	}
+	break;
+	case MT_MINECARTEND:
+	{
+		if (!P_MobjWasRemoved(mobj->tracer))
+			P_SetScale(mobj->tracer, mobj->scale, true);
+		// TODO: Add code for setting height if upside down?
+	}
+	break;
 	case MT_SSZTREE:
 	{ // Spawn the branches
 		INT32 i;
@@ -13580,6 +13598,20 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	P_SetScale(mobj, FixedMul(mobj->scale, mthing->scale), false);
 	mobj->destscale = FixedMul(mobj->destscale, mthing->scale);
 	mobj->old_scale = FixedMul(mobj->old_scale, mthing->scale);
+
+	// Redo this in case the mobj's scale was changed through mthing->scale
+	// TODO: Maybe it would be beneficial to have P_SpawnMobjScaled...
+	if (z == ONCEILINGZ)
+	{
+		mobj->z = mobj->ceilingz - mobj->height;
+
+		if (mobj->type == MT_UNIDUS)
+			mobj->z -= FixedMul(mobj->info->mass, mobj->scale);
+
+		// defaults onground
+		if (mobj->z + mobj->height == mobj->ceilingz)
+			mobj->eflags |= MFE_ONGROUND;
+	}
 
 	mobj->spritexscale = mthing->spritexscale;
 	mobj->spriteyscale = mthing->spriteyscale;

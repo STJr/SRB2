@@ -1860,9 +1860,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_MINECARTSPAWNER:
 			if (!player->bot && player->bot != BOT_MPAI && special->fuse <= TICRATE && player->powers[pw_carry] != CR_MINECART && !(player->powers[pw_ignorelatch] & (1<<15)))
 			{
-				mobj_t *mcart = P_SpawnMobj(special->x, special->y, special->z, MT_MINECART);
+				// mobj_t *mcart = P_SpawnMobj(special->x, special->y, special->z, MT_MINECART);
+				mobj_t *mcart = P_SpawnMobjFromMobj(special, 0, 0, 0, MT_MINECART);
 				if (!P_MobjWasRemoved(mcart))
 				{
+					// P_SetScale(mcart, special->scale, true);
 					P_SetTarget(&mcart->target, toucher);
 					mcart->angle = toucher->angle = player->drawangle = special->angle;
 					mcart->friction = FRACUNIT;
@@ -2902,7 +2904,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			if (inflictor)
 			{
 				fixed_t dx = target->x - inflictor->x, dy = target->y - inflictor->y, dz = target->z - inflictor->z;
-				fixed_t dm = GetDistance3D(0, 0, 0, dy, dx, dz);
+				fixed_t dm = FixedDiv(GetDistance3D(0, 0, 0, dy, dx, dz), inflictor->scale);
 				target->momx = FixedDiv(FixedDiv(dx, dm), dm)*512;
 				target->momy = FixedDiv(FixedDiv(dy, dm), dm)*512;
 				target->momz = FixedDiv(FixedDiv(dz, dm), dm)*512;

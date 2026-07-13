@@ -1001,7 +1001,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 		if (((thing->flags2 & MF2_AMBUSH) && (tmthing->z <= thing->z + thing->height) && (tmthing->z + tmthing->height >= thing->z))
 			|| ref != tmthing)
 		{
-			fixed_t dm = min(P_GetMobjMomentum2D(ref), 16*FRACUNIT);
+			fixed_t dm = min(FixedDiv(P_GetMobjMomentum2D(ref), ref->scale), 16*FRACUNIT);
 			angle_t ang = R_PointToAngle2(0, 0, ref->momx, ref->momy) - thing->angle;
 			fixed_t s = FINESINE((ang >> ANGLETOFINESHIFT) & FINEMASK);
 			S_StartSoundFromMobj(tmthing, thing->info->activesound);
@@ -1085,7 +1085,7 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 		fixed_t dx = thing->x - tmthing->x;
 		fixed_t dy = thing->y - tmthing->y;
 		fixed_t dz = thing->z - tmthing->z;
-		fixed_t dm = GetDistance3D(0, 0, 0, dx, dy, dz);
+		fixed_t dm = FixedDiv(GetDistance3D(0, 0, 0, dx, dy, dz), thing->scale);
 		thing->momx += FixedDiv(dx, dm);
 		thing->momy += FixedDiv(dy, dm);
 		thing->momz += FixedDiv(dz, dm);
