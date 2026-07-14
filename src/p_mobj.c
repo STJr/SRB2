@@ -10688,149 +10688,10 @@ static INT32 P_SetupNPC(mobj_t *mobj, const char *name)
 	return skinnum;
 }
 
-//
-// P_SpawnMobj
-//
-mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
+static boolean P_SetupSpawnedMobj(mobj_t *mobj, fixed_t x, fixed_t y, fixed_t z)
 {
-	const mobjinfo_t *info = &mobjinfo[type];
 	SINT8 sc = -1;
-	state_t *st;
-	mobj_t *mobj;
 	int status;
-	va_list args;
-
-	if (type == MT_NULL)
-		return NULL;
-
-	if (mobjcache != NULL)
-	{
-		mobj = mobjcache;
-		mobjcache = mobjcache->hnext;
-		memset(mobj, 0, sizeof(*mobj));
-	}
-	else
-	{
-		mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
-	}
-
-	// this is officially a mobj, declared as soon as possible.
-	mobj->thinker.function = (actionf_p1)P_MobjThinker;
-	mobj->type = type;
-	mobj->info = info;
-
-	mobj->x = x;
-	mobj->y = y;
-
-	mobj->radius = info->radius;
-	mobj->height = info->height;
-	mobj->flags = info->flags;
-
-	mobj->health = (info->spawnhealth ? info->spawnhealth : 1);
-
-	mobj->reactiontime = info->reactiontime;
-
-	mobj->dispoffset = info->dispoffset;
-
-	mobj->lastlook = -1; // stuff moved in P_enemy.P_LookForPlayer
-
-	// do not set the state with P_SetMobjState,
-	// because action routines can not be called yet
-	st = &states[info->spawnstate];
-
-	mobj->state = st;
-	mobj->tics = st->tics;
-	mobj->sprite = st->sprite;
-	mobj->frame = st->frame; // FF_FRAMEMASK for frame, and other bits..
-	P_SetupStateAnimation(mobj, st);
-
-	mobj->friction = ORIG_FRICTION;
-
-	mobj->movefactor = FRACUNIT;
-	mobj->gravity = FRACUNIT;
-
-	// All mobjs are created at 100% scale.
-	mobj->scale = FRACUNIT;
-	mobj->destscale = mapobjectscale;
-	mobj->scalespeed = mapobjectscale/12;
-
-	// TODO: 2.3: Remove in favor of mapobjectscale and mapthing_t->scale
-	if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))
-		mobj->destscale = FRACUNIT/2;
-
-	// Sprite rendering
-	mobj->blendmode = AST_TRANSLUCENT;
-	mobj->alpha = FRACUNIT;
-	mobj->spritexscale = mobj->spriteyscale = mobj->scale;
-	mobj->spritexoffset = mobj->spriteyoffset = 0;
-	mobj->floorspriteslope = NULL;
-
-	// set subsector and/or block links
-	P_SetThingPosition(mobj);
-	I_Assert(mobj->subsector != NULL);
-
-	// Make sure scale matches destscale immediately when spawned
-	P_SetScale(mobj, mobj->destscale, true);
-
-	mobj->floorz   = P_GetSectorFloorZAt  (mobj->subsector->sector, x, y);
-	mobj->ceilingz = P_GetSectorCeilingZAt(mobj->subsector->sector, x, y);
-
-	mobj->floorrover = NULL;
-	mobj->ceilingrover = NULL;
-
-	// Tells MobjCheckWater that the water height was not set.
-	mobj->watertop = INT32_MAX;
-
-	if (z == ONFLOORZ)
-	{
-		mobj->z = mobj->floorz;
-
-		if (mobj->type == MT_UNIDUS)
-			mobj->z += FixedMul(mobj->info->mass, mobj->scale);
-
-		// defaults onground
-		if (mobj->z == mobj->floorz)
-			mobj->eflags |= MFE_ONGROUND;
-	}
-	else if (z == ONCEILINGZ)
-	{
-		mobj->z = mobj->ceilingz - mobj->height;
-
-		if (mobj->type == MT_UNIDUS)
-			mobj->z -= FixedMul(mobj->info->mass, mobj->scale);
-
-		// defaults onground
-		if (mobj->z + mobj->height == mobj->ceilingz)
-			mobj->eflags |= MFE_ONGROUND;
-	}
-	else
-		mobj->z = z;
-
-	// Set shadowscale here, before spawn hook so that Lua can change it
-	mobj->shadowscale = P_DefaultMobjShadowScale(mobj);
-
-	// A monitor can't respawn if we're not in multiplayer,
-	// or if we're in co-op and it's score or a 1up
-	if (mobj->flags & MF_MONITOR && (!(netgame || multiplayer)
-	|| (G_CoopGametype()
-		&& (mobj->type == MT_1UP_BOX
-		|| mobj->type == MT_SCORE1K_BOX
-		|| mobj->type == MT_SCORE10K_BOX)
-	)))
-		mobj->flags2 |= MF2_DONTRESPAWN;
-
-	if (type == MT_PLAYER)
-	{
-		// when spawning MT_PLAYER, set mobj->player before calling MobjSpawn hook to prevent P_RemoveMobj from succeeding on player mobj.
-		va_start(args, type);
-		mobj->player = va_arg(args, player_t *);
-		if (mobj->player)
-			mobj->player->mo = mobj;
-		va_end(args);
-	}
-
-	if (!(mobj->flags & MF_NOTHINK) || (titlemapinaction && mobj->type == MT_ALTVIEWMAN))
-		P_AddThinker(THINK_MOBJ, &mobj->thinker);
 
 	// increment mobj reference, so we don't get a dangling reference in case MobjSpawn calls P_RemoveMobj
 	mobj->thinker.references++;
@@ -10843,10 +10704,10 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 	if (status)
 	{
 		if (P_MobjWasRemoved(mobj))
-			return NULL;
+			return false;
 	}
 	else if (P_MobjWasRemoved(mobj))
-		return NULL;
+		return false;
 	else
 	switch (mobj->type)
 	{
@@ -11119,6 +10980,338 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
 			}
 		}
 	}
+
+	return true;
+}
+
+//
+// P_SpawnMobj
+//
+mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type, ...)
+{
+	const mobjinfo_t *info = &mobjinfo[type];
+	state_t *st;
+	mobj_t *mobj;
+	va_list args;
+
+	if (type == MT_NULL)
+		return NULL;
+
+	if (mobjcache != NULL)
+	{
+		mobj = mobjcache;
+		mobjcache = mobjcache->hnext;
+		memset(mobj, 0, sizeof(*mobj));
+	}
+	else
+	{
+		mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
+	}
+
+	// this is officially a mobj, declared as soon as possible.
+	mobj->thinker.function = (actionf_p1)P_MobjThinker;
+	mobj->type = type;
+	mobj->info = info;
+
+	mobj->x = x;
+	mobj->y = y;
+
+	mobj->radius = info->radius;
+	mobj->height = info->height;
+	mobj->flags = info->flags;
+
+	mobj->health = (info->spawnhealth ? info->spawnhealth : 1);
+
+	mobj->reactiontime = info->reactiontime;
+
+	mobj->dispoffset = info->dispoffset;
+
+	mobj->lastlook = -1; // stuff moved in P_enemy.P_LookForPlayer
+
+	// do not set the state with P_SetMobjState,
+	// because action routines can not be called yet
+	st = &states[info->spawnstate];
+
+	mobj->state = st;
+	mobj->tics = st->tics;
+	mobj->sprite = st->sprite;
+	mobj->frame = st->frame; // FF_FRAMEMASK for frame, and other bits..
+	P_SetupStateAnimation(mobj, st);
+
+	mobj->friction = ORIG_FRICTION;
+
+	mobj->movefactor = FRACUNIT;
+	mobj->gravity = FRACUNIT;
+
+	// All mobjs are created at 100% scale.
+	mobj->scale = FRACUNIT;
+	mobj->destscale = mapobjectscale;
+	mobj->scalespeed = mapobjectscale/12;
+
+	// TODO: 2.3: Remove in favor of mapobjectscale and mapthing_t->scale
+	if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))
+		mobj->destscale = FRACUNIT/2;
+
+	// Sprite rendering
+	mobj->blendmode = AST_TRANSLUCENT;
+	mobj->alpha = FRACUNIT;
+	mobj->spritexscale = mobj->spriteyscale = mobj->scale;
+	mobj->spritexoffset = mobj->spriteyoffset = 0;
+	mobj->floorspriteslope = NULL;
+
+	// set subsector and/or block links
+	P_SetThingPosition(mobj);
+	I_Assert(mobj->subsector != NULL);
+
+	// Make sure scale matches destscale immediately when spawned
+	P_SetScale(mobj, mobj->destscale, true);
+
+	mobj->floorz   = P_GetSectorFloorZAt  (mobj->subsector->sector, x, y);
+	mobj->ceilingz = P_GetSectorCeilingZAt(mobj->subsector->sector, x, y);
+
+	mobj->floorrover = NULL;
+	mobj->ceilingrover = NULL;
+
+	// Tells MobjCheckWater that the water height was not set.
+	mobj->watertop = INT32_MAX;
+
+	if (z == ONFLOORZ)
+	{
+		mobj->z = mobj->floorz;
+
+		if (mobj->type == MT_UNIDUS)
+			mobj->z += FixedMul(mobj->info->mass, mobj->scale);
+
+		// defaults onground
+		if (mobj->z == mobj->floorz)
+			mobj->eflags |= MFE_ONGROUND;
+	}
+	else if (z == ONCEILINGZ)
+	{
+		mobj->z = mobj->ceilingz - mobj->height;
+
+		if (mobj->type == MT_UNIDUS)
+			mobj->z -= FixedMul(mobj->info->mass, mobj->scale);
+
+		// defaults onground
+		if (mobj->z + mobj->height == mobj->ceilingz)
+			mobj->eflags |= MFE_ONGROUND;
+	}
+	else
+		mobj->z = z;
+
+	// Set shadowscale here, before spawn hook so that Lua can change it
+	mobj->shadowscale = P_DefaultMobjShadowScale(mobj);
+
+	// A monitor can't respawn if we're not in multiplayer,
+	// or if we're in co-op and it's score or a 1up
+	if (mobj->flags & MF_MONITOR && (!(netgame || multiplayer)
+	|| (G_CoopGametype()
+		&& (mobj->type == MT_1UP_BOX
+		|| mobj->type == MT_SCORE1K_BOX
+		|| mobj->type == MT_SCORE10K_BOX)
+	)))
+		mobj->flags2 |= MF2_DONTRESPAWN;
+
+	if (type == MT_PLAYER)
+	{
+		// when spawning MT_PLAYER, set mobj->player before calling MobjSpawn hook to prevent P_RemoveMobj from succeeding on player mobj.
+		va_start(args, type);
+		mobj->player = va_arg(args, player_t *);
+		if (mobj->player)
+			mobj->player->mo = mobj;
+		va_end(args);
+	}
+
+	if (!(mobj->flags & MF_NOTHINK) || (titlemapinaction && mobj->type == MT_ALTVIEWMAN))
+		P_AddThinker(THINK_MOBJ, &mobj->thinker);
+
+	if (!P_SetupSpawnedMobj(mobj, x, y, z))
+		return mobj;
+
+	if (mobj->skin) // correct inadequecies above.
+	{
+		mobj->sprite2 = P_GetSkinSprite2(mobj->skin, P_GetStateSprite2(mobj->state), NULL);
+		mobj->frame &= ~FF_FRAMEMASK;
+	}
+
+	// Call action functions when the state is set
+	if (st->action && (mobj->flags & MF_RUNSPAWNFUNC))
+	{
+		if (levelloading)
+		{
+			// Cache actions in a linked list
+			// with function pointer, and
+			// var1 & var2, which will be executed
+			// when the level finishes loading.
+			P_AddCachedAction(mobj, mobj->info->spawnstate);
+		}
+		else
+		{
+			var1 = st->var1;
+			var2 = st->var2;
+			astate = st;
+			st->action(mobj);
+			// DANGER! This can cause P_SpawnMobj to return NULL!
+			// Avoid using MF_RUNSPAWNFUNC on mobjs whose spawn state expects target or tracer to already be set!
+			if (P_MobjWasRemoved(mobj))
+				return NULL;
+		}
+	}
+
+	if (CheckForReverseGravity && !(mobj->flags & MF_NOBLOCKMAP))
+		P_CheckGravity(mobj, false);
+
+	R_AddMobjInterpolator(mobj);
+
+	return mobj;
+}
+
+//
+// P_SpawnScaledMobj
+//
+mobj_t *P_SpawnScaledMobj(fixed_t x, fixed_t y, fixed_t z, fixed_t scale, mobjtype_t type)
+{
+	const mobjinfo_t *info = &mobjinfo[type];
+	state_t *st;
+	mobj_t *mobj;
+	// va_list args;
+
+	if (type == MT_NULL)
+		return NULL;
+
+	if (mobjcache != NULL)
+	{
+		mobj = mobjcache;
+		mobjcache = mobjcache->hnext;
+		memset(mobj, 0, sizeof(*mobj));
+	}
+	else
+	{
+		mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
+	}
+
+	// this is officially a mobj, declared as soon as possible.
+	mobj->thinker.function = (actionf_p1)P_MobjThinker;
+	mobj->type = type;
+	mobj->info = info;
+
+	mobj->x = x;
+	mobj->y = y;
+
+	mobj->radius = info->radius;
+	mobj->height = info->height;
+	mobj->flags = info->flags;
+
+	mobj->health = (info->spawnhealth ? info->spawnhealth : 1);
+
+	mobj->reactiontime = info->reactiontime;
+
+	mobj->dispoffset = info->dispoffset;
+
+	mobj->lastlook = -1; // stuff moved in P_enemy.P_LookForPlayer
+
+	// do not set the state with P_SetMobjState,
+	// because action routines can not be called yet
+	st = &states[info->spawnstate];
+
+	mobj->state = st;
+	mobj->tics = st->tics;
+	mobj->sprite = st->sprite;
+	mobj->frame = st->frame; // FF_FRAMEMASK for frame, and other bits..
+	P_SetupStateAnimation(mobj, st);
+
+	mobj->friction = ORIG_FRICTION;
+
+	mobj->movefactor = FRACUNIT;
+	mobj->gravity = FRACUNIT;
+
+	// All mobjs are created at 100% scale.
+	mobj->scale = FRACUNIT;
+	mobj->destscale = FixedMul(mapobjectscale, scale);
+	mobj->scalespeed = FixedMul(mapobjectscale, scale)/12;
+
+	// TODO: 2.3: Remove in favor of mapobjectscale and mapthing_t->scale
+	if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))
+		mobj->destscale = FRACUNIT/2;
+
+	// Sprite rendering
+	mobj->blendmode = AST_TRANSLUCENT;
+	mobj->alpha = FRACUNIT;
+	mobj->spritexscale = mobj->spriteyscale = mobj->scale;
+	mobj->spritexoffset = mobj->spriteyoffset = 0;
+	mobj->floorspriteslope = NULL;
+
+	// set subsector and/or block links
+	P_SetThingPosition(mobj);
+	I_Assert(mobj->subsector != NULL);
+
+	// Make sure scale matches destscale immediately when spawned
+	P_SetScale(mobj, mobj->destscale, true);
+
+	mobj->floorz   = P_GetSectorFloorZAt  (mobj->subsector->sector, x, y);
+	mobj->ceilingz = P_GetSectorCeilingZAt(mobj->subsector->sector, x, y);
+
+	mobj->floorrover = NULL;
+	mobj->ceilingrover = NULL;
+
+	// Tells MobjCheckWater that the water height was not set.
+	mobj->watertop = INT32_MAX;
+
+	if (z == ONFLOORZ)
+	{
+		mobj->z = mobj->floorz;
+
+		if (mobj->type == MT_UNIDUS)
+			mobj->z += FixedMul(mobj->info->mass, mobj->scale);
+
+		// defaults onground
+		if (mobj->z == mobj->floorz)
+			mobj->eflags |= MFE_ONGROUND;
+	}
+	else if (z == ONCEILINGZ)
+	{
+		mobj->z = mobj->ceilingz - mobj->height;
+
+		if (mobj->type == MT_UNIDUS)
+			mobj->z -= FixedMul(mobj->info->mass, mobj->scale);
+
+		// defaults onground
+		if (mobj->z + mobj->height == mobj->ceilingz)
+			mobj->eflags |= MFE_ONGROUND;
+	}
+	else
+		mobj->z = z;
+
+	// Set shadowscale here, before spawn hook so that Lua can change it
+	mobj->shadowscale = P_DefaultMobjShadowScale(mobj);
+
+	// A monitor can't respawn if we're not in multiplayer,
+	// or if we're in co-op and it's score or a 1up
+	if (mobj->flags & MF_MONITOR && (!(netgame || multiplayer)
+	|| (G_CoopGametype()
+		&& (mobj->type == MT_1UP_BOX
+		|| mobj->type == MT_SCORE1K_BOX
+		|| mobj->type == MT_SCORE10K_BOX)
+	)))
+		mobj->flags2 |= MF2_DONTRESPAWN;
+
+	// I don't think we'll EVER need to use P_SpawnScaledMobj with MT_PLAYER, since that's handled with mapobjectscale...
+	// if (type == MT_PLAYER)
+	// {
+	// 	// when spawning MT_PLAYER, set mobj->player before calling MobjSpawn hook to prevent P_RemoveMobj from succeeding on player mobj.
+	// 	va_start(args, type);
+	// 	mobj->player = va_arg(args, player_t *);
+	// 	if (mobj->player)
+	// 		mobj->player->mo = mobj;
+	// 	va_end(args);
+	// }
+
+	if (!(mobj->flags & MF_NOTHINK) || (titlemapinaction && mobj->type == MT_ALTVIEWMAN))
+		P_AddThinker(THINK_MOBJ, &mobj->thinker);
+
+	if (!P_SetupSpawnedMobj(mobj, x, y, z))
+		return mobj;
 
 	if (mobj->skin) // correct inadequecies above.
 	{
@@ -13213,24 +13406,6 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			banner->angle = mobjangle + ANGLE_90;
 	}
 	break;
-	case MT_WAVINGFLAG1:
-	case MT_WAVINGFLAG2:
-	{ // Scale the segments
-		mobj_t *seg = mobj->tracer;
-		while (seg)
-		{
-			P_SetScale(seg, mobj->scale, true);
-			seg = seg->tracer;
-		}
-	}
-	break;
-	case MT_MINECARTEND:
-	{
-		if (!P_MobjWasRemoved(mobj->tracer))
-			P_SetScale(mobj->tracer, mobj->scale, true);
-		// TODO: Add code for setting height if upside down?
-	}
-	break;
 	case MT_SSZTREE:
 	{ // Spawn the branches
 		INT32 i;
@@ -13466,22 +13641,12 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		break;
 	case MT_CRUSHSTACEAN:
 	case MT_BANPYURA:
-		// Make sure the Crushtacean's tracer gets scaled properly
-		if (!P_MobjWasRemoved(mobj->tracer))
-			P_SetScale(mobj->tracer, FixedMul(mobj->tracer->scale, mthing->scale), true);
 		if (mthing->args[0])
 			mobj->flags2 |= MF2_AMBUSH;
 		break;
 	case MT_EGGGUARD:
 		if (mthing->args[1])
 			mobj->flags2 |= MF2_AMBUSH;
-		break;
-	case MT_SPINBOBERT:
-		// Make sure the Spinbobert's rotating skulls get scaled properly
-		if (!P_MobjWasRemoved(mobj->hnext))
-			P_SetScale(mobj->hnext, FixedMul(mobj->hnext->scale, mthing->scale), true);
-		if (!P_MobjWasRemoved(mobj->hprev))
-			P_SetScale(mobj->hprev, FixedMul(mobj->hprev->scale, mthing->scale), true);
 		break;
 	case MT_STEAM:
 		if (mthing->args[0])
@@ -13590,28 +13755,10 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	mobj_t *mobj = NULL;
 	boolean doangle = true;
 
-	mobj = P_SpawnMobj(x, y, z, i);
+	mobj = P_SpawnScaledMobj(x, y, z, mthing->scale, i);
 	if (mobj == NULL)
 		return NULL;
 	mobj->spawnpoint = mthing;
-
-	P_SetScale(mobj, FixedMul(mobj->scale, mthing->scale), false);
-	mobj->destscale = FixedMul(mobj->destscale, mthing->scale);
-	mobj->old_scale = FixedMul(mobj->old_scale, mthing->scale);
-
-	// Redo this in case the mobj's scale was changed through mthing->scale
-	// TODO: Maybe it would be beneficial to have P_SpawnMobjScaled...
-	if (z == ONCEILINGZ)
-	{
-		mobj->z = mobj->ceilingz - mobj->height;
-
-		if (mobj->type == MT_UNIDUS)
-			mobj->z -= FixedMul(mobj->info->mass, mobj->scale);
-
-		// defaults onground
-		if (mobj->z + mobj->height == mobj->ceilingz)
-			mobj->eflags |= MFE_ONGROUND;
-	}
 
 	mobj->spritexscale = mthing->spritexscale;
 	mobj->spriteyscale = mthing->spriteyscale;
