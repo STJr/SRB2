@@ -6901,8 +6901,9 @@ static void P_DoNiGHTSCapsule(player_t *player)
 {
 	INT32 i, spherecount, totalduration, popduration, deductinterval, deductquantity, sphereresult, firstpoptic;
 	INT32 tictimer = ++player->capsule->extravalue2;
+	fixed_t speed = FixedMul(3*FRACUNIT, mapobjectscale);
 
-	if (abs(player->mo->x-player->capsule->x) <= 3*FRACUNIT)
+	if (abs(player->mo->x-player->capsule->x) <= speed)
 	{
 		P_UnsetThingPosition(player->mo);
 		player->mo->x = player->capsule->x;
@@ -6910,7 +6911,7 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		player->mo->momx = 0;
 	}
 
-	if (abs(player->mo->y-player->capsule->y) <= 3*FRACUNIT)
+	if (abs(player->mo->y-player->capsule->y) <= speed)
 	{
 		P_UnsetThingPosition(player->mo);
 		player->mo->y = player->capsule->y;
@@ -6918,26 +6919,26 @@ static void P_DoNiGHTSCapsule(player_t *player)
 		player->mo->momy = 0;
 	}
 
-	if (abs(player->mo->z - (player->capsule->z+(player->capsule->height/3))) <= 3*FRACUNIT)
+	if (abs(player->mo->z - (player->capsule->z+(player->capsule->height/3))) <= speed)
 	{
 		player->mo->z = player->capsule->z+(player->capsule->height/3);
 		player->mo->momz = 0;
 	}
 
 	if (player->mo->x > player->capsule->x)
-		player->mo->momx = -3*FRACUNIT;
+		player->mo->momx = -speed;
 	else if (player->mo->x < player->capsule->x)
-		player->mo->momx = 3*FRACUNIT;
+		player->mo->momx = speed;
 
 	if (player->mo->y > player->capsule->y)
-		player->mo->momy = -3*FRACUNIT;
+		player->mo->momy = -speed;
 	else if (player->mo->y < player->capsule->y)
-		player->mo->momy = 3*FRACUNIT;
+		player->mo->momy = speed;
 
 	if (player->mo->z > player->capsule->z+(player->capsule->height/3))
-		player->mo->momz = -3*FRACUNIT;
+		player->mo->momz = -speed;
 	else if (player->mo->z < player->capsule->z+(player->capsule->height/3))
-		player->mo->momz = 3*FRACUNIT;
+		player->mo->momz = speed;
 
 	if (player->powers[pw_carry] == CR_NIGHTSMODE)
 	{
@@ -7309,8 +7310,8 @@ static void P_NiGHTSMovement(player_t *player)
 	if (player->mo->z+player->mo->height > player->mo->ceilingz)
 		player->mo->z = player->mo->ceilingz - player->mo->height;
 
-	newx = P_ReturnThrustX(player->mo, player->mo->angle, 3*FRACUNIT)+player->mo->x;
-	newy = P_ReturnThrustY(player->mo, player->mo->angle, 3*FRACUNIT)+player->mo->y;
+	newx = P_ReturnThrustX(player->mo, player->mo->angle, FixedMul(3*FRACUNIT, mapobjectscale))+player->mo->x;
+	newy = P_ReturnThrustY(player->mo, player->mo->angle, FixedMul(3*FRACUNIT, mapobjectscale))+player->mo->y;
 
 	if (!player->mo->target)
 	{
@@ -7390,7 +7391,7 @@ static void P_NiGHTSMovement(player_t *player)
 	{
 		{
 			const angle_t fa = (FixedAngle(player->flyangle*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
-			const fixed_t speed = FixedDiv(player->speed*FRACUNIT,50*FRACUNIT);
+			const fixed_t speed = FixedMul(FixedDiv(player->speed*FRACUNIT,50*FRACUNIT), mapobjectscale);
 
 			xspeed = FixedMul(FINECOSINE(fa),speed);
 			yspeed = FixedMul(FINESINE(fa),speed);
@@ -7636,7 +7637,7 @@ static void P_NiGHTSMovement(player_t *player)
 
 	{
 		const angle_t fa = (FixedAngle(player->flyangle*FRACUNIT)>>ANGLETOFINESHIFT) & FINEMASK;
-		const fixed_t speed = FixedDiv(player->speed*FRACUNIT,50*FRACUNIT);
+		const fixed_t speed = FixedMul(FixedDiv(player->speed*FRACUNIT,50*FRACUNIT), mapobjectscale);
 		xspeed = FixedMul(FINECOSINE(fa),speed);
 		yspeed = FixedMul(FINESINE(fa),speed);
 	}
@@ -7654,14 +7655,15 @@ static void P_NiGHTSMovement(player_t *player)
 	P_NightsTransferPoints(player, xspeed, radius);
 
 	if (still)
-		player->mo->momz = -FRACUNIT;
+		player->mo->momz = -mapobjectscale;
 	else
 		player->mo->momz = yspeed/11;
 
-	if (player->mo->momz > 20*FRACUNIT)
-		player->mo->momz = 20*FRACUNIT;
-	else if (player->mo->momz < -20*FRACUNIT)
-		player->mo->momz = -20*FRACUNIT;
+	fixed_t maxyspeed = FixedMul(20*FRACUNIT, mapobjectscale);
+	if (player->mo->momz > maxyspeed)
+		player->mo->momz = maxyspeed;
+	else if (player->mo->momz < -maxyspeed)
+		player->mo->momz = -maxyspeed;
 
 	// You can create splashes as you fly across water.
 	if (((!(player->mo->eflags & MFE_VERTICALFLIP)
@@ -10222,7 +10224,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		dist = 480<<FRACBITS;
 	else if (player->powers[pw_carry] == CR_NIGHTSMODE
 		|| ((maptol & TOL_NIGHTS) && player->capsule && player->capsule->reactiontime > 0 && player == &players[player->capsule->reactiontime-1]))
-		dist = 320<<FRACBITS;
+		dist = FixedMul(mapobjectscale, 320<<FRACBITS);
 	else
 	{
 		dist = camdist;

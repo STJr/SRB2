@@ -6170,9 +6170,9 @@ static void P_MoveHoop(mobj_t *mobj)
 	FM_RotateZ(&m, FixedAngle(mobj->target->movecount*FRACUNIT));
 	FV4_Copy(&v, FM_MultMatrixVec4(&m, &v, &res));
 
-	finalx = x + v.x;
-	finaly = y + v.y;
-	finalz = z + v.z;
+	finalx = x + FixedMul(v.x, mobj->scale);
+	finaly = y + FixedMul(v.y, mobj->scale);
+	finalz = z + FixedMul(v.z, mobj->scale);
 
 	P_UnsetThingPosition(mobj);
 	mobj->x = finalx;
@@ -6250,7 +6250,7 @@ void P_SpawnHoopOfSomething(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT
 	}
 }
 
-void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 number, mobjtype_t type, statenum_t nstate, angle_t rotangle, boolean spawncenter)
+void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 number, mobjtype_t type, statenum_t nstate, angle_t rotangle, boolean spawncenter, fixed_t scale)
 {
 	mobj_t *mobj;
 	INT32 i;
@@ -6260,10 +6260,12 @@ void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 numb
 	fixed_t finalx, finaly, finalz, dist;
 	angle_t degrees, fa, closestangle;
 	fixed_t mobjx, mobjy, mobjz;
+	if (scale <= 0) // Can't spawn if the scale is 0 or below
+		return;
 
 	degrees = FINEANGLES/number;
 
-	radius = FixedDiv(radius,5*(FRACUNIT/4));
+	radius = FixedDiv(FixedMul(radius, scale), 5*(FRACUNIT/4));
 
 	closestangle = 0;
 
@@ -6286,7 +6288,7 @@ void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 numb
 		finaly = y + v.y;
 		finalz = z + v.z;
 
-		mobj = P_SpawnMobj(finalx, finaly, finalz, type);
+		mobj = P_SpawnScaledMobj(finalx, finaly, finalz, scale, type);
 		if (P_MobjWasRemoved(mobj))
 			continue;
 
@@ -6309,10 +6311,11 @@ void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 numb
 		if (nstate != S_NULL)
 			P_SetMobjState(mobj, nstate);
 
-		mobj->momx = FixedMul(FixedDiv(x - mobjx, dist), 5*FRACUNIT);
-		mobj->momy = FixedMul(FixedDiv(y - mobjy, dist), 5*FRACUNIT);
-		mobj->momz = FixedMul(FixedDiv(z - mobjz, dist), 5*FRACUNIT);
-		mobj->fuse = (radius>>(FRACBITS+2)) + 1;
+		fixed_t speed = FixedMul(5*FRACUNIT, scale);
+		mobj->momx = FixedMul(FixedDiv(x - mobjx, dist), speed);
+		mobj->momy = FixedMul(FixedDiv(y - mobjy, dist), speed);
+		mobj->momz = FixedMul(FixedDiv(z - mobjz, dist), speed);
+		mobj->fuse = (FixedDiv(radius, scale)>>(FRACBITS+2)) + 1;
 
 		if (spawncenter)
 			P_SetOrigin(mobj, x, y, z);
@@ -7210,7 +7213,7 @@ static void P_FlameJetSceneryThink(mobj_t *mobj)
 	else
 		mobj->fuse -= 2;
 
-	flame = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_FLAMEJETFLAME);
+	flame = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_FLAMEJETFLAME);
 	if (P_MobjWasRemoved(flame))
 		return;
 	P_SetMobjState(flame, S_FLAMEJETFLAME4);
@@ -7218,11 +7221,11 @@ static void P_FlameJetSceneryThink(mobj_t *mobj)
 	flame->angle = mobj->angle;
 
 	if (mobj->flags2 & MF2_AMBUSH) // Wave up and down instead of side-to-side
-		flame->momz = mobj->fuse << (FRACBITS - 2);
+		flame->momz = FixedMul(mobj->fuse << (FRACBITS - 2), mobj->scale);
 	else
 		flame->angle += FixedAngle(mobj->fuse<<FRACBITS);
 
-	strength = (mobj->movedir ? mobj->movedir : 80)<<(FRACBITS-2);
+	strength = FixedMul((mobj->movedir ? mobj->movedir : 80)<<(FRACBITS-2), mobj->scale);
 
 	P_InstaThrust(flame, flame->angle, strength);
 	S_StartSoundFromMobj(flame, sfx_fire);
@@ -7250,11 +7253,11 @@ static void P_VerticalFlameJetSceneryThink(mobj_t *mobj)
 	else
 		mobj->fuse--;
 
-	flame = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_FLAMEJETFLAME);
+	flame = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_FLAMEJETFLAME);
 	if (P_MobjWasRemoved(flame))
 		return;
 
-	strength = (mobj->movedir ? mobj->movedir : 80)<<(FRACBITS-2);
+	strength = FixedMul((mobj->movedir ? mobj->movedir : 80)<<(FRACBITS-2), mobj->scale);
 
 	// If deaf'd, the object spawns on the ceiling.
 	if (mobj->flags2 & MF2_AMBUSH)
@@ -7267,7 +7270,7 @@ static void P_VerticalFlameJetSceneryThink(mobj_t *mobj)
 		flame->momz = strength;
 		P_SetMobjState(flame, S_FLAMEJETFLAME7);
 	}
-	P_InstaThrust(flame, mobj->angle, FixedDiv(mobj->fuse*FRACUNIT, 3*FRACUNIT));
+	P_InstaThrust(flame, mobj->angle, FixedMul(FixedDiv(mobj->fuse*FRACUNIT, 3*FRACUNIT), mobj->scale));
 	S_StartSoundFromMobj(flame, sfx_fire);
 }
 
@@ -7435,7 +7438,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 			if (allowed)
 			{
 				fixed_t mom, max;
-				P_Thrust(mobj, angletoplayer, (3*FRACUNIT) >> 1);
+				P_Thrust(mobj, angletoplayer, FixedMul((3*FRACUNIT) >> 1, mobj->scale));
 				mom = P_GetMobjMomentum2D(mobj);
 				max = pdist;
 				if ((--mobj->extravalue1) <= 0)
@@ -7547,12 +7550,12 @@ static void P_RosySceneryThink(mobj_t *mobj)
 
 		if (makeheart)
 		{
-			mobj_t *cdlhrt = P_SpawnMobjFromMobj(mobj, 0, 0, mobj->height, MT_CDLHRT);
+			mobj_t *cdlhrt = P_SpawnMobjFromMobj(mobj, 0, 0, mobj->info->height, MT_CDLHRT);
 			if (!P_MobjWasRemoved(cdlhrt))
 			{
 				P_SetScale(cdlhrt, (5*mobj->scale) >> 4, true);
 				cdlhrt->fuse = (5*TICRATE) >> 1;
-				cdlhrt->momz = mobj->scale;
+				cdlhrt->momz = P_MobjFlip(cdlhrt)*mobj->scale;
 				P_SetTarget(&cdlhrt->target, mobj);
 				cdlhrt->extravalue1 = mobj->x;
 				cdlhrt->extravalue2 = mobj->y;
@@ -9807,7 +9810,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		break;
 	case MT_TRAINDUSTSPAWNER:
 		if (leveltime % 5 == 0) {
-			mobj_t* traindust = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_PARTICLE);
+			mobj_t* traindust = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_PARTICLE);
 			if (P_MobjWasRemoved(traindust))
 				break;
 			traindust->flags = MF_SCENERY;
@@ -9815,25 +9818,26 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 			traindust->frame = P_RandomRange(0, 8)|FF_TRANS90;
 			traindust->angle = mobj->angle;
 			traindust->tics = TICRATE*4;
-			P_SetScale(traindust, FRACUNIT*6, true);
-			traindust->destscale = FRACUNIT*64;
-			traindust->scalespeed = FRACUNIT/24;
+			P_SetScale(traindust, FixedMul(FRACUNIT*6, mobj->scale), true);
+			traindust->destscale = FixedMul(FRACUNIT*64, mobj->scale);
+			traindust->scalespeed = FixedMul(FRACUNIT/24, mobj->scale);
 		}
 		break;
 	case MT_TRAINSTEAMSPAWNER:
 		if (leveltime % 5 == 0) {
-			mobj_t *steam = P_SpawnMobj(mobj->x + FRACUNIT*P_SignedRandom()/2, mobj->y + FRACUNIT*P_SignedRandom()/2, mobj->z, MT_PARTICLE);
+			// mobj_t *steam = P_SpawnMobj(mobj->x + FRACUNIT*P_SignedRandom()/2, mobj->y + FRACUNIT*P_SignedRandom()/2, mobj->z, MT_PARTICLE);
+			mobj_t *steam = P_SpawnMobjFromMobj(mobj, FRACUNIT*P_SignedRandom()/2, FRACUNIT*P_SignedRandom()/2, 0, MT_PARTICLE);
 			if (P_MobjWasRemoved(steam))
 				break;
 			P_SetMobjState(steam, S_TRAINSTEAM);
 			steam->frame = P_RandomRange(0, 1)|FF_TRANS90;
 			steam->tics = TICRATE*8;
-			P_SetScale(steam, FRACUNIT*16, true);
-			steam->destscale = FRACUNIT*64;
-			steam->scalespeed = FRACUNIT/8;
-			steam->momx = P_SignedRandom()*32;
-			steam->momy = -64*FRACUNIT;
-			steam->momz = 2*FRACUNIT;
+			P_SetScale(steam, FixedMul(FRACUNIT*16, mobj->scale), true);
+			steam->destscale = FixedMul(FRACUNIT*64, mobj->scale);
+			steam->scalespeed = FixedMul(FRACUNIT/8, mobj->scale);
+			steam->momx = FixedMul(P_SignedRandom()*32, mobj->scale);
+			steam->momy = -FixedMul(64*FRACUNIT, mobj->scale);
+			steam->momz = FixedMul(2*FRACUNIT, mobj->scale);
 		}
 		break;
 	case MT_CANARIVORE_GAS:
@@ -11228,8 +11232,8 @@ mobj_t *P_SpawnScaledMobj(fixed_t x, fixed_t y, fixed_t z, fixed_t scale, mobjty
 
 	// All mobjs are created at 100% scale.
 	mobj->scale = FRACUNIT;
-	mobj->destscale = FixedMul(mapobjectscale, scale);
-	mobj->scalespeed = FixedMul(mapobjectscale, scale)/12;
+	mobj->destscale = scale;
+	mobj->scalespeed = scale/12;
 
 	// TODO: 2.3: Remove in favor of mapobjectscale and mapthing_t->scale
 	if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))
@@ -13495,7 +13499,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		if (mthing->args[3])
 			mobj->flags2 |= MF2_AMBUSH;
 
-		mobj->radius = abs(mthing->args[2]) << FRACBITS;
+		mobj->radius = FixedMul(abs(mthing->args[2]) << FRACBITS, mobj->scale);
 		// FALLTHRU
 	case MT_AXISTRANSFER:
 	case MT_AXISTRANSFERLINE:
@@ -13516,7 +13520,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		if (mthing->args[6] & TMB_BARRIER)
 		{
 			mobj_t* elecmobj;
-			elecmobj = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_CYBRAKDEMON_ELECTRIC_BARRIER);
+			elecmobj = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_CYBRAKDEMON_ELECTRIC_BARRIER);
 			if (P_MobjWasRemoved(elecmobj))
 				break;
 			P_SetTarget(&elecmobj->target, mobj);
@@ -13755,7 +13759,7 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	mobj_t *mobj = NULL;
 	boolean doangle = true;
 
-	mobj = P_SpawnScaledMobj(x, y, z, mthing->scale, i);
+	mobj = P_SpawnScaledMobj(x, y, z, FixedMul(mapobjectscale, mthing->scale), i);
 	if (mobj == NULL)
 		return NULL;
 	mobj->spawnpoint = mthing;
@@ -13852,11 +13856,10 @@ void P_SpawnHoop(mapthing_t *mthing)
 	fixed_t y = mthing->y << FRACBITS;
 	fixed_t z = P_GetMobjSpawnHeight(MT_HOOP, x, y, mthing->z << FRACBITS, 0, false, mthing->scale, mthing->options & MTF_ABSOLUTEZ);
 
-	hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
+	hoopcenter = P_SpawnScaledMobj(x, y, z, finalScale, MT_HOOPCENTER);
 	if (P_MobjWasRemoved(hoopcenter))
 		return;
 
-	P_SetScale(hoopcenter, finalScale, true);
 	hoopcenter->spawnpoint = mthing;
 	hoopcenter->z -= hoopcenter->height/2;
 
@@ -13886,10 +13889,9 @@ void P_SpawnHoop(mapthing_t *mthing)
 		FV4_Copy(&v, FM_MultMatrixVec4(&pitchmatrix, &v, &res));
 		FV4_Copy(&v, FM_MultMatrixVec4(&yawmatrix, &v, &res));
 
-		mobj = P_SpawnMobj(x + v.x, y + v.y, z + v.z, MT_HOOP);
+		mobj = P_SpawnScaledMobj(x + v.x, y + v.y, z + v.z, hoopcenter->scale, MT_HOOP);
 		if (P_MobjWasRemoved(mobj))
 			continue;
-		P_SetScale(mobj, hoopcenter->scale, true);
 		mobj->z -= mobj->height/2;
 
 		if (maptol & TOL_XMAS)
@@ -13920,7 +13922,7 @@ void P_SpawnHoop(mapthing_t *mthing)
 		else
 			hoopsize /= 2;
 
-		radius = hoopsize*sizefactor;
+		radius = FixedMul(hoopsize*sizefactor, finalScale);
 
 		for (i = 0; i < hoopsize; i++)
 		{
@@ -13933,7 +13935,7 @@ void P_SpawnHoop(mapthing_t *mthing)
 			FV4_Copy(&v, FM_MultMatrixVec4(&pitchmatrix, &v, &res));
 			FV4_Copy(&v, FM_MultMatrixVec4(&yawmatrix, &v, &res));
 
-			mobj = P_SpawnMobj(x + v.x, y + v.y, z + v.z, MT_HOOPCOLLIDE);
+			mobj = P_SpawnScaledMobj(x + v.x, y + v.y, z + v.z, mobj->scale, MT_HOOPCOLLIDE);
 			if (P_MobjWasRemoved(mobj))
 				continue;
 			mobj->z -= mobj->height/2;

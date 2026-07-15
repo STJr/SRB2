@@ -5588,7 +5588,7 @@ void A_MinusDigging(void *data)
 		S_StartSoundFromMobj(actor, actor->info->attacksound);
 
 		// Spawn growing dirt pile.
-		par = P_SpawnMobj(actor->x, actor->y, mz, MT_MINUSDIRT);
+		par = P_SpawnScaledMobj(actor->x, actor->y, mz, actor->scale, MT_MINUSDIRT);
 		if (P_MobjWasRemoved(par))
 			return;
 		P_SetMobjState(par, actor->info->raisestate);
@@ -6026,9 +6026,6 @@ void A_CapeChase(void *data)
 	boffsety = P_ReturnThrustY(chaser, angle-ANGLE_90, FixedMul((locvar2 & 65535)*FRACUNIT, actor->scale));
 
 	P_UnsetThingPosition(actor);
-	P_SetScale(actor, chaser->scale, false);
-	actor->destscale = chaser->destscale;
-	actor->old_scale = chaser->old_scale;
 	actor->x = chaser->x + foffsetx + boffsetx;
 	actor->y = chaser->y + foffsety + boffsety;
 	if (chaser->eflags & MFE_VERTICALFLIP)
@@ -6508,7 +6505,7 @@ void A_RingExplode(void *data)
 		return;
 
 	for (d = 0; d < 16; d++)
-		P_SpawnParaloop(actor->x, actor->y, actor->z + actor->height, FixedMul(actor->info->painchance, actor->scale), 16, MT_NIGHTSPARKLE, S_NULL, d*(ANGLE_22h), true);
+		P_SpawnParaloop(actor->x, actor->y, actor->z + actor->height, actor->info->painchance, 16, MT_NIGHTSPARKLE, S_NULL, d*(ANGLE_22h), true, actor->scale);
 
 	S_StartSoundFromMobj(actor, sfx_prloop);
 
@@ -8398,7 +8395,7 @@ void A_Shockwave(void *data)
 
 	for (i = 0; i < locvar2; i++)
 	{
-		shock = P_SpawnMobj(actor->x, actor->y, actor->z, locvar1);
+		shock = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1);
 		P_SetTarget(&shock->target, actor);
 		shock->fuse = shock->info->painchance;
 
@@ -8560,16 +8557,15 @@ void A_SmokeTrailer(void *data)
 	// add the smoke behind the rocket
 	if (actor->eflags & MFE_VERTICALFLIP)
 	{
-		th = P_SpawnMobj(actor->x-actor->momx, actor->y-actor->momy, actor->z + actor->height - FixedMul(mobjinfo[locvar1].height, actor->scale), locvar1);
+		th = P_SpawnScaledMobj(actor->x-actor->momx, actor->y-actor->momy, actor->z + actor->height - FixedMul(mobjinfo[locvar1].height, actor->scale), actor->scale, locvar1);
 		if (!P_MobjWasRemoved(th))
 			th->flags2 |= MF2_OBJECTFLIP;
 	}
 	else
-		th = P_SpawnMobj(actor->x-actor->momx, actor->y-actor->momy, actor->z, locvar1);
+		th = P_SpawnScaledMobj(actor->x-actor->momx, actor->y-actor->momy, actor->z, actor->scale, locvar1);
 	if (P_MobjWasRemoved(th))
 		return;
 	P_SetObjectMomZ(th, FRACUNIT, false);
-	P_SetScale(th, actor->scale, true);
 	th->tics -= P_RandomByte() & 3;
 	if (th->tics < 1)
 		th->tics = 1;
@@ -9340,11 +9336,10 @@ void A_BossJetFume(void *data)
 		else
 			jetz = actor->z + FixedMul(38*FRACUNIT, actor->scale);
 
-		filler = P_SpawnMobj(jetx, jety, jetz, MT_JETFUME1);
+		filler = P_SpawnScaledMobj(jetx, jety, jetz, actor->scale, MT_JETFUME1);
 		if (!P_MobjWasRemoved(filler))
 		{
 			P_SetTarget(&filler->target, actor);
-			P_SetScale(filler, actor->scale, true);
 			if (actor->eflags & MFE_VERTICALFLIP)
 				filler->flags2 |= MF2_OBJECTFLIP;
 			filler->fuse = 56;
@@ -9355,26 +9350,24 @@ void A_BossJetFume(void *data)
 		else
 			jetz = actor->z + FixedMul(12*FRACUNIT, actor->scale);
 
-		filler = P_SpawnMobj(jetx + P_ReturnThrustX(actor, actor->angle-ANGLE_90, FixedMul(24*FRACUNIT, actor->scale)),
+		filler = P_SpawnScaledMobj(jetx + P_ReturnThrustX(actor, actor->angle-ANGLE_90, FixedMul(24*FRACUNIT, actor->scale)),
 				jety + P_ReturnThrustY(actor, actor->angle-ANGLE_90, FixedMul(24*FRACUNIT, actor->scale)),
-				jetz, MT_JETFUME1);
+				jetz, actor->scale, MT_JETFUME1);
 		if (!P_MobjWasRemoved(filler))
 		{
 			P_SetTarget(&filler->target, actor);
-			P_SetScale(filler, actor->scale, true);
 			if (actor->eflags & MFE_VERTICALFLIP)
 				filler->flags2 |= MF2_OBJECTFLIP;
 			filler->fuse = 57;
 		}
 
-		filler = P_SpawnMobj(jetx + P_ReturnThrustX(actor, actor->angle+ANGLE_90, FixedMul(24*FRACUNIT, actor->scale)),
+		filler = P_SpawnScaledMobj(jetx + P_ReturnThrustX(actor, actor->angle+ANGLE_90, FixedMul(24*FRACUNIT, actor->scale)),
 				jety + P_ReturnThrustY(actor, actor->angle+ANGLE_90, FixedMul(24*FRACUNIT, actor->scale)),
-				jetz, MT_JETFUME1);
+				jetz, actor->scale, MT_JETFUME1);
 		if (!P_MobjWasRemoved(filler))
 		{
 			P_SetTarget(&filler->target, actor);
 			filler->destscale = actor->scale;
-			P_SetScale(filler, actor->scale, true);
 			if (actor->eflags & MFE_VERTICALFLIP)
 				filler->flags2 |= MF2_OBJECTFLIP;
 			filler->fuse = 58;
@@ -9404,15 +9397,12 @@ void A_BossJetFume(void *data)
 	}*/
 	else if (locvar1 == 2) // Metal Sonic jet fumes
 	{
-		filler = P_SpawnMobj(actor->x, actor->y, actor->z, MT_JETFUME1);
+		filler = P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_JETFUME1);
 		if (!P_MobjWasRemoved(filler))
 		{
 			P_SetTarget(&filler->target, actor);
 			filler->fuse = 59;
 			P_SetTarget(&actor->tracer, filler);
-			P_SetScale(filler, actor->scale/3, true);
-			if (actor->eflags & MFE_VERTICALFLIP)
-				filler->flags2 |= MF2_OBJECTFLIP;
 			filler->color = SKINCOLOR_ICY;
 			filler->colorized = true;
 		}
@@ -9424,12 +9414,11 @@ void A_BossJetFume(void *data)
 			jetz = actor->z + actor->height + FixedMul(50*FRACUNIT - mobjinfo[MT_JETFLAME].height, actor->scale);
 		else
 			jetz = actor->z - 50*actor->scale;
-		filler = P_SpawnMobj(actor->x, actor->y, jetz, MT_JETFLAME);
+		filler = P_SpawnScaledMobj(actor->x, actor->y, jetz, actor->scale, MT_JETFLAME);
 		if (!P_MobjWasRemoved(filler))
 		{
 			P_SetTarget(&filler->target, actor);
 			// Boss 4 already uses its tracer for other things
-			P_SetScale(filler, actor->scale, true);
 			if (actor->eflags & MFE_VERTICALFLIP)
 				filler->flags2 |= MF2_OBJECTFLIP;
 		}
@@ -9446,12 +9435,11 @@ void A_BossJetFume(void *data)
 		{
 			jetx = actor->x + P_ReturnThrustX(actor, actor->angle+ANGLE_90, movefactor*actor->scale) - P_ReturnThrustX(actor, actor->angle, 19*actor->scale);
 			jety = actor->y + P_ReturnThrustY(actor, actor->angle+ANGLE_90, movefactor*actor->scale) - P_ReturnThrustY(actor, actor->angle, 19*actor->scale);
-			filler = P_SpawnMobj(jetx, jety, jetz, MT_EGGROBO1JET);
+			filler = P_SpawnScaledMobj(jetx, jety, jetz, actor->scale, MT_EGGROBO1JET);
 			if (!P_MobjWasRemoved(filler))
 			{
 				filler->movefactor = movefactor;
 				P_SetTarget(&filler->target, actor);
-				P_SetScale(filler, actor->scale, true);
 				if (actor->eflags & MFE_VERTICALFLIP)
 					filler->flags2 |= MF2_OBJECTFLIP;
 			}
@@ -11182,14 +11170,12 @@ void A_TrapShot(void *data)
 	CONS_Debug(DBG_GAMELOGIC, "A_TrapShot: missile no. = %d, front offset = %d, vertical angle = %d, z offset = %d\n",
 		type, frontoff, (INT16)(locvar2 & 65535), vertoff);
 
-	missile = P_SpawnMobj(x, y, z, type);
+	missile = P_SpawnScaledMobj(x, y, z, actor->scale, type);
 	if (P_MobjWasRemoved(missile))
 		return;
 
 	if (actor->eflags & MFE_VERTICALFLIP)
 		missile->flags2 |= MF2_OBJECTFLIP;
-
-	P_SetScale(missile, actor->scale, true);
 
 	if (missile->info->seesound)
 		S_StartSoundFromMobj(missile, missile->info->seesound);
@@ -11253,10 +11239,11 @@ void A_VileTarget(void *data)
 
 	if (!locvar2)
 	{
-		fog = P_SpawnMobj(actor->target->x,
-							actor->target->y,
-							actor->target->z + ((actor->target->eflags & MFE_VERTICALFLIP) ? actor->target->height - mobjinfo[fogtype].height : 0),
-							fogtype);
+		fog = P_SpawnScaledMobj(actor->target->x,
+			actor->target->y,
+			actor->target->z + ((actor->target->eflags & MFE_VERTICALFLIP) ? actor->target->height - FixedMul(mobjinfo[fogtype].height, actor->target->scale) : 0),
+			actor->target->scale,
+			fogtype);
 		if (!P_MobjWasRemoved(fog))
 		{
 			if (actor->target->eflags & MFE_VERTICALFLIP)
@@ -11264,7 +11251,6 @@ void A_VileTarget(void *data)
 				fog->eflags |= MFE_VERTICALFLIP;
 				fog->flags2 |= MF2_OBJECTFLIP;
 			}
-			P_SetScale(fog, actor->target->scale, true);
 
 			P_SetTarget(&actor->tracer, fog);
 			P_SetTarget(&fog->target, actor);
@@ -11286,10 +11272,11 @@ void A_VileTarget(void *data)
 			if (!players[i].mo->health)
 				continue;
 
-			fog = P_SpawnMobj(players[i].mo->x,
-							players[i].mo->y,
-							players[i].mo->z + ((players[i].mo->eflags & MFE_VERTICALFLIP) ? players[i].mo->height - mobjinfo[fogtype].height : 0),
-							fogtype);
+			fog = P_SpawnScaledMobj(players[i].mo->x,
+				players[i].mo->y,
+				players[i].mo->z + ((players[i].mo->eflags & MFE_VERTICALFLIP) ? players[i].mo->height - FixedMul(mobjinfo[fogtype].height, players[i].mo->scale) : 0),
+				players[i].mo->scale,
+				fogtype);
 			if (!P_MobjWasRemoved(fog))
 			{
 				if (players[i].mo->eflags & MFE_VERTICALFLIP)
@@ -11297,7 +11284,6 @@ void A_VileTarget(void *data)
 					fog->eflags |= MFE_VERTICALFLIP;
 					fog->flags2 |= MF2_OBJECTFLIP;
 				}
-				P_SetScale(fog, players[i].mo->scale, true);
 
 				if (players[i].mo == actor->target) // We only care to track the fog targeting who we REALLY hate right now
 					P_SetTarget(&actor->tracer, fog);
@@ -11328,7 +11314,6 @@ void A_VileAttack(void *data)
 	mobjtype_t explosionType = MT_NULL;
 	mobj_t *fire;
 	INT32 i;
-	mobj_t *explosion;
 
 	if (LUA_CallAction(A_VILEATTACK, actor))
 		return;
@@ -11360,11 +11345,7 @@ void A_VileAttack(void *data)
 		//actor->target->momz = 1000*FRACUNIT/actor->target->info->mass; // How id did it
 		actor->target->momz += FixedMul(10*FRACUNIT, actor->scale)*P_MobjFlip(actor->target); // How we're doing it
 		if (explosionType != MT_NULL)
-		{
-			explosion = P_SpawnMobj(actor->target->x, actor->target->y, actor->target->z, explosionType);
-			if (!P_MobjWasRemoved(explosion))
-				P_SetScale(explosion, actor->target->scale, true);
-		}
+			P_SpawnScaledMobj(actor->target->x, actor->target->y, actor->target->z, actor->target->scale, explosionType);
 
 		// Extra attack. This was for additional damage in Doom. Doesn't really belong in SRB2, but the heck with it, it's here anyway.
 		fire = actor->tracer;
@@ -11403,11 +11384,7 @@ void A_VileAttack(void *data)
 			//actor->target->momz = 1000*FRACUNIT/actor->target->info->mass; // How id did it
 			players[i].mo->momz += FixedMul(10*FRACUNIT, actor->scale)*P_MobjFlip(players[i].mo); // How we're doing it
 			if (explosionType != MT_NULL)
-			{
-				explosion = P_SpawnMobj(players[i].mo->x, players[i].mo->y, players[i].mo->z, explosionType);
-				if (!P_MobjWasRemoved(explosion))
-					P_SetScale(explosion, actor->target->scale, true);
-			}
+				P_SpawnScaledMobj(players[i].mo->x, players[i].mo->y, players[i].mo->z, players[i].mo->scale, explosionType);
 
 			// Extra attack. This was for additional damage in Doom. Doesn't really belong in SRB2, but the heck with it, it's here anyway.
 			// However, it ONLY applies to the actor's target. Nobody else matters!
@@ -11506,16 +11483,15 @@ void A_VileFire(void *data)
 		// Get distance for each step
 		distX = (actor->target->x - actor->x) / numLineMobjs;
 		distY = (actor->target->y - actor->y) / numLineMobjs;
-		distZ = ((actor->target->z + FixedMul(actor->target->height/2, actor->target->scale)) - (actor->z + FixedMul(actor->height/2, actor->scale))) / numLineMobjs;
+		distZ = ((actor->target->z + actor->target->height/2) - (actor->z + (actor->height/2))) / numLineMobjs;
 
 		for (i = 1; i <= numLineMobjs; i++)
 		{
-			lineMobj = P_SpawnMobj(actor->x + (distX * i), actor->y + (distY * i), actor->z + (distZ * i) + FixedMul(actor->height/2, actor->scale), lineMobjType);
+			lineMobj = P_SpawnScaledMobj(actor->x + (distX * i), actor->y + (distY * i), actor->z + (distZ * i) + (actor->height/2), actor->scale, lineMobjType);
 			if (!P_MobjWasRemoved(lineMobj))
 			{
 				if (actor->eflags & MFE_VERTICALFLIP)
 					lineMobj->eflags |= MFE_VERTICALFLIP;
-				P_SetScale(lineMobj, actor->scale, true);
 			}
 		}
 	}
@@ -11806,11 +11782,9 @@ void A_BrakLobShot(void *data)
 	if (locvar1 <= 0 || locvar1 >= NUMMOBJTYPES)
 		typeOfShot = MT_CANNONBALL;
 	else typeOfShot = (mobjtype_t)locvar1;
-	shot = P_SpawnMobj(actor->x, actor->y, actor->z + FixedMul(locvar2*FRACUNIT, actor->scale), typeOfShot);
+	shot = P_SpawnMobjFromMobj(actor, 0, 0, locvar2*FRACUNIT, typeOfShot);
 	if (P_MobjWasRemoved(shot))
 		return;
-
-	P_SetScale(shot, actor->scale, true);
 
 	if (shot->info->seesound)
 		S_StartSoundFromMobj(shot, shot->info->seesound);
@@ -11878,11 +11852,10 @@ void A_NapalmScatter(void *data)
 	{
 		const angle_t fa = (i*FINEANGLES/numToShoot) & FINEMASK;
 
-		mo = P_SpawnMobj(actor->x, actor->y, actor->z, typeOfShot);
+		mo = P_SpawnMobjFromMobj(actor, 0, 0, 0, typeOfShot);
 		if (P_MobjWasRemoved(mo))
 			continue;
 		P_SetTarget(&mo->target, actor->target); // Transfer target so Brak doesn't hit himself like an idiot
-		P_SetScale(mo, actor->scale, true);
 
 		mo->angle = fa << ANGLETOFINESHIFT;
 		mo->momx = FixedMul(FINECOSINE(fa),FixedMul(vx, actor->scale));
@@ -12729,14 +12702,12 @@ void A_MineExplode(void *data)
 		UINT8 i;
 		mobjtype_t type = ((actor->eflags & MFE_UNDERWATER) ? MT_UWEXPLODE : MT_SONIC3KBOSSEXPLODE);
 		S_StartSoundFromMobj(actor, ((actor->eflags & MFE_UNDERWATER) ? sfx_s3k57 : sfx_s3k4e));
-		mobj_t *b = P_SpawnMobj(actor->x, actor->y, actor->z, type);
-		if (!P_MobjWasRemoved(b))
-			P_SetScale(b, actor->scale, true);
+		mobj_t *b = P_SpawnMobjFromMobj(actor, 0, 0, 0, type);
 		for (i = 0; i < 16; i++)
 		{
-			b = P_SpawnMobj(actor->x+FixedMul(P_RandomRange(-dist, dist)*FRACUNIT, actor->scale),
-				actor->y+FixedMul(P_RandomRange(-dist, dist)*FRACUNIT, actor->scale),
-				actor->z+FixedMul(P_RandomRange(((actor->eflags & MFE_UNDERWATER) ? -dist : 0), dist)*FRACUNIT, actor->scale),
+			b = P_SpawnMobjFromMobj(actor, P_RandomRange(-dist, dist)*FRACUNIT,
+				P_RandomRange(-dist, dist)*FRACUNIT,
+				P_RandomRange(((actor->eflags & MFE_UNDERWATER) ? -dist : 0), dist)*FRACUNIT,
 				type);
 			if (P_MobjWasRemoved(b))
 				continue;
@@ -12752,7 +12723,7 @@ void A_MineExplode(void *data)
 #undef dist
 
 		if (actor->watertop != INT32_MAX)
-			P_SpawnMobj(actor->x, actor->y, actor->watertop, (actor->eflags & MFE_TOUCHLAVA) ? MT_LAVASPLISH : MT_SPLISH);
+			P_SpawnScaledMobj(actor->x, actor->y, actor->watertop, actor->scale, (actor->eflags & MFE_TOUCHLAVA) ? MT_LAVASPLISH : MT_SPLISH);
 	}
 }
 
@@ -13837,7 +13808,7 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 			P_SetMobjState(thing, S_PLAY_FALL);
 		}
 
-		thing->momz = thrust;
+		P_SetObjectMomZ(thing, thrust, false);
 	}
 
 	return true;
@@ -13878,7 +13849,7 @@ void A_DustDevilThink(void *data)
 	if (P_IsObjectOnGround(actor))
 	{
 		angle_t dustang = ((P_RandomRange(0, 7)*ANGLE_45)>>ANGLETOFINESHIFT) & FINEMASK;
-		mobj_t *dust = P_SpawnMobj(actor->x + 96 * FixedMul(scale, FINECOSINE(dustang)), actor->y + 96 * FixedMul(scale, FINESINE(dustang)), actor->z, MT_ARIDDUST);
+		mobj_t *dust = P_SpawnMobjFromMobj(actor, 96 * FINECOSINE(dustang), 96 * FINESINE(dustang), 0, MT_ARIDDUST);
 		if (!P_MobjWasRemoved(dust))
 		{
 			P_SetMobjState(dust, dust->info->spawnstate + P_RandomRange(0, 2));
@@ -13896,14 +13867,10 @@ void A_DustDevilThink(void *data)
 		for (; i <= 3; i++)
 		{
 			fixed_t fa = (ANGLE_90*i) >> ANGLETOFINESHIFT;
-			fixed_t px = actor->x + 70 * FixedMul(scale, FINECOSINE(fa));
-			fixed_t py = actor->y + 70 * FixedMul(scale, FINESINE(fa));
-			fixed_t pz = actor->z;
 
-			layer = P_SpawnMobj(px, py, pz, MT_DUSTLAYER);
+			layer = P_SpawnMobjFromMobj(actor, 70 * FINECOSINE(fa), 70 * FINESINE(fa), 0, MT_DUSTLAYER);
 			if (P_MobjWasRemoved(layer))
 				continue;
-			P_SetScale(layer, scale, true);
 			layer->momz = 5 * scale;
 			layer->angle = ANGLE_90 + ANGLE_90*i;
 			layer->extravalue1 = TICRATE * 3;
@@ -14085,14 +14052,14 @@ void A_DebrisRandom(void *data)
 
 static mobj_t *P_TrainSeg(mobj_t *src, fixed_t x, fixed_t y, fixed_t z, angle_t ang, spritenum_t spr, UINT32 frame)
 {
-	mobj_t *s = P_SpawnMobj(x, y, z, MT_TRAINSEG);
+	mobj_t *s = P_SpawnMobjFromMobj(src, x, y, z, MT_TRAINSEG);
 	if (P_MobjWasRemoved(s))
 		return NULL;
 	s->fuse = 16*TICRATE;
 	s->sprite = spr;
 	s->frame = frame|FF_PAPERSPRITE;
 	s->angle = ang;
-	P_Thrust(s, src->angle, 7*FRACUNIT);
+	P_Thrust(s, src->angle, FixedMul(7*FRACUNIT, src->scale));
 	return s;
 }
 
@@ -14108,9 +14075,6 @@ void A_TrainCameo(void *data)
 	mobj_t *actor = data;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	fixed_t x = actor->x;
-	fixed_t y = actor->y;
-	fixed_t z = actor->z;
 	angle_t ang = actor->angle;
 	mobj_t *m;
 	spritenum_t spr = SPR_TRAE;
@@ -14121,18 +14085,18 @@ void A_TrainCameo(void *data)
 		return;
 
 	//Spawn sides.
-	P_TrainSeg(actor, x, y + span, z, ang, spr, 0);
-	P_TrainSeg(actor, x, y - span, z, ang, spr, 0);
+	P_TrainSeg(actor, 0, span, 0, ang, spr, 0);
+	P_TrainSeg(actor, 0, -span, 0, ang, spr, 0);
 
 	//Center.
-	P_TrainSeg(actor, x, y, z, ang, spr, 1);
+	P_TrainSeg(actor, 0, 0, 0, ang, spr, 1);
 
 	//Front and back.
-	P_TrainSeg(actor, x + len, y, z, ang + ANGLE_90, spr, 2);
-	P_TrainSeg(actor, x - len, y, z, ang + ANGLE_90, spr, 2);
+	P_TrainSeg(actor, len, 0, 0, ang + ANGLE_90, spr, 2);
+	P_TrainSeg(actor, -len, 0, 0, ang + ANGLE_90, spr, 2);
 
 	//Smoke spawner.
-	m = P_TrainSeg(actor, x - (20 * FRACUNIT), y, z + (30 * FRACUNIT), ang + ANGLE_90, spr, 0);
+	m = P_TrainSeg(actor, -(20 * FRACUNIT), 0, (30 * FRACUNIT), ang + ANGLE_90, spr, 0);
 	P_SetMobjState(m, S_TRAINPUFFMAKER);
 }
 
@@ -14148,9 +14112,6 @@ void A_TrainCameo2(void *data)
 	mobj_t *actor = data;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	fixed_t x = actor->x;
-	fixed_t y = actor->y;
-	fixed_t z = actor->z;
 	angle_t ang = actor->angle;
 	spritenum_t spr = SPR_TRAI;
 	fixed_t span = locvar1*FRACUNIT;
@@ -14160,15 +14121,15 @@ void A_TrainCameo2(void *data)
 		return;
 
 	//Spawn sides.
-	P_TrainSeg(actor, x, y + span, z, ang, spr, 0);
-	P_TrainSeg(actor, x, y - span, z, ang, spr, 0);
+	P_TrainSeg(actor, 0, span, 0, ang, spr, 0);
+	P_TrainSeg(actor, 0, -span, 0, ang, spr, 0);
 
 	//Center.
-	P_TrainSeg(actor, x, y, z, ang, spr, 1);
+	P_TrainSeg(actor, 0, 0, 0, ang, spr, 1);
 
 	//Front and back.
-	P_TrainSeg(actor, x + len, y, z, ang + ANGLE_90, spr, 2);
-	P_TrainSeg(actor, x - len, y, z, ang + ANGLE_90, spr, 2);
+	P_TrainSeg(actor, len, 0, 0, ang + ANGLE_90, spr, 2);
+	P_TrainSeg(actor, -len, 0, 0, ang + ANGLE_90, spr, 2);
 }
 
 // Function: A_CanarivoreGas
@@ -14619,7 +14580,7 @@ void A_LavafallLava(void *data)
 	// Don't spawn lava unless a player is nearby.
 	for (i = 0; i < MAXPLAYERS; ++i)
 		if (players[i].ingame && players[i].mo
-			&& P_AreMobjsClose2D(actor, players[i].mo, actor->info->speed))
+			&& P_AreMobjsClose2D(actor, players[i].mo, FixedMul(actor->info->speed, actor->scale)))
 			break; // Stop looking.
 
 	if (i >= MAXPLAYERS)
@@ -14627,7 +14588,7 @@ void A_LavafallLava(void *data)
 
 	lavafall = P_SpawnMobjFromMobj(actor, 0, 0, -8*FRACUNIT, MT_LAVAFALL_LAVA);
 	if (!P_MobjWasRemoved(lavafall))
-		lavafall->momz = -P_MobjFlip(actor)*25*FRACUNIT;
+		lavafall->momz = -P_MobjFlip(actor)*FixedMul(25*FRACUNIT, lavafall->scale);
 }
 
 // Function: A_FallingLavaCheck
@@ -14772,9 +14733,9 @@ void A_RolloutSpawn(void *data)
 
 	if (!(actor->target)
 		|| P_MobjWasRemoved(actor->target)
-		|| P_AreMobjsFar2D(actor, actor->target, locvar1))
+		|| P_AreMobjsFar2D(actor, actor->target, FixedMul(locvar1, actor->scale)))
 	{
-		P_SetTarget(&actor->target, P_SpawnMobj(actor->x, actor->y, actor->z, locvar2));
+		P_SetTarget(&actor->target, P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar2));
 		if (!P_MobjWasRemoved(actor->target))
 		{
 			actor->target->flags2 |= (actor->flags2 & (MF2_AMBUSH | MF2_OBJECTFLIP)) | MF2_SLIDEPUSH;

@@ -264,10 +264,10 @@ void P_DoNightsScore(player_t *player)
 	P_SetMobjState(dummymo, (player->bonustime ? dummymo->info->xdeathstate : dummymo->info->spawnstate) + min(player->linkcount,10)-1);
 
 	// Make objects slowly rise & scale up
-	dummymo->momz = FRACUNIT;
+	dummymo->momz = mapobjectscale;
 	dummymo->fuse = 3*TICRATE;
-	dummymo->scalespeed = FRACUNIT/25;
-	dummymo->destscale = 2*FRACUNIT;
+	dummymo->scalespeed = FixedMul(FRACUNIT/25, mapobjectscale);
+	dummymo->destscale = FixedMul(2*FRACUNIT, mapobjectscale);
 
 	// Add extra values used for color variety
 	dummymo->extravalue1 = player->linkcount-1;
@@ -1134,11 +1134,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					sparklestate = mobjinfo[MT_NIGHTSPARKLE].seestate;
 				}
 
-				if (gatherradius < 30*FRACUNIT) // Player is probably just sitting there.
+				if (gatherradius < FixedMul(30*FRACUNIT, mapobjectscale)) // Player is probably just sitting there.
 					return;
 
 				for (d = 0; d < 16; d++)
-					P_SpawnParaloop(x, y, z, gatherradius, 16, MT_NIGHTSPARKLE, sparklestate, d*ANGLE_22h, false);
+					P_SpawnParaloop(x, y, z, FixedDiv(gatherradius, mapobjectscale), 16, MT_NIGHTSPARKLE, sparklestate, d*ANGLE_22h, false, mapobjectscale);
 
 				S_StartSoundFromMobj(toucher, sfx_prloop);
 
@@ -1248,7 +1248,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					else
 						player->flyangle = special->threshold;
 
-					player->speed = FixedMul(special->info->speed, special->scale);
+					player->speed = FixedMul(special->info->speed, FixedDiv(special->scale, mapobjectscale));
 					P_SetTarget(&player->mo->hnext, special); // Reference bumper for position correction on next tic
 				}
 				else // More like a spring
@@ -1336,7 +1336,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			if (!G_IsSpecialStage(gamemap))
 			{
 				// A flicky orbits us now
-				mobj_t *flickyobj = P_SpawnMobj(toucher->x, toucher->y, toucher->z + toucher->info->height, MT_NIGHTOPIANHELPER);
+				mobj_t *flickyobj = P_SpawnMobjFromMobj(toucher, 0, 0, toucher->info->height, MT_NIGHTOPIANHELPER);
 				if (!P_MobjWasRemoved(flickyobj))
 					P_SetTarget(&flickyobj->target, toucher);
 
@@ -1348,7 +1348,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				for (i = 0; i < MAXPLAYERS; i++)
 					if (players[i].ingame && players[i].mo && players[i].powers[pw_carry] == CR_NIGHTSMODE) {
 						players[i].powers[pw_nights_helper] = (UINT16)special->info->speed;
-						flickyobj = P_SpawnMobj(players[i].mo->x, players[i].mo->y, players[i].mo->z + players[i].mo->info->height, MT_NIGHTOPIANHELPER);
+						flickyobj = P_SpawnMobjFromMobj(players[i].mo, 0, 0, players[i].mo->info->height, MT_NIGHTOPIANHELPER);
 						if (!P_MobjWasRemoved(flickyobj))
 							P_SetTarget(&flickyobj->target, players[i].mo);
 					}

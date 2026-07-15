@@ -915,12 +915,13 @@ static int lib_pSpawnParaloop(lua_State *L)
 	angle_t rotangle = luaL_checkangle(L, 7);
 	statenum_t nstate = luaL_optinteger(L, 8, S_NULL);
 	boolean spawncenter = lua_optboolean(L, 9);
+	fixed_t scale = luaL_optfixed(L, 10, FRACUNIT);
 	NOHUD
 	INLEVEL
 	NOSPAWNNULL
 	if (nstate >= NUMSTATES)
 		return luaL_error(L, "state %d out of range (0 - %d)", nstate, NUMSTATES-1);
-	P_SpawnParaloop(x, y, z, radius, number, type, nstate, rotangle, spawncenter);
+	P_SpawnParaloop(x, y, z, radius, number, type, nstate, rotangle, spawncenter, scale);
 	P_SetTarget(&tmthing, ptmthing);
 	return 0;
 }

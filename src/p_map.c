@@ -2289,6 +2289,8 @@ static const fixed_t hoophalfheight = (56*FRACUNIT)/2;
 void P_CheckHoopPosition(mobj_t *hoopthing, fixed_t x, fixed_t y, fixed_t z, fixed_t radius)
 {
 	INT32 i;
+	const fixed_t scaledhoopblockdist = FixedMul(hoopblockdist, hoopthing->scale);
+	const fixed_t scaledhoophalfheight = FixedMul(hoophalfheight, hoopthing->scale);
 
 	(void)radius; //unused
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -2296,9 +2298,9 @@ void P_CheckHoopPosition(mobj_t *hoopthing, fixed_t x, fixed_t y, fixed_t z, fix
 		if (!players[i].ingame || !players[i].mo || players[i].spectator)
 			continue;
 
-		if (abs(players[i].mo->x - x) >= hoopblockdist ||
-			abs(players[i].mo->y - y) >= hoopblockdist ||
-			abs((players[i].mo->z+hoophalfheight) - z) >= hoopblockdist)
+		if (abs(players[i].mo->x - x) >= scaledhoopblockdist ||
+			abs(players[i].mo->y - y) >= scaledhoopblockdist ||
+			abs((players[i].mo->z+scaledhoophalfheight) - z) >= scaledhoopblockdist)
 			continue; // didn't hit it
 
 		// can remove thing
