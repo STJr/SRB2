@@ -12843,18 +12843,7 @@ void A_SpawnParticleRelative(void *data)
 
 	// Spawn objects correctly in reverse gravity.
 	// NOTE: Doing actor->z + actor->height is the bottom of the object while the object has reverse gravity. - Flame
-	// mo = P_SpawnMobj(actor->x + FixedMul(x<<FRACBITS, actor->scale),
-	// 	actor->y + FixedMul(y<<FRACBITS, actor->scale),
-	// 	(actor->eflags & MFE_VERTICALFLIP) ? ((actor->z + actor->height - FixedMul(mobjinfo[MT_PARTICLE].height, actor->scale)) - FixedMul(z<<FRACBITS, actor->scale)) : (actor->z + FixedMul(z<<FRACBITS, actor->scale)), MT_PARTICLE);
-	// if (P_MobjWasRemoved(mo))
-	// 	return;
-
-	// P_SetScale(mo, actor->scale, true);
-	// // Spawn objects with an angle matching the spawner's, rather than spawning Eastwards - Monster Iestyn
-	// mo->angle = actor->angle;
-
-	// if (actor->eflags & MFE_VERTICALFLIP)
-	// 	mo->flags2 |= MF2_OBJECTFLIP;
+	// Spawn objects with an angle matching the spawner's, rather than spawning Eastwards - Monster Iestyn
 	mo = P_SpawnMobjFromMobj(actor, x<<FRACBITS, y<<FRACBITS, z<<FRACBITS, MT_PARTICLE);
 	if (P_MobjWasRemoved(mo))
 		return;
