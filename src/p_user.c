@@ -2076,14 +2076,12 @@ void P_SetPower(player_t *player, powertype_t power, UINT16 value)
 //
 mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 {
-	mobj_t *ghost = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_GHOST);
+	mobj_t *ghost = P_SpawnScaledMobj(mobj->x, mobj->y, mobj->z, mobj->scale, MT_GHOST);
 	if (P_MobjWasRemoved(ghost))
 		return NULL;
 
 	P_SetTarget(&ghost->target, mobj);
 	P_SetTarget(&ghost->dontdrawforviewmobj, mobj); // Hide the ghost in first-person
-
-	P_SetScale(ghost, mobj->scale, true);
 
 	if (mobj->eflags & MFE_VERTICALFLIP)
 	{
@@ -2186,7 +2184,7 @@ void P_SpawnThokMobj(player_t *player)
 		else if (player->mo->eflags & MFE_VERTICALFLIP && zheight + FixedMul(mobjinfo[type].height, player->mo->scale) > player->mo->ceilingz && !(mobjinfo[type].flags & MF_NOCLIPHEIGHT))
 			zheight = player->mo->ceilingz - FixedMul(mobjinfo[type].height, player->mo->scale);
 
-		mobj = P_SpawnMobj(player->mo->x, player->mo->y, zheight, type);
+		mobj = P_SpawnScaledMobj(player->mo->x, player->mo->y, zheight, player->mo->scale, type);
 		if (P_MobjWasRemoved(mobj))
 			return;
 
@@ -2201,9 +2199,6 @@ void P_SpawnThokMobj(player_t *player)
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 			mobj->flags2 |= MF2_OBJECTFLIP;
 		mobj->eflags |= (player->mo->eflags & MFE_VERTICALFLIP);
-
-		// scale
-		P_SetScale(mobj, player->mo->scale, true);
 
 		if (type == MT_THOK) // spintrail-specific modification for MT_THOK
 		{
@@ -2250,7 +2245,7 @@ void P_SpawnSpinMobj(player_t *player, mobjtype_t type)
 		else if (player->mo->eflags & MFE_VERTICALFLIP && zheight + FixedMul(mobjinfo[type].height, player->mo->scale) > player->mo->ceilingz && !(mobjinfo[type].flags & MF_NOCLIPHEIGHT))
 			zheight = player->mo->ceilingz - FixedMul(mobjinfo[type].height, player->mo->scale);
 
-		mobj = P_SpawnMobj(player->mo->x, player->mo->y, zheight, type);
+		mobj = P_SpawnScaledMobj(player->mo->x, player->mo->y, zheight, player->mo->scale, type);
 		if (P_MobjWasRemoved(mobj))
 			return;
 
@@ -2265,9 +2260,6 @@ void P_SpawnSpinMobj(player_t *player, mobjtype_t type)
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 			mobj->flags2 |= MF2_OBJECTFLIP;
 		mobj->eflags |= (player->mo->eflags & MFE_VERTICALFLIP);
-
-		// scale
-		P_SetScale(mobj, player->mo->scale, true);
 
 		if (type == MT_THOK) // spintrail-specific modification for MT_THOK
 		{
@@ -3071,7 +3063,7 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 		? player->mo->z - FixedMul(8*FRACUNIT + mobjinfo[MT_DROWNNUMBERS].height, FixedMul(player->mo->scale, player->shieldscale))
 		: player->mo->z + player->mo->height + FixedMul(8*FRACUNIT, FixedMul(player->mo->scale, player->shieldscale));
 
-		mobj_t *numbermobj = P_SpawnMobj(player->mo->x, player->mo->y, height, MT_DROWNNUMBERS);
+		mobj_t *numbermobj = P_SpawnScaledMobj(player->mo->x, player->mo->y, height, player->mo->scale, MT_DROWNNUMBERS);
 		if (!P_MobjWasRemoved(numbermobj))
 		{
 			timeleft /= (2*TICRATE); // To be strictly accurate it'd need to be ((timeleft/TICRATE) - 1)/2, but integer division rounds down for us
@@ -3090,7 +3082,6 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 					P_SetMobjState(numbermobj, numbermobj->info->spawnstate+timeleft);
 
 				P_SetTarget(&numbermobj->target, player->mo);
-				P_SetScale(numbermobj, player->mo->scale, true);
 				numbermobj->threshold = 40;
 			}
 		}
@@ -3151,9 +3142,7 @@ static void P_CheckInvincibilityTimer(player_t *player)
 		player->mo->color = (UINT16)(SKINCOLOR_RUBY + (leveltime % (FIRSTSUPERCOLOR - SKINCOLOR_RUBY))); // Passes through all saturated colours
 	else if (leveltime % (TICRATE/7) == 0)
 	{
-		mobj_t *sparkle = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_IVSP);
-		if (!P_MobjWasRemoved(sparkle))
-			P_SetScale(sparkle, player->mo->scale, true);
+		P_SpawnScaledMobj(player->mo->x, player->mo->y, player->mo->z, player->mo->scale, MT_IVSP);
 	}
 
 	// Resume normal music stuff.
@@ -3204,10 +3193,11 @@ static void P_DoBubbleBreath(player_t *player)
 		if (player->powers[pw_underwater] && P_RandomChance((128-(player->powers[pw_underwater]/4))*FRACUNIT/256))
 		{
 			fixed_t r = player->mo->radius>>FRACBITS;
-			x += (P_RandomRange(r, -r)<<FRACBITS);
-			y += (P_RandomRange(r, -r)<<FRACBITS);
-			z += (P_RandomKey(player->mo->height>>FRACBITS)<<FRACBITS);
-			bubble = P_SpawnMobj(x, y, z, MT_WATERZAP);
+			bubble = P_SpawnMobjFromMobj(player->mo,
+				P_RandomRange(r, -r)<<FRACBITS,
+				P_RandomRange(r, -r)<<FRACBITS,
+				P_RandomKey(player->mo->height/player->mo->scale)<<FRACBITS,
+				MT_WATERZAP);
 			if (!P_MobjWasRemoved(bubble))
 				S_StartSoundFromMobj(bubble, sfx_beelec);
 		}
@@ -3220,16 +3210,13 @@ static void P_DoBubbleBreath(player_t *player)
 			z += FixedDiv(player->mo->height,5*(FRACUNIT/4));
 
 		if (P_RandomChance(FRACUNIT/16))
-			bubble = P_SpawnMobj(x, y, z, MT_SMALLBUBBLE);
+			bubble = P_SpawnScaledMobj(x, y, z, player->mo->scale, MT_SMALLBUBBLE);
 		else if (P_RandomChance(3*FRACUNIT/256))
-			bubble = P_SpawnMobj(x, y, z, MT_MEDIUMBUBBLE);
+			bubble = P_SpawnScaledMobj(x, y, z, player->mo->scale, MT_MEDIUMBUBBLE);
 	}
 
 	if (bubble)
-	{
 		bubble->threshold = 42;
-		P_SetScale(bubble, player->mo->scale, true);
-	}
 
 	// Tails stirs up the water while flying in it
 	if (player->powers[pw_tailsfly] && (leveltime & 1) && player->charability != CA_SWIM)
@@ -3245,19 +3232,15 @@ static void P_DoBubbleBreath(player_t *player)
 		else
 			stirwaterz = player->mo->z + (4<<FRACBITS);
 
-		bubble = P_SpawnMobj(
+		bubble = P_SpawnScaledMobj(
 			player->mo->x + stirwaterx,
 			player->mo->y + stirwatery,
-			stirwaterz, MT_SMALLBUBBLE);
-		if (!P_MobjWasRemoved(bubble))
-			P_SetScale(bubble, player->mo->scale, true);
+			stirwaterz, player->mo->scale, MT_SMALLBUBBLE);
 
-		bubble = P_SpawnMobj(
+		bubble = P_SpawnScaledMobj(
 			player->mo->x - stirwaterx,
 			player->mo->y - stirwatery,
-			stirwaterz, MT_SMALLBUBBLE);
-		if (!P_MobjWasRemoved(bubble))
-			P_SetScale(bubble, player->mo->scale, true);
+			stirwaterz, player->mo->scale, MT_SMALLBUBBLE);
 	}
 }
 
@@ -4395,7 +4378,7 @@ firenormal:
 				}
 
 				if (i&1)
-					P_SpawnMobj(mo->x, mo->y, mo->z, MT_SPARK);
+					P_SpawnScaledMobj(mo->x, mo->y, mo->z, mo->scale, MT_SPARK);
 
 				if (P_RailThinker(mo))
 					break; // mobj was removed (missile hit a wall) or couldn't move
@@ -4414,7 +4397,6 @@ firenormal:
 //
 static void P_DoSuperStuff(player_t *player)
 {
-	mobj_t *spark;
 	ticcmd_t *cmd = &player->cmd;
 	if (player->mo->state >= &states[S_PLAY_SUPER_TRANS1]
 	&& player->mo->state < &states[S_PLAY_SUPER_TRANS6])
@@ -4474,11 +4456,7 @@ static void P_DoSuperStuff(player_t *player)
 
 		if ((cmd->forwardmove != 0 || cmd->sidemove != 0 || player->powers[pw_carry])
 		&& !(leveltime % TICRATE) && (player->mo->momx || player->mo->momy))
-		{
-			spark = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, MT_SUPERSPARK);
-			if (!P_MobjWasRemoved(spark))
-				P_SetScale(spark, player->mo->scale, true);
-		}
+			P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_SUPERSPARK);
 
 		// Ran out of rings while super!
 		if (player->rings <= 0 || player->exiting)
@@ -7042,9 +7020,10 @@ static void P_DoNiGHTSCapsule(player_t *player)
 			// Spawn a 'pop' for every 2 tics
 			if (!((tictimer - firstpoptic) % 2))
 			{
-				mobj_t *explodemo = P_SpawnMobj(player->capsule->x + ((P_SignedRandom()/2)<<FRACBITS),
-					player->capsule->y + ((P_SignedRandom()/2)<<FRACBITS),
-					player->capsule->z + (player->capsule->height/2) + ((P_SignedRandom()/2)<<FRACBITS),
+				mobj_t *explodemo = P_SpawnMobjFromMobj(player->capsule,
+					(P_SignedRandom()/2)<<FRACBITS,
+					(P_SignedRandom()/2)<<FRACBITS,
+					player->capsule->info->height/2 + ((P_SignedRandom()/2)<<FRACBITS),
 					MT_SONIC3KBOSSEXPLODE);
 				if (!P_MobjWasRemoved(explodemo))
 					S_StartSoundFromMobj(explodemo,sfx_s3kb4);
@@ -7459,20 +7438,18 @@ static void P_NiGHTSMovement(player_t *player)
 		if (player->mo->eflags & MFE_VERTICALFLIP)
 			z -= FixedMul(mobjinfo[MT_NIGHTSPARKLE].height, player->mo->scale);
 
-		firstmobj = P_SpawnMobj(player->mo->x + P_ReturnThrustX(player->mo, player->mo->angle+ANGLE_90, spawndist), player->mo->y + P_ReturnThrustY(player->mo, player->mo->angle+ANGLE_90, spawndist), z, MT_NIGHTSPARKLE);
+		firstmobj = P_SpawnScaledMobj(player->mo->x + P_ReturnThrustX(player->mo, player->mo->angle+ANGLE_90, spawndist), player->mo->y + P_ReturnThrustY(player->mo, player->mo->angle+ANGLE_90, spawndist), z, player->mo->scale, MT_NIGHTSPARKLE);
 		if (!P_MobjWasRemoved(firstmobj))
 		{
 			P_SetTarget(&firstmobj->target, player->mo);
-			P_SetScale(firstmobj, player->mo->scale, true);
 			// Superloop turns sparkles red
 			if (player->powers[pw_nights_superloop])
 				P_SetMobjState(firstmobj, mobjinfo[MT_NIGHTSPARKLE].seestate);
 		}
-		secondmobj = P_SpawnMobj(player->mo->x + P_ReturnThrustX(player->mo, player->mo->angle-ANGLE_90, spawndist), player->mo->y + P_ReturnThrustY(player->mo, player->mo->angle-ANGLE_90, spawndist), z, MT_NIGHTSPARKLE);
+		secondmobj = P_SpawnScaledMobj(player->mo->x + P_ReturnThrustX(player->mo, player->mo->angle-ANGLE_90, spawndist), player->mo->y + P_ReturnThrustY(player->mo, player->mo->angle-ANGLE_90, spawndist), z, player->mo->scale, MT_NIGHTSPARKLE);
 		if (!P_MobjWasRemoved(secondmobj))
 		{
 			P_SetTarget(&secondmobj->target, player->mo);
-			P_SetScale(secondmobj, player->mo->scale, true);
 			// Superloop turns sparkles red
 			if (player->powers[pw_nights_superloop])
 				P_SetMobjState(secondmobj, mobjinfo[MT_NIGHTSPARKLE].seestate);
@@ -7482,12 +7459,11 @@ static void P_NiGHTSMovement(player_t *player)
 	// Paraloop helper is now separate from sparkles
 	// It also spawns every tic to avoid failed paraloops
 	{
-		mobj_t *helpermobj = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + player->mo->height/2, MT_NIGHTSLOOPHELPER);
+		mobj_t *helpermobj = P_SpawnScaledMobj(player->mo->x, player->mo->y, player->mo->z + player->mo->height/2, player->mo->scale, MT_NIGHTSLOOPHELPER);
 		if (!P_MobjWasRemoved(helpermobj))
 		{
 			helpermobj->fuse = player->mo->fuse = leveltime;
 			P_SetTarget(&helpermobj->target, player->mo);
-			P_SetScale(helpermobj, player->mo->scale, false);
 		}
 	}
 
@@ -7673,8 +7649,8 @@ static void P_NiGHTSMovement(player_t *player)
 	&& player->speed > 9000 && leveltime % (TICRATE/7) == 0 && !player->spectator)
 	{
 		mobjtype_t splishtype = (player->mo->eflags & MFE_TOUCHLAVA) ? MT_LAVASPLISH : MT_SPLISH;
-		mobj_t *water = P_SpawnMobj(player->mo->x, player->mo->y,
-			((player->mo->eflags & MFE_VERTICALFLIP) ? player->mo->waterbottom - FixedMul(mobjinfo[splishtype].height, player->mo->scale) : player->mo->watertop), splishtype);
+		mobj_t *water = P_SpawnScaledMobj(player->mo->x, player->mo->y,
+			((player->mo->eflags & MFE_VERTICALFLIP) ? player->mo->waterbottom - FixedMul(mobjinfo[splishtype].height, player->mo->scale) : player->mo->watertop), player->mo->scale, splishtype);
 		if (!P_MobjWasRemoved(water))
 		{
 			if (player->mo->eflags & MFE_GOOWATER)
@@ -7688,7 +7664,6 @@ static void P_NiGHTSMovement(player_t *player)
 				water->flags2 |= MF2_OBJECTFLIP;
 				water->eflags |= MFE_VERTICALFLIP;
 			}
-			P_SetScale(water, player->mo->scale, true);
 		}
 	}
 
@@ -7923,14 +7898,13 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 		travelangle = player->mo->angle + P_RandomRange(-limitangle, limitangle)*ANG1;
 		for (i = 0; i < numangles; i++)
 		{
-			flame = P_SpawnMobj(player->mo->x, player->mo->y, ground, MT_SPINFIRE);
+			flame = P_SpawnScaledMobj(player->mo->x, player->mo->y, ground, player->mo->scale, MT_SPINFIRE);
 			if (P_MobjWasRemoved(flame))
 				continue;
 			flame->flags &= ~MF_NOGRAVITY;
 			P_SetTarget(&flame->target, player->mo);
 			flame->angle = travelangle + i*(ANGLE_MAX/numangles);
 			flame->fuse = TICRATE*7; // takes about an extra second to hit the ground
-			P_SetScale(flame, player->mo->scale, true);
 			if (!(player->mo->flags2 & MF2_OBJECTFLIP) != !(player->powers[pw_gravityboots])) // take gravity boots into account
 				flame->flags2 |= MF2_OBJECTFLIP;
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
@@ -7961,13 +7935,12 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 					ground -= FixedMul(mobjinfo[MT_SPINFIRE].height, player->mo->scale);
 			}
 
-			flame = P_SpawnMobj(newx, newy, ground, MT_SPINFIRE);
+			flame = P_SpawnScaledMobj(newx, newy, ground, player->mo->scale, MT_SPINFIRE);
 			if (P_MobjWasRemoved(flame))
 				continue;
 			P_SetTarget(&flame->target, player->mo);
 			flame->angle = travelangle;
 			flame->fuse = TICRATE*6;
-			P_SetScale(flame, player->mo->scale, true);
 			if (!(player->mo->flags2 & MF2_OBJECTFLIP) != !(player->powers[pw_gravityboots])) // take gravity boots into account
 				flame->flags2 |= MF2_OBJECTFLIP;
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
@@ -8589,8 +8562,8 @@ void P_MovePlayer(player_t *player)
 	&& leveltime % (TICRATE/7) == 0 && player->mo->momz == 0 && !(player->pflags & PF_SLIDING) && !player->spectator)
 	{
 		mobjtype_t splishtype = (player->mo->eflags & MFE_TOUCHLAVA) ? MT_LAVASPLISH : MT_SPLISH;
-		mobj_t *water = P_SpawnMobj(player->mo->x - P_ReturnThrustX(NULL, player->mo->angle, player->mo->radius), player->mo->y - P_ReturnThrustY(NULL, player->mo->angle, player->mo->radius),
-			((player->mo->eflags & MFE_VERTICALFLIP) ? player->mo->waterbottom - FixedMul(mobjinfo[splishtype].height, player->mo->scale) : player->mo->watertop), splishtype);
+		mobj_t *water = P_SpawnScaledMobj(player->mo->x - P_ReturnThrustX(NULL, player->mo->angle, player->mo->radius), player->mo->y - P_ReturnThrustY(NULL, player->mo->angle, player->mo->radius),
+			((player->mo->eflags & MFE_VERTICALFLIP) ? player->mo->waterbottom - FixedMul(mobjinfo[splishtype].height, player->mo->scale) : player->mo->watertop), player->mo->scale, splishtype);
 		if (!P_MobjWasRemoved(water))
 		{
 			if (player->mo->eflags & MFE_GOOWATER)
@@ -8604,7 +8577,6 @@ void P_MovePlayer(player_t *player)
 				water->flags2 |= MF2_OBJECTFLIP;
 				water->eflags |= MFE_VERTICALFLIP;
 			}
-			P_SetScale(water, player->mo->scale, true);
 		}
 	}
 
@@ -11047,7 +11019,7 @@ static void P_SpawnSparks(mobj_t *mo, angle_t maindir)
 	fixed_t r3 = FRACUNIT*P_RandomRange(-1, 1);
 	fixed_t fm = (maindir >> ANGLETOFINESHIFT) & FINEMASK;
 
-	spark = P_SpawnMobj(mo->x - b2*s + b1*c, mo->y + b2*c + b1*s, mo->z, MT_MINECARTSPARK);
+	spark = P_SpawnScaledMobj(mo->x - b2*s + b1*c, mo->y + b2*c + b1*s, mo->z, mo->scale/4, MT_MINECARTSPARK);
 	if (P_MobjWasRemoved(spark))
 		return;
 	spark->momx = mo->momx + FixedMul(r1 + 8*FINECOSINE(fm), mo->scale);
@@ -11055,7 +11027,6 @@ static void P_SpawnSparks(mobj_t *mo, angle_t maindir)
 	spark->momz = mo->momz + FixedMul(r3, mo->scale);
 
 	P_Thrust(spark, R_PointToAngle2(mo->x, mo->y, spark->x, spark->y), FixedMul(8*FRACUNIT, mo->scale));
-	P_SetScale(spark, mo->scale/4, true);
 	spark->fuse = TICRATE/3;
 }
 
@@ -11651,8 +11622,7 @@ void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 				x = mo->x + radiusX + FixedMul(offsetH, factorX);
 				y = mo->y + radiusY + FixedMul(offsetH, factorY);
 				z = mo->z + heightoffset + offsetV;
-				bubble = P_SpawnMobj(x, y, z, MT_SMALLBUBBLE);
-				P_SetScale(bubble, mo->scale/2, true);
+				bubble = P_SpawnScaledMobj(x, y, z, mo->scale/2, MT_SMALLBUBBLE);
 				bubble->destscale = mo->scale;
 				bubble->scalespeed = FixedMul(bubble->scalespeed, mo->scale);
 				P_SetTarget(&bubble->dontdrawforviewmobj, mo); // Hide the bubble in first-person

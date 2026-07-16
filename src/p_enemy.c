@@ -16,7 +16,6 @@
 #include "doomdef.h"
 #include "g_game.h"
 #include "p_local.h"
-#include "p_mobj.h"
 #include "p_setup.h"
 #include "r_main.h"
 #include "r_state.h"
@@ -14486,12 +14485,11 @@ void A_MinecartSparkThink(void *data)
 
 	for (i = 1; i <= 8; i++)
 	{
-		mobj_t *trail = P_SpawnMobj(actor->x - dx*i, actor->y - dy*i, actor->z - dz*i, MT_PARTICLE);
+		mobj_t *trail = P_SpawnScaledMobj(actor->x - dx*i, actor->y - dy*i, actor->z - dz*i, actor->scale, MT_PARTICLE);
 		if (P_MobjWasRemoved(trail))
 			continue;
 		trail->tics = 2;
 		trail->sprite = actor->sprite;
-		P_SetScale(trail, actor->scale, true);
 	}
 }
 
