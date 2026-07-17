@@ -13445,14 +13445,11 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	case MT_JETTBOMBER:
 	case MT_JETTGUNNER:
 	case MT_ROBOHOOD:
+	case MT_CRUSHSTACEAN:
+	case MT_BANPYURA:
 	case MT_BUMBLEBORE:
 	case MT_CACOLANTERN:
 	case MT_PIAN:
-		if (mthing->args[0])
-			mobj->flags2 |= MF2_AMBUSH;
-		break;
-	case MT_CRUSHSTACEAN:
-	case MT_BANPYURA:
 		if (mthing->args[0])
 			mobj->flags2 |= MF2_AMBUSH;
 		break;

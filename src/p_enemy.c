@@ -4820,16 +4820,33 @@ void A_ThrownRing(void *data)
 
 	if (leveltime % (TICRATE/7) == 0)
 	{
+		mobj_t *ring = NULL;
+
 		if (actor->flags2 & MF2_EXPLOSION)
 		{
 			if (actor->momx != 0 || actor->momy != 0)
-				P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_SMOKE);
+				ring = P_SpawnScaledMobj(actor->x, actor->y,
+					(actor->eflags & MFE_VERTICALFLIP) ? actor->z + actor->height - FixedMul(mobjinfo[MT_SMOKE].height, actor->scale) : actor->z,
+					actor->scale, MT_SMOKE);
 			// Else spawn nothing because it's totally stationary and constantly smoking would be weird -SH
 		}
 		else if (actor->flags2 & MF2_AUTOMATIC)
 			P_SpawnGhostMobj(actor);
 		else if (!(actor->flags2 & MF2_RAILRING))
-			P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_SPARK);
+			ring = P_SpawnScaledMobj(actor->x, actor->y,
+				(actor->eflags & MFE_VERTICALFLIP) ? actor->z + actor->height - FixedMul(mobjinfo[MT_SPARK].height, actor->scale) : actor->z,
+				actor->scale, MT_SPARK);
+
+		if (!P_MobjWasRemoved(ring))
+		{
+			/*
+			P_SetTarget(&ring->target, actor);
+			ring->color = actor->color; //copy color
+			*/
+			if (actor->eflags & MFE_VERTICALFLIP)
+				ring->flags2 |= MF2_OBJECTFLIP;
+			ring->eflags |= (actor->eflags & MFE_VERTICALFLIP);
+		}
 	}
 
 	// A_GrenadeRing beeping lives once moooooore -SH
