@@ -663,10 +663,20 @@ static int lib_pSpawnMobj(lua_State *L)
 	fixed_t y = luaL_checkfixed(L, 2);
 	fixed_t z = luaL_checkfixed(L, 3);
 	mobjtype_t type = luaL_checkinteger(L, 4);
+	fixed_t scale = mapobjectscale;
 	NOHUD
 	INLEVEL
 	NOSPAWNNULL
-	LUA_PushUserdata(L, P_SpawnMobj(x, y, z, type, NULL), META_MOBJ);
+	if (!lua_isnoneornil(L, 5))
+	{
+		luaL_checktype(L, 5, LUA_TTABLE);
+
+		lua_getfield(L, 5, "scale");
+		if (!lua_isnil(L, -1))
+			scale = luaL_checkinteger(L, -1);
+		lua_pop(L, 1);
+	}
+	LUA_PushUserdata(L, P_SpawnScaledMobj(x, y, z, scale, type, NULL), META_MOBJ);
 	return 1;
 }
 
