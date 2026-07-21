@@ -16,7 +16,6 @@ Debian testing Clang:
 
   variables:
     CC: clang
-    CXX: clang
+    CXX: clang++
     WFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion -Werror -Wno-deprecated-non-prototype -Wno-single-bit-bitfield-constant-conversion
     CFLAGS: -Wno-cast-align -Wno-implicit-const-int-float-conversion -Werror -Wno-deprecated-non-prototype -Wno-single-bit-bitfield-constant-conversion
-    LDFLAGS: -Wl,-fuse-ld=gold

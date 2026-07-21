@@ -71,13 +71,11 @@ extern consvar_t cv_masterserver_timeout;
 extern consvar_t cv_masterserver_debug;
 extern consvar_t cv_masterserver_token;
 
-#ifdef HAVE_THREADS
 extern int           ms_QueryId;
 extern I_mutex       ms_QueryId_mutex;
 
 extern msg_server_t *ms_ServerList;
 extern I_mutex       ms_ServerList_mutex;
-#endif
 
 void RegisterServer(void);
 void UnregisterServer(void);
@@ -99,7 +97,6 @@ void HMS_set_api (char *api);
 int  HMS_fetch_rooms (int joining, int id);
 int  HMS_register (void);
 int  HMS_unlist (void);
-int  HMS_update (void);
 void HMS_list_servers (void);
 msg_server_t * HMS_fetch_servers (msg_server_t *list, int room, int id);
 int  HMS_compare_mod_version (char *buffer, size_t size_of_buffer);

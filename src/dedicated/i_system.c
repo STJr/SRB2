@@ -1181,10 +1181,8 @@ static void I_RegisterSignals (void)
 
 INT32 I_StartupSystem(void)
 {
-#ifdef HAVE_THREADS
 	I_start_threads();
 	I_AddExitFunc(I_stop_threads);
-#endif
 	I_StartupConsole();
 	I_RegisterSignals();
 #ifndef NOMUMBLE

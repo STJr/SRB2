@@ -110,7 +110,7 @@ int startswith (const char *base, const char *tag);
 int endswith (const char *base, const char *tag);
 char *xstrtok(char *line, const char *delims);
 
-#if defined (_WIN32) || defined (__HAIKU__)
+#if defined (_WIN32) || defined (__HAIKU__) || defined (__EMSCRIPTEN__)
 #define HAVE_DOSSTR_FUNCS
 #endif
 
@@ -145,24 +145,11 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 
 /* Boolean type definition */
 
-// Note: C++ bool and C99/C11 _Bool are NOT compatible.
-// Historically, boolean was win32 BOOL on Windows. For equivalence, it's now
-// int32_t. "true" and "false" are only declared for C code; in C++, conversion
-// between "bool" and "int32_t" takes over.
-#ifndef _WIN32
-typedef int32_t boolean;
-#else
-#define boolean BOOL
+#ifndef bool // backwards compat for older GNU
+#include <stdbool.h>
 #endif
 
-#ifndef __cplusplus
-#ifndef _WIN32
-enum {false = 0, true = 1};
-#else
-#define false FALSE
-#define true TRUE
-#endif
-#endif
+#define boolean bool
 
 /* 7.18.2.1  Limits of exact-width integer types */
 
@@ -245,6 +232,8 @@ enum {false = 0, true = 1};
 
 	#define FUNCNOINLINE __attribute__((noinline))
 
+	#define FUNCWARNRV __attribute__((warn_unused_result))
+
 	#if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 4) // >= GCC 4.4
 		#ifdef __i386__ // i386 only
 			#define FUNCTARGET(X)  __attribute__ ((__target__ (X)))
@@ -295,6 +284,9 @@ enum {false = 0, true = 1};
 #endif
 #ifndef FUNCTARGET
 #define FUNCTARGET(x)
+#endif
+#ifndef FUNCWARNRV
+#define FUNCWARNRV
 #endif
 #ifndef ATTRPACK
 #define ATTRPACK

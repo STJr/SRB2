@@ -34,9 +34,6 @@ void Command_Numnodes(void);
 
 extern INT32 mapchangepending;
 
-// Points inside doomcom
-extern doomdata_t *netbuffer;
-
 #define BASEPACKETSIZE      offsetof(doomdata_t, u)
 #define BASESERVERTICSSIZE  offsetof(doomdata_t, u.serverpak.cmds[0])
 
@@ -71,6 +68,7 @@ extern tic_t connectiontimeout;
 extern UINT16 pingmeasurecount;
 extern UINT32 realpingtable[MAXPLAYERS];
 extern UINT32 playerpingtable[MAXPLAYERS];
+extern UINT32 playerpacketlosstable[MAXPLAYERS];
 extern tic_t servermaxping;
 
 extern consvar_t cv_netticbuffer, cv_resynchattempts, cv_blamecfail, cv_playbackspeed, cv_idletime, cv_idleaction, cv_dedicatedidletime;
@@ -121,15 +119,19 @@ SINT8 nametonum(const char *name);
 extern char motd[254], server_context[8];
 extern UINT8 playernode[MAXPLAYERS];
 
+extern plrinfo_pak playerinfo[MAXPLAYERS];
+extern SINT8 joinnode;
+
 INT32 D_NumPlayers(void);
 INT32 D_NumNodes(boolean skiphost);
 INT32 D_NumBots(void);
 
 tic_t GetLag(INT32 node);
 
-void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest);
+void D_SHA256PasswordPass(const UINT8 *buffer, size_t len, const char *salt, UINT8 dest[static 32]);
 
-extern UINT8 (*adminpassmd5)[16];
+extern char *reqpass;
+extern char **adminpass;
 extern UINT32 adminpasscount;
 
 extern boolean hu_stopped;

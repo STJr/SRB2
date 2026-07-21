@@ -19,17 +19,10 @@
 // Must be a power of two
 #define TEXTCMD_HASH_SIZE 4
 
-typedef struct textcmdplayer_s
-{
-	INT32 playernum;
-	UINT8 cmd[MAXTEXTCMD];
-	struct textcmdplayer_s *next;
-} textcmdplayer_t;
-
 typedef struct textcmdtic_s
 {
 	tic_t tic;
-	textcmdplayer_t *playercmds[TEXTCMD_HASH_SIZE];
+	UINT8 *playercmds[MAXPLAYERS];
 	struct textcmdtic_s *next;
 } textcmdtic_t;
 
@@ -56,7 +49,7 @@ void ExtraDataTicker(void);
 // used at txtcmds received to check packetsize bound
 size_t TotalTextCmdPerTic(tic_t tic);
 
-void PT_TextCmd(SINT8 node, INT32 netconsole);
+void PT_TextCmd(doomcom_t *doomcom, INT32 netconsole);
 void SV_WriteNetCommandsForTic(tic_t tic, UINT8 **buf);
 void CL_CopyNetCommandsFromServerPacket(tic_t tic, UINT8 **buf);
 void CL_SendNetCommands(void);

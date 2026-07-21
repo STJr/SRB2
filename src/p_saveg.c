@@ -34,6 +34,7 @@
 #include "r_sky.h"
 #include "p_polyobj.h"
 #include "lua_script.h"
+#include "lua_archive.h"
 #include "p_slopes.h"
 #include "hu_stuff.h"
 
@@ -302,7 +303,19 @@ typedef enum
 	DRONE      = 0x80,
 } player_saveflags;
 
-static inline void P_ArchivePlayer(save_t *save_p)
+FUNCINLINE static ATTRINLINE UINT32 SavePlayer(const player_t *player)
+{
+	if (player) return (UINT32)(player - players);
+	return 0xFFFFFFFF;
+}
+
+FUNCINLINE static ATTRINLINE player_t *LoadPlayer(UINT32 player)
+{
+	if (player >= MAXPLAYERS) return NULL;
+	return &players[player];
+}
+
+FUNCINLINE static ATTRINLINE void P_ArchivePlayer(save_t *save_p)
 {
 	const player_t *player = &players[consoleplayer];
 	SINT8 pllives = player->lives;
@@ -334,7 +347,7 @@ static inline void P_ArchivePlayer(save_t *save_p)
 	P_WriteINT32(save_p, player->continues);
 }
 
-static inline void P_UnArchivePlayer(save_t *save_p)
+FUNCINLINE static ATTRINLINE void P_UnArchivePlayer(save_t *save_p)
 {
 #ifdef NEWSKINSAVES
 	INT16 backwardsCompat = P_ReadUINT16(save_p);
@@ -376,7 +389,7 @@ static void P_NetArchivePlayers(save_t *save_p)
 	{
 		P_WriteSINT8(save_p, (SINT8)adminplayers[i]);
 
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			continue;
 
 		flags = 0;
@@ -441,6 +454,7 @@ static void P_NetArchivePlayers(save_t *save_p)
 		// Bots //
 		//////////
 		P_WriteUINT8(save_p, players[i].bot);
+		P_WriteUINT32(save_p, SavePlayer(players[i].botleader));
 		P_WriteUINT8(save_p, players[i].botmem.lastForward);
 		P_WriteUINT8(save_p, players[i].botmem.lastBlocked);
 		P_WriteUINT8(save_p, players[i].botmem.catchup_tics);
@@ -609,7 +623,7 @@ static void P_NetUnArchivePlayers(save_t *save_p)
 		// Do NOT memset player struct to 0
 		// other areas may initialize data elsewhere
 		//memset(&players[i], 0, sizeof (player_t));
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			continue;
 
 		// NOTE: sending tics should (hopefully) no longer be necessary
@@ -672,6 +686,7 @@ static void P_NetUnArchivePlayers(save_t *save_p)
 		// Bots //
 		//////////
 		players[i].bot = P_ReadUINT8(save_p);
+		players[i].botleader = LoadPlayer(P_ReadUINT32(save_p));
 
 		players[i].botmem.lastForward = P_ReadUINT8(save_p);
 		players[i].botmem.lastBlocked = P_ReadUINT8(save_p);
@@ -727,7 +742,7 @@ static void P_NetUnArchivePlayers(save_t *save_p)
 		players[i].bumpertime = P_ReadUINT32(save_p);
 		players[i].drillmeter = P_ReadINT32(save_p);
 		players[i].drilldelay = P_ReadUINT8(save_p);
-		players[i].bonustime = (boolean)P_ReadUINT8(save_p);
+		players[i].bonustime = P_ReadUINT8(save_p);
 		players[i].oldscale = P_ReadFixed(save_p);
 		players[i].mare = P_ReadUINT8(save_p);
 		players[i].marelap = P_ReadUINT8(save_p);
@@ -2045,7 +2060,8 @@ typedef enum
 	MD2_DRAWONLYFORPLAYER   = 1<<24,
 	MD2_DONTDRAWFORVIEWMOBJ = 1<<25,
 	MD2_TRANSLATION         = 1<<26,
-	MD2_ALPHA               = 1<<27
+	MD2_ALPHA               = 1<<27,
+	MD2_GRAVITY             = 1<<28
 } mobj_diff2_t;
 
 typedef enum
@@ -2094,7 +2110,7 @@ typedef enum
 	tc_end
 } specials_e;
 
-static inline UINT32 SaveMobjnum(const mobj_t *mobj)
+FUNCINLINE static ATTRINLINE UINT32 SaveMobjnum(const mobj_t *mobj)
 {
 	if (mobj) return mobj->mobjnum;
 	return 0;
@@ -2109,12 +2125,6 @@ static UINT32 SaveSector(const sector_t *sector)
 static UINT32 SaveLine(const line_t *line)
 {
 	if (line) return (UINT32)(line - lines);
-	return 0xFFFFFFFF;
-}
-
-static inline UINT32 SavePlayer(const player_t *player)
-{
-	if (player) return (UINT32)(player - players);
 	return 0xFFFFFFFF;
 }
 
@@ -2290,6 +2300,8 @@ static void SaveMobjThinker(save_t *save_p, const thinker_t *th, const UINT8 typ
 		diff2 |= MD2_DISPOFFSET;
 	if (mobj->alpha != FRACUNIT)
 		diff2 |= MD2_ALPHA;
+	if (mobj->gravity != FRACUNIT)
+		diff2 |= MD2_GRAVITY;
 
 	if (diff2 != 0)
 		diff |= MD_MORE;
@@ -2475,6 +2487,8 @@ static void SaveMobjThinker(save_t *save_p, const thinker_t *th, const UINT8 typ
 		P_WriteUINT16(save_p, mobj->translation);
 	if (diff2 & MD2_ALPHA)
 		P_WriteFixed(save_p, mobj->alpha);
+	if (diff2 & MD2_GRAVITY)
+		P_WriteFixed(save_p, mobj->gravity);
 
 	P_WriteUINT32(save_p, mobj->mobjnum);
 }
@@ -2652,7 +2666,7 @@ static void SaveGlowThinker(save_t *save_p, const thinker_t *th, const UINT8 typ
 	P_WriteINT16(save_p, ht->speed);
 }
 
-static inline void SaveFireflickerThinker(save_t *save_p, const thinker_t *th, const UINT8 type)
+FUNCINLINE static ATTRINLINE void SaveFireflickerThinker(save_t *save_p, const thinker_t *th, const UINT8 type)
 {
 	const fireflicker_t *ht = (const void *)th;
 	P_WriteUINT8(save_p, type);
@@ -2702,7 +2716,7 @@ static void SaveCrumbleThinker(save_t *save_p, const thinker_t *th, const UINT8 
 	P_WriteUINT8(save_p, ht->flags);
 }
 
-static inline void SaveScrollThinker(save_t *save_p, const thinker_t *th, const UINT8 type)
+FUNCINLINE static ATTRINLINE void SaveScrollThinker(save_t *save_p, const thinker_t *th, const UINT8 type)
 {
 	const scroll_t *ht = (const void *)th;
 	P_WriteUINT8(save_p, type);
@@ -2718,7 +2732,7 @@ static inline void SaveScrollThinker(save_t *save_p, const thinker_t *th, const 
 	P_WriteUINT8(save_p, ht->type);
 }
 
-static inline void SaveFrictionThinker(save_t *save_p, const thinker_t *th, const UINT8 type)
+FUNCINLINE static ATTRINLINE void SaveFrictionThinker(save_t *save_p, const thinker_t *th, const UINT8 type)
 {
 	const friction_t *ht = (const void *)th;
 	P_WriteUINT8(save_p, type);
@@ -2729,7 +2743,7 @@ static inline void SaveFrictionThinker(save_t *save_p, const thinker_t *th, cons
 	P_WriteUINT8(save_p, ht->roverfriction);
 }
 
-static inline void SavePusherThinker(save_t *save_p, const thinker_t *th, const UINT8 type)
+FUNCINLINE static ATTRINLINE void SavePusherThinker(save_t *save_p, const thinker_t *th, const UINT8 type)
 {
 	const pusher_t *ht = (const void *)th;
 	P_WriteUINT8(save_p, type);
@@ -2834,7 +2848,7 @@ static void SavePlaneDisplaceThinker(save_t *save_p, const thinker_t *th, const 
 	P_WriteUINT8(save_p, ht->type);
 }
 
-static inline void SaveDynamicLineSlopeThinker(save_t *save_p, const thinker_t *th, const UINT8 type)
+FUNCINLINE static ATTRINLINE void SaveDynamicLineSlopeThinker(save_t *save_p, const thinker_t *th, const UINT8 type)
 {
 	const dynlineplanethink_t* ht = (const void*)th;
 
@@ -2845,7 +2859,7 @@ static inline void SaveDynamicLineSlopeThinker(save_t *save_p, const thinker_t *
 	P_WriteFixed(save_p, ht->extent);
 }
 
-static inline void SaveDynamicVertexSlopeThinker(save_t *save_p, const thinker_t *th, const UINT8 type)
+FUNCINLINE static ATTRINLINE void SaveDynamicVertexSlopeThinker(save_t *save_p, const thinker_t *th, const UINT8 type)
 {
 	size_t i;
 	const dynvertexplanethink_t* ht = (const void*)th;
@@ -2860,7 +2874,7 @@ static inline void SaveDynamicVertexSlopeThinker(save_t *save_p, const thinker_t
 	P_WriteUINT8(save_p, ht->relative);
 }
 
-static inline void SavePolyrotatetThinker(save_t *save_p, const thinker_t *th, const UINT8 type)
+FUNCINLINE static ATTRINLINE void SavePolyrotatetThinker(save_t *save_p, const thinker_t *th, const UINT8 type)
 {
 	const polyrotate_t *ht = (const void *)th;
 	P_WriteUINT8(save_p, type);
@@ -2978,213 +2992,213 @@ static void P_NetArchiveThinkers(save_t *save_p)
 		// save off the current thinkers
 		for (th = thlist[i].next; th != &thlist[i]; th = th->next)
 		{
-			if (!(th->removing || th->function.acp1 == (actionf_p1)P_NullPrecipThinker))
+			if (!(th->removing || th->function == (actionf_p1)P_NullPrecipThinker))
 				numsaved++;
 
-			if (th->function.acp1 == (actionf_p1)P_MobjThinker)
+			if (th->function == (actionf_p1)P_MobjThinker)
 			{
 				SaveMobjThinker(save_p, th, tc_mobj);
 				continue;
 			}
 	#ifdef PARANOIA
-			else if (th->function.acp1 == (actionf_p1)P_NullPrecipThinker);
+			else if (th->function == (actionf_p1)P_NullPrecipThinker);
 	#endif
-			else if (th->function.acp1 == (actionf_p1)T_MoveCeiling)
+			else if (th->function == (actionf_p1)T_MoveCeiling)
 			{
 				SaveCeilingThinker(save_p, th, tc_ceiling);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_CrushCeiling)
+			else if (th->function == (actionf_p1)T_CrushCeiling)
 			{
 				SaveCeilingThinker(save_p, th, tc_crushceiling);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_MoveFloor)
+			else if (th->function == (actionf_p1)T_MoveFloor)
 			{
 				SaveFloormoveThinker(save_p, th, tc_floor);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_LightningFlash)
+			else if (th->function == (actionf_p1)T_LightningFlash)
 			{
 				SaveLightflashThinker(save_p, th, tc_flash);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_StrobeFlash)
+			else if (th->function == (actionf_p1)T_StrobeFlash)
 			{
 				SaveStrobeThinker(save_p, th, tc_strobe);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_Glow)
+			else if (th->function == (actionf_p1)T_Glow)
 			{
 				SaveGlowThinker(save_p, th, tc_glow);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_FireFlicker)
+			else if (th->function == (actionf_p1)T_FireFlicker)
 			{
 				SaveFireflickerThinker(save_p, th, tc_fireflicker);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_MoveElevator)
+			else if (th->function == (actionf_p1)T_MoveElevator)
 			{
 				SaveElevatorThinker(save_p, th, tc_elevator);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_ContinuousFalling)
+			else if (th->function == (actionf_p1)T_ContinuousFalling)
 			{
 				SaveContinuousFallThinker(save_p, th, tc_continuousfalling);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_ThwompSector)
+			else if (th->function == (actionf_p1)T_ThwompSector)
 			{
 				SaveThwompThinker(save_p, th, tc_thwomp);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_NoEnemiesSector)
+			else if (th->function == (actionf_p1)T_NoEnemiesSector)
 			{
 				SaveNoEnemiesThinker(save_p, th, tc_noenemies);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_EachTimeThinker)
+			else if (th->function == (actionf_p1)T_EachTimeThinker)
 			{
 				SaveEachTimeThinker(save_p, th, tc_eachtime);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_RaiseSector)
+			else if (th->function == (actionf_p1)T_RaiseSector)
 			{
 				SaveRaiseThinker(save_p, th, tc_raisesector);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_CameraScanner)
+			else if (th->function == (actionf_p1)T_CameraScanner)
 			{
 				SaveElevatorThinker(save_p, th, tc_camerascanner);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_Scroll)
+			else if (th->function == (actionf_p1)T_Scroll)
 			{
 				SaveScrollThinker(save_p, th, tc_scroll);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_Friction)
+			else if (th->function == (actionf_p1)T_Friction)
 			{
 				SaveFrictionThinker(save_p, th, tc_friction);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_Pusher)
+			else if (th->function == (actionf_p1)T_Pusher)
 			{
 				SavePusherThinker(save_p, th, tc_pusher);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_BounceCheese)
+			else if (th->function == (actionf_p1)T_BounceCheese)
 			{
 				SaveBounceCheeseThinker(save_p, th, tc_bouncecheese);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_StartCrumble)
+			else if (th->function == (actionf_p1)T_StartCrumble)
 			{
 				SaveCrumbleThinker(save_p, th, tc_startcrumble);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_MarioBlock)
+			else if (th->function == (actionf_p1)T_MarioBlock)
 			{
 				SaveMarioBlockThinker(save_p, th, tc_marioblock);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_MarioBlockChecker)
+			else if (th->function == (actionf_p1)T_MarioBlockChecker)
 			{
 				SaveMarioCheckThinker(save_p, th, tc_marioblockchecker);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_FloatSector)
+			else if (th->function == (actionf_p1)T_FloatSector)
 			{
 				SaveFloatThinker(save_p, th, tc_floatsector);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_LaserFlash)
+			else if (th->function == (actionf_p1)T_LaserFlash)
 			{
 				SaveLaserThinker(save_p, th, tc_laserflash);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_LightFade)
+			else if (th->function == (actionf_p1)T_LightFade)
 			{
 				SaveLightlevelThinker(save_p, th, tc_lightfade);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_ExecutorDelay)
+			else if (th->function == (actionf_p1)T_ExecutorDelay)
 			{
 				SaveExecutorThinker(save_p, th, tc_executor);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_Disappear)
+			else if (th->function == (actionf_p1)T_Disappear)
 			{
 				SaveDisappearThinker(save_p, th, tc_disappear);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_Fade)
+			else if (th->function == (actionf_p1)T_Fade)
 			{
 				SaveFadeThinker(save_p, th, tc_fade);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_FadeColormap)
+			else if (th->function == (actionf_p1)T_FadeColormap)
 			{
 				SaveFadeColormapThinker(save_p, th, tc_fadecolormap);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_PlaneDisplace)
+			else if (th->function == (actionf_p1)T_PlaneDisplace)
 			{
 				SavePlaneDisplaceThinker(save_p, th, tc_planedisplace);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_PolyObjRotate)
+			else if (th->function == (actionf_p1)T_PolyObjRotate)
 			{
 				SavePolyrotatetThinker(save_p, th, tc_polyrotate);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_PolyObjMove)
+			else if (th->function == (actionf_p1)T_PolyObjMove)
 			{
 				SavePolymoveThinker(save_p, th, tc_polymove);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_PolyObjWaypoint)
+			else if (th->function == (actionf_p1)T_PolyObjWaypoint)
 			{
 				SavePolywaypointThinker(save_p, th, tc_polywaypoint);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_PolyDoorSlide)
+			else if (th->function == (actionf_p1)T_PolyDoorSlide)
 			{
 				SavePolyslidedoorThinker(save_p, th, tc_polyslidedoor);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_PolyDoorSwing)
+			else if (th->function == (actionf_p1)T_PolyDoorSwing)
 			{
 				SavePolyswingdoorThinker(save_p, th, tc_polyswingdoor);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_PolyObjFlag)
+			else if (th->function == (actionf_p1)T_PolyObjFlag)
 			{
 				SavePolymoveThinker(save_p, th, tc_polyflag);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_PolyObjDisplace)
+			else if (th->function == (actionf_p1)T_PolyObjDisplace)
 			{
 				SavePolydisplaceThinker(save_p, th, tc_polydisplace);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_PolyObjRotDisplace)
+			else if (th->function == (actionf_p1)T_PolyObjRotDisplace)
 			{
 				SavePolyrotdisplaceThinker(save_p, th, tc_polyrotdisplace);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_PolyObjFade)
+			else if (th->function == (actionf_p1)T_PolyObjFade)
 			{
 				SavePolyfadeThinker(save_p, th, tc_polyfade);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_DynamicSlopeLine)
+			else if (th->function == (actionf_p1)T_DynamicSlopeLine)
 			{
 				SaveDynamicLineSlopeThinker(save_p, th, tc_dynslopeline);
 				continue;
 			}
-			else if (th->function.acp1 == (actionf_p1)T_DynamicSlopeVert)
+			else if (th->function == (actionf_p1)T_DynamicSlopeVert)
 			{
 				SaveDynamicVertexSlopeThinker(save_p, th, tc_dynslopevert);
 				continue;
@@ -3225,7 +3239,7 @@ mobj_t *P_FindNewPosition(UINT32 oldposition)
 	return NULL;
 }
 
-static inline mobj_t *LoadMobj(UINT32 mobjnum)
+FUNCINLINE static ATTRINLINE mobj_t *LoadMobj(UINT32 mobjnum)
 {
 	if (mobjnum == 0) return NULL;
 	return (mobj_t *)(size_t)mobjnum;
@@ -3243,13 +3257,7 @@ static line_t *LoadLine(UINT32 line)
 	return &lines[line];
 }
 
-static inline player_t *LoadPlayer(UINT32 player)
-{
-	if (player >= MAXPLAYERS) return NULL;
-	return &players[player];
-}
-
-static inline pslope_t *LoadSlope(UINT32 slopeid)
+FUNCINLINE static ATTRINLINE pslope_t* LoadSlope(UINT32 slopeid)
 {
 	pslope_t *p = slopelist;
 	if (slopeid > slopecount) return NULL;
@@ -3316,7 +3324,7 @@ static thinker_t* LoadMobjThinker(save_t *save_p, actionf_p1 thinker)
 		mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
 
 	// declare this as a valid mobj as soon as possible.
-	mobj->thinker.function.acp1 = thinker;
+	mobj->thinker.function = thinker;
 
 	mobj->z = z;
 	mobj->floorz = floorz;
@@ -3544,6 +3552,10 @@ static thinker_t* LoadMobjThinker(save_t *save_p, actionf_p1 thinker)
 		mobj->alpha = P_ReadFixed(save_p);
 	else
 		mobj->alpha = FRACUNIT;
+	if (diff2 & MD2_GRAVITY)
+		mobj->gravity = P_ReadFixed(save_p);
+	else
+		mobj->gravity = FRACUNIT;
 
 	if (diff & MD_REDFLAG)
 	{
@@ -3591,7 +3603,7 @@ static thinker_t* LoadMobjThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadNoEnemiesThinker(save_t *save_p, actionf_p1 thinker)
 {
 	noenemies_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->sourceline = LoadLine(P_ReadUINT32(save_p));
 	return &ht->thinker;
 }
@@ -3599,7 +3611,7 @@ static thinker_t* LoadNoEnemiesThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadBounceCheeseThinker(save_t *save_p, actionf_p1 thinker)
 {
 	bouncecheese_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->sourceline = LoadLine(P_ReadUINT32(save_p));
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
 	ht->speed = P_ReadFixed(save_p);
@@ -3617,7 +3629,7 @@ static thinker_t* LoadBounceCheeseThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadContinuousFallThinker(save_t *save_p, actionf_p1 thinker)
 {
 	continuousfall_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
 	ht->speed = P_ReadFixed(save_p);
 	ht->direction = P_ReadINT32(save_p);
@@ -3637,7 +3649,7 @@ static thinker_t* LoadContinuousFallThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadMarioBlockThinker(save_t *save_p, actionf_p1 thinker)
 {
 	mariothink_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
 	ht->speed = P_ReadFixed(save_p);
 	ht->direction = P_ReadINT32(save_p);
@@ -3657,7 +3669,7 @@ static thinker_t* LoadMarioBlockThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadMarioCheckThinker(save_t *save_p, actionf_p1 thinker)
 {
 	mariocheck_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->sourceline = LoadLine(P_ReadUINT32(save_p));
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
 	return &ht->thinker;
@@ -3666,7 +3678,7 @@ static thinker_t* LoadMarioCheckThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadThwompThinker(save_t *save_p, actionf_p1 thinker)
 {
 	thwomp_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->sourceline = LoadLine(P_ReadUINT32(save_p));
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
 	ht->crushspeed = P_ReadFixed(save_p);
@@ -3690,7 +3702,7 @@ static thinker_t* LoadThwompThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadFloatThinker(save_t *save_p, actionf_p1 thinker)
 {
 	floatthink_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->sourceline = LoadLine(P_ReadUINT32(save_p));
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
 	ht->tag = P_ReadINT16(save_p);
@@ -3701,7 +3713,7 @@ static thinker_t* LoadEachTimeThinker(save_t *save_p, actionf_p1 thinker)
 {
 	size_t i;
 	eachtime_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->sourceline = LoadLine(P_ReadUINT32(save_p));
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -3714,7 +3726,7 @@ static thinker_t* LoadEachTimeThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadRaiseThinker(save_t *save_p, actionf_p1 thinker)
 {
 	raise_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->tag = P_ReadINT16(save_p);
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
 	ht->ceilingbottom = P_ReadFixed(save_p);
@@ -3729,7 +3741,7 @@ static thinker_t* LoadRaiseThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadCeilingThinker(save_t *save_p, actionf_p1 thinker)
 {
 	ceiling_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->type = P_ReadUINT8(save_p);
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
 	ht->bottomheight = P_ReadFixed(save_p);
@@ -3751,7 +3763,7 @@ static thinker_t* LoadCeilingThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadFloormoveThinker(save_t *save_p, actionf_p1 thinker)
 {
 	floormove_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->type = P_ReadUINT8(save_p);
 	ht->crush = P_ReadUINT8(save_p);
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
@@ -3772,7 +3784,7 @@ static thinker_t* LoadFloormoveThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadLightflashThinker(save_t *save_p, actionf_p1 thinker)
 {
 	lightflash_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
 	ht->maxlight = P_ReadINT32(save_p);
 	ht->minlight = P_ReadINT32(save_p);
@@ -3784,7 +3796,7 @@ static thinker_t* LoadLightflashThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadStrobeThinker(save_t *save_p, actionf_p1 thinker)
 {
 	strobe_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
 	ht->count = P_ReadINT32(save_p);
 	ht->minlight = P_ReadINT16(save_p);
@@ -3799,7 +3811,7 @@ static thinker_t* LoadStrobeThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadGlowThinker(save_t *save_p, actionf_p1 thinker)
 {
 	glow_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
 	ht->minlight = P_ReadINT16(save_p);
 	ht->maxlight = P_ReadINT16(save_p);
@@ -3813,7 +3825,7 @@ static thinker_t* LoadGlowThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadFireflickerThinker(save_t *save_p, actionf_p1 thinker)
 {
 	fireflicker_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
 	ht->count = P_ReadINT32(save_p);
 	ht->resetcount = P_ReadINT32(save_p);
@@ -3827,7 +3839,7 @@ static thinker_t* LoadFireflickerThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadElevatorThinker(save_t *save_p, actionf_p1 thinker, boolean setplanedata)
 {
 	elevator_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->type = P_ReadUINT8(save_p);
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
 	ht->actionsector = LoadSector(P_ReadUINT32(save_p));
@@ -3857,7 +3869,7 @@ static thinker_t* LoadElevatorThinker(save_t *save_p, actionf_p1 thinker, boolea
 static thinker_t* LoadCrumbleThinker(save_t *save_p, actionf_p1 thinker)
 {
 	crumble_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->sourceline = LoadLine(P_ReadUINT32(save_p));
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
 	ht->actionsector = LoadSector(P_ReadUINT32(save_p));
@@ -3879,7 +3891,7 @@ static thinker_t* LoadCrumbleThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadScrollThinker(save_t *save_p, actionf_p1 thinker)
 {
 	scroll_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->dx = P_ReadFixed(save_p);
 	ht->dy = P_ReadFixed(save_p);
 	ht->affectee = P_ReadINT32(save_p);
@@ -3893,10 +3905,10 @@ static thinker_t* LoadScrollThinker(save_t *save_p, actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadFrictionThinker(save_t *save_p, actionf_p1 thinker)
+FUNCINLINE static ATTRINLINE thinker_t *LoadFrictionThinker(save_t *save_p, actionf_p1 thinker)
 {
 	friction_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->friction = P_ReadINT32(save_p);
 	ht->movefactor = P_ReadINT32(save_p);
 	ht->affectee = P_ReadINT32(save_p);
@@ -3908,7 +3920,7 @@ static inline thinker_t* LoadFrictionThinker(save_t *save_p, actionf_p1 thinker)
 static thinker_t* LoadPusherThinker(save_t *save_p, actionf_p1 thinker)
 {
 	pusher_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->type = P_ReadUINT8(save_p);
 	ht->x_mag = P_ReadFixed(save_p);
 	ht->y_mag = P_ReadFixed(save_p);
@@ -3921,20 +3933,20 @@ static thinker_t* LoadPusherThinker(save_t *save_p, actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadLaserThinker(save_t *save_p, actionf_p1 thinker)
+FUNCINLINE static ATTRINLINE thinker_t *LoadLaserThinker(save_t *save_p, actionf_p1 thinker)
 {
 	laserthink_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->tag = P_ReadINT16(save_p);
 	ht->sourceline = LoadLine(P_ReadUINT32(save_p));
 	ht->nobosses = P_ReadUINT8(save_p);
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadLightlevelThinker(save_t *save_p, actionf_p1 thinker)
+FUNCINLINE static ATTRINLINE thinker_t *LoadLightlevelThinker(save_t *save_p, actionf_p1 thinker)
 {
 	lightlevel_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
 	ht->sourcelevel = P_ReadINT16(save_p);
 	ht->destlevel = P_ReadINT16(save_p);
@@ -3946,10 +3958,10 @@ static inline thinker_t* LoadLightlevelThinker(save_t *save_p, actionf_p1 thinke
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadExecutorThinker(save_t *save_p, actionf_p1 thinker)
+FUNCINLINE static ATTRINLINE thinker_t *LoadExecutorThinker(save_t *save_p, actionf_p1 thinker)
 {
 	executor_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->line = LoadLine(P_ReadUINT32(save_p));
 	ht->caller = LoadMobj(P_ReadUINT32(save_p));
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
@@ -3957,10 +3969,10 @@ static inline thinker_t* LoadExecutorThinker(save_t *save_p, actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadDisappearThinker(save_t *save_p, actionf_p1 thinker)
+FUNCINLINE static ATTRINLINE thinker_t *LoadDisappearThinker(save_t *save_p, actionf_p1 thinker)
 {
 	disappear_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->appeartime = P_ReadUINT32(save_p);
 	ht->disappeartime = P_ReadUINT32(save_p);
 	ht->offset = P_ReadUINT32(save_p);
@@ -3971,11 +3983,11 @@ static inline thinker_t* LoadDisappearThinker(save_t *save_p, actionf_p1 thinker
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadFadeThinker(save_t *save_p, actionf_p1 thinker)
+FUNCINLINE static ATTRINLINE thinker_t *LoadFadeThinker(save_t *save_p, actionf_p1 thinker)
 {
 	sector_t *ss;
 	fade_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->dest_exc = GetNetColormapFromList(P_ReadUINT32(save_p));
 	ht->sectornum = P_ReadUINT32(save_p);
 	ht->ffloornum = P_ReadUINT32(save_p);
@@ -3984,7 +3996,7 @@ static inline thinker_t* LoadFadeThinker(save_t *save_p, actionf_p1 thinker)
 	ht->destvalue = P_ReadINT16(save_p);
 	ht->destlightlevel = P_ReadINT16(save_p);
 	ht->speed = P_ReadINT16(save_p);
-	ht->ticbased = (boolean)P_ReadUINT8(save_p);
+	ht->ticbased = P_ReadUINT8(save_p);
 	ht->timer = P_ReadINT32(save_p);
 	ht->doexists = P_ReadUINT8(save_p);
 	ht->dotranslucent = P_ReadUINT8(save_p);
@@ -4013,14 +4025,14 @@ static inline thinker_t* LoadFadeThinker(save_t *save_p, actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadFadeColormapThinker(save_t *save_p, actionf_p1 thinker)
+FUNCINLINE static ATTRINLINE thinker_t *LoadFadeColormapThinker(save_t *save_p, actionf_p1 thinker)
 {
 	fadecolormap_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->sector = LoadSector(P_ReadUINT32(save_p));
 	ht->source_exc = GetNetColormapFromList(P_ReadUINT32(save_p));
 	ht->dest_exc = GetNetColormapFromList(P_ReadUINT32(save_p));
-	ht->ticbased = (boolean)P_ReadUINT8(save_p);
+	ht->ticbased = P_ReadUINT8(save_p);
 	ht->duration = P_ReadINT32(save_p);
 	ht->timer = P_ReadINT32(save_p);
 	if (ht->sector)
@@ -4028,10 +4040,10 @@ static inline thinker_t* LoadFadeColormapThinker(save_t *save_p, actionf_p1 thin
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadPlaneDisplaceThinker(save_t *save_p, actionf_p1 thinker)
+FUNCINLINE static ATTRINLINE thinker_t *LoadPlaneDisplaceThinker(save_t *save_p, actionf_p1 thinker)
 {
 	planedisplace_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 
 	ht->affectee = P_ReadINT32(save_p);
 	ht->control = P_ReadINT32(save_p);
@@ -4041,10 +4053,10 @@ static inline thinker_t* LoadPlaneDisplaceThinker(save_t *save_p, actionf_p1 thi
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadDynamicLineSlopeThinker(save_t *save_p, actionf_p1 thinker)
+FUNCINLINE static ATTRINLINE thinker_t *LoadDynamicLineSlopeThinker(save_t *save_p, actionf_p1 thinker)
 {
 	dynlineplanethink_t* ht = Z_Malloc(sizeof(*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 
 	ht->type = P_ReadUINT8(save_p);
 	ht->slope = LoadSlope(P_ReadUINT32(save_p));
@@ -4053,11 +4065,11 @@ static inline thinker_t* LoadDynamicLineSlopeThinker(save_t *save_p, actionf_p1 
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadDynamicVertexSlopeThinker(save_t *save_p, actionf_p1 thinker)
+FUNCINLINE static ATTRINLINE thinker_t *LoadDynamicVertexSlopeThinker(save_t *save_p, actionf_p1 thinker)
 {
 	size_t i;
 	dynvertexplanethink_t* ht = Z_Malloc(sizeof(*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 
 	ht->slope = LoadSlope(P_ReadUINT32(save_p));
 	for (i = 0; i < 3; i++)
@@ -4069,10 +4081,10 @@ static inline thinker_t* LoadDynamicVertexSlopeThinker(save_t *save_p, actionf_p
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadPolyrotatetThinker(save_t *save_p, actionf_p1 thinker)
+FUNCINLINE static ATTRINLINE thinker_t *LoadPolyrotatetThinker(save_t *save_p, actionf_p1 thinker)
 {
 	polyrotate_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->polyObjNum = P_ReadINT32(save_p);
 	ht->speed = P_ReadINT32(save_p);
 	ht->distance = P_ReadINT32(save_p);
@@ -4083,7 +4095,7 @@ static inline thinker_t* LoadPolyrotatetThinker(save_t *save_p, actionf_p1 think
 static thinker_t* LoadPolymoveThinker(save_t *save_p, actionf_p1 thinker)
 {
 	polymove_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->polyObjNum = P_ReadINT32(save_p);
 	ht->speed = P_ReadINT32(save_p);
 	ht->momx = P_ReadFixed(save_p);
@@ -4093,10 +4105,10 @@ static thinker_t* LoadPolymoveThinker(save_t *save_p, actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadPolywaypointThinker(save_t *save_p, actionf_p1 thinker)
+FUNCINLINE static ATTRINLINE thinker_t *LoadPolywaypointThinker(save_t *save_p, actionf_p1 thinker)
 {
 	polywaypoint_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->polyObjNum = P_ReadINT32(save_p);
 	ht->speed = P_ReadINT32(save_p);
 	ht->sequence = P_ReadINT32(save_p);
@@ -4108,10 +4120,10 @@ static inline thinker_t* LoadPolywaypointThinker(save_t *save_p, actionf_p1 thin
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadPolyslidedoorThinker(save_t *save_p, actionf_p1 thinker)
+FUNCINLINE static ATTRINLINE thinker_t *LoadPolyslidedoorThinker(save_t *save_p, actionf_p1 thinker)
 {
 	polyslidedoor_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->polyObjNum = P_ReadINT32(save_p);
 	ht->delay = P_ReadINT32(save_p);
 	ht->delayCount = P_ReadINT32(save_p);
@@ -4128,10 +4140,10 @@ static inline thinker_t* LoadPolyslidedoorThinker(save_t *save_p, actionf_p1 thi
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadPolyswingdoorThinker(save_t *save_p, actionf_p1 thinker)
+FUNCINLINE static ATTRINLINE thinker_t *LoadPolyswingdoorThinker(save_t *save_p, actionf_p1 thinker)
 {
 	polyswingdoor_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->polyObjNum = P_ReadINT32(save_p);
 	ht->delay = P_ReadINT32(save_p);
 	ht->delayCount = P_ReadINT32(save_p);
@@ -4143,10 +4155,10 @@ static inline thinker_t* LoadPolyswingdoorThinker(save_t *save_p, actionf_p1 thi
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadPolydisplaceThinker(save_t *save_p, actionf_p1 thinker)
+FUNCINLINE static ATTRINLINE thinker_t *LoadPolydisplaceThinker(save_t *save_p, actionf_p1 thinker)
 {
 	polydisplace_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->polyObjNum = P_ReadINT32(save_p);
 	ht->controlSector = LoadSector(P_ReadUINT32(save_p));
 	ht->dx = P_ReadFixed(save_p);
@@ -4155,10 +4167,10 @@ static inline thinker_t* LoadPolydisplaceThinker(save_t *save_p, actionf_p1 thin
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadPolyrotdisplaceThinker(save_t *save_p, actionf_p1 thinker)
+FUNCINLINE static ATTRINLINE thinker_t *LoadPolyrotdisplaceThinker(save_t *save_p, actionf_p1 thinker)
 {
 	polyrotdisplace_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->polyObjNum = P_ReadINT32(save_p);
 	ht->controlSector = LoadSector(P_ReadUINT32(save_p));
 	ht->rotscale = P_ReadFixed(save_p);
@@ -4170,13 +4182,13 @@ static inline thinker_t* LoadPolyrotdisplaceThinker(save_t *save_p, actionf_p1 t
 static thinker_t* LoadPolyfadeThinker(save_t *save_p, actionf_p1 thinker)
 {
 	polyfade_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
+	ht->thinker.function = thinker;
 	ht->polyObjNum = P_ReadINT32(save_p);
 	ht->sourcevalue = P_ReadINT32(save_p);
 	ht->destvalue = P_ReadINT32(save_p);
-	ht->docollision = (boolean)P_ReadUINT8(save_p);
-	ht->doghostfade = (boolean)P_ReadUINT8(save_p);
-	ht->ticbased = (boolean)P_ReadUINT8(save_p);
+	ht->docollision = P_ReadUINT8(save_p);
+	ht->doghostfade = P_ReadUINT8(save_p);
+	ht->ticbased = P_ReadUINT8(save_p);
 	ht->duration = P_ReadINT32(save_p);
 	ht->timer = P_ReadINT32(save_p);
 	return &ht->thinker;
@@ -4202,7 +4214,7 @@ static void P_NetUnArchiveThinkers(save_t *save_p)
 		{
 			next = currentthinker->next;
 
-			if (currentthinker->function.acp1 == (actionf_p1)P_MobjThinker || currentthinker->function.acp1 == (actionf_p1)P_NullPrecipThinker)
+			if (currentthinker->function == (actionf_p1)P_MobjThinker || currentthinker->function == (actionf_p1)P_NullPrecipThinker)
 				P_RemoveSavegameMobj((mobj_t *)currentthinker); // item isn't saved, don't remove it
 			else
 			{
@@ -4421,7 +4433,7 @@ static void P_NetUnArchiveThinkers(save_t *save_p)
 		UINT32 mobjnum;
 		for (currentthinker = thlist[THINK_MAIN].next; currentthinker != &thlist[THINK_MAIN]; currentthinker = currentthinker->next)
 		{
-			if (currentthinker->function.acp1 != (actionf_p1)T_ExecutorDelay)
+			if (currentthinker->function != (actionf_p1)T_ExecutorDelay)
 				continue;
 			delay = (void *)currentthinker;
 			if (!(mobjnum = (UINT32)(size_t)delay->caller))
@@ -4438,7 +4450,7 @@ static void P_NetUnArchiveThinkers(save_t *save_p)
 #define PD_FLAGS  0x01
 #define PD_TRANS   0x02
 
-static inline void P_ArchivePolyObj(save_t *save_p, polyobj_t *po)
+FUNCINLINE static ATTRINLINE void P_ArchivePolyObj(save_t *save_p, polyobj_t *po)
 {
 	UINT8 diff = 0;
 	P_WriteINT32(save_p, po->id);
@@ -4460,7 +4472,7 @@ static inline void P_ArchivePolyObj(save_t *save_p, polyobj_t *po)
 		P_WriteINT32(save_p, po->translucency);
 }
 
-static inline void P_UnArchivePolyObj(save_t *save_p, polyobj_t *po)
+FUNCINLINE static ATTRINLINE void P_UnArchivePolyObj(save_t *save_p, polyobj_t *po)
 {
 	INT32 id;
 	UINT32 angle;
@@ -4495,7 +4507,7 @@ static inline void P_UnArchivePolyObj(save_t *save_p, polyobj_t *po)
 	Polyobj_MoveOnLoad(po, angle, x, y);
 }
 
-static inline void P_ArchivePolyObjects(save_t *save_p)
+FUNCINLINE static ATTRINLINE void P_ArchivePolyObjects(save_t *save_p)
 {
 	INT32 i;
 
@@ -4508,7 +4520,7 @@ static inline void P_ArchivePolyObjects(save_t *save_p)
 		P_ArchivePolyObj(save_p, &PolyObjects[i]);
 }
 
-static inline void P_UnArchivePolyObjects(save_t *save_p)
+FUNCINLINE static ATTRINLINE void P_UnArchivePolyObjects(save_t *save_p)
 {
 	INT32 i, numSavedPolys;
 
@@ -4524,7 +4536,7 @@ static inline void P_UnArchivePolyObjects(save_t *save_p)
 		P_UnArchivePolyObj(save_p, &PolyObjects[i]);
 }
 
-static inline void P_FinishMobjs(void)
+FUNCINLINE static ATTRINLINE void P_FinishMobjs(void)
 {
 	thinker_t *currentthinker;
 	mobj_t *mobj;
@@ -4639,7 +4651,7 @@ static void P_RelinkPointers(void)
 	}
 }
 
-static inline void P_NetArchiveSpecials(save_t *save_p)
+FUNCINLINE static ATTRINLINE void P_NetArchiveSpecials(save_t *save_p)
 {
 	size_t i, z;
 
@@ -4727,22 +4739,58 @@ static void P_NetUnArchiveSpecials(save_t *save_p)
 // =======================================================================
 static inline void P_ArchiveMisc(save_t *save_p, INT16 mapnum)
 {
-	//lastmapsaved = mapnum;
 	lastmaploaded = mapnum;
 
-	if (gamecomplete)
-		mapnum |= 8192;
+#ifdef NEWMAPSAVES
+	if (mapnum >= NUMBASEMAPS)
+	{
+		P_WriteINT16(save_p, NEWMAPSAVES);
+		P_WriteStringN(save_p, G_BuildMapName(mapnum), MAX_MAP_NAME_SIZE);
 
-	P_WriteINT16(save_p, mapnum);
+		UINT8 flags = 0;
+		if (gamecomplete)
+			flags |= SAVE_GAME_COMPLETE_BIT;
+
+		P_WriteUINT8(save_p, flags);
+	}
+	else
+#endif
+	{
+		if (gamecomplete)
+			mapnum |= 8192;
+
+		P_WriteINT16(save_p, mapnum);
+	}
+
 	P_WriteUINT16(save_p, emeralds+357);
 	P_WriteStringN(save_p, timeattackfolder, sizeof(timeattackfolder));
 }
 
-static inline void P_UnArchiveSPGame(save_t *save_p, INT16 mapoverride)
+static void P_UnArchiveSPGame(save_t *save_p, INT16 mapoverride)
 {
+	INT32 i;
 	char testname[sizeof(timeattackfolder)];
 
-	gamemap = P_ReadINT16(save_p);
+	INT16 mapnum = P_ReadINT16(save_p);
+
+#ifdef NEWMAPSAVES
+	if (mapnum == NEWMAPSAVES)
+	{
+		char mapname[MAX_MAP_NAME_SIZE+1];
+
+		P_ReadStringN(save_p, mapname, MAX_MAP_NAME_SIZE);
+		P_ReadUINT8(save_p); // flags
+
+		mapnum = G_GetMapNumber(mapname);
+		if (mapnum == 0)
+		{
+			// If not valid, just load MAP01 instead.
+			mapnum = 1;
+		}
+	}
+#endif
+
+	gamemap = mapnum;
 
 	if (mapoverride != 0)
 	{
@@ -4757,7 +4805,6 @@ static inline void P_UnArchiveSPGame(save_t *save_p, INT16 mapoverride)
 	if(!mapheaderinfo[gamemap-1])
 		P_AllocMapHeader(gamemap-1);
 
-	//lastmapsaved = gamemap;
 	lastmaploaded = gamemap;
 
 	tokenlist = 0;
@@ -4775,8 +4822,9 @@ static inline void P_UnArchiveSPGame(save_t *save_p, INT16 mapoverride)
 			I_Error("This save file is for a particular mod, it cannot be used with the regular game.");
 	}
 
-	memset(playeringame, 0, sizeof(*playeringame));
-	playeringame[consoleplayer] = true;
+	for (i = 0; i < MAXPLAYERS; i++)
+		players[i].ingame = false;
+	players[consoleplayer].ingame = true;
 }
 
 static void P_NetArchiveMisc(save_t *save_p, boolean resending)
@@ -4798,7 +4846,7 @@ static void P_NetArchiveMisc(save_t *save_p, boolean resending)
 	{
 		UINT32 pig = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
-			pig |= (playeringame[i] != 0)<<i;
+			pig |= (players[i].ingame != 0)<<i;
 		P_WriteUINT32(save_p, pig);
 	}
 
@@ -4830,6 +4878,8 @@ static void P_NetArchiveMisc(save_t *save_p, boolean resending)
 	P_WriteUINT16(save_p, skincolor_blueteam);
 	P_WriteUINT16(save_p, skincolor_redring);
 	P_WriteUINT16(save_p, skincolor_bluering);
+
+	P_WriteINT32(save_p, nummaprings);
 
 	P_WriteINT32(save_p, modulothing);
 
@@ -4868,7 +4918,7 @@ static void P_NetArchiveMisc(save_t *save_p, boolean resending)
 	}
 }
 
-static inline boolean P_NetUnArchiveMisc(save_t *save_p, boolean reloading)
+FUNCINLINE static ATTRINLINE boolean P_NetUnArchiveMisc(save_t *save_p, boolean reloading)
 {
 	INT32 i;
 
@@ -4897,7 +4947,7 @@ static inline boolean P_NetUnArchiveMisc(save_t *save_p, boolean reloading)
 		UINT32 pig = P_ReadUINT32(save_p);
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			playeringame[i] = (pig & (1<<i)) != 0;
+			players[i].ingame = (pig & (1<<i)) != 0;
 			// playerstate is set in unarchiveplayers
 		}
 	}
@@ -4935,6 +4985,8 @@ static inline boolean P_NetUnArchiveMisc(save_t *save_p, boolean reloading)
 	skincolor_redring = P_ReadUINT16(save_p);
 	skincolor_bluering = P_ReadUINT16(save_p);
 
+	nummaprings = P_ReadINT32(save_p);
+
 	modulothing = P_ReadINT32(save_p);
 
 	autobalance = P_ReadINT16(save_p);
@@ -4955,7 +5007,7 @@ static inline boolean P_NetUnArchiveMisc(save_t *save_p, boolean reloading)
 	gravity = P_ReadFixed(save_p);
 
 	countdowntimer = (tic_t)P_ReadUINT32(save_p);
-	countdowntimeup = (boolean)P_ReadUINT8(save_p);
+	countdowntimeup = P_ReadUINT8(save_p);
 
 	hidetime = P_ReadUINT32(save_p);
 
@@ -4972,7 +5024,7 @@ static inline boolean P_NetUnArchiveMisc(save_t *save_p, boolean reloading)
 	return true;
 }
 
-static inline void P_NetArchiveEmblems(save_t *save_p)
+FUNCINLINE static ATTRINLINE void P_NetArchiveEmblems(save_t *save_p)
 {
 	gamedata_t *data = serverGamedata;
 	INT32 i, j;
@@ -4994,7 +5046,8 @@ static inline void P_NetArchiveEmblems(save_t *save_p)
 	P_WriteUINT32(save_p, data->totalplaytime);
 
 	// TODO put another cipher on these things? meh, I don't care...
-	for (i = 0; i < NUMMAPS; i++)
+
+	for (i = 0; i < numgamemaps; i++)
 		P_WriteUINT8(save_p, (data->mapvisited[i] & MV_MAX));
 
 	// To save space, use one bit per collected/achieved/unlocked flag
@@ -5036,7 +5089,7 @@ static inline void P_NetArchiveEmblems(save_t *save_p)
 	P_WriteUINT32(save_p, data->timesBeatenUltimate);
 
 	// Main records
-	for (i = 0; i < NUMMAPS; i++)
+	for (i = 0; i < numgamemaps; i++)
 	{
 		if (data->mainrecords[i])
 		{
@@ -5053,7 +5106,7 @@ static inline void P_NetArchiveEmblems(save_t *save_p)
 	}
 
 	// NiGHTS records
-	for (i = 0; i < NUMMAPS; i++)
+	for (i = 0; i < numgamemaps; i++)
 	{
 		if (!data->nightsrecords[i] || !data->nightsrecords[i]->nummares)
 		{
@@ -5093,7 +5146,7 @@ static inline void P_NetArchiveEmblems(save_t *save_p)
 	}
 }
 
-static inline void P_NetUnArchiveEmblems(save_t *save_p)
+FUNCINLINE static ATTRINLINE void P_NetUnArchiveEmblems(save_t *save_p)
 {
 	gamedata_t *data = serverGamedata;
 	INT32 i, j;
@@ -5107,7 +5160,7 @@ static inline void P_NetUnArchiveEmblems(save_t *save_p)
 	if (P_ReadUINT32(save_p) != ARCHIVEBLOCK_EMBLEMS)
 		I_Error("Bad $$$.sav at archive block Emblems");
 
-	savemoddata = (boolean)P_ReadUINT8(save_p); // this one is actually necessary because savemoddata stays false otherwise for some reason.
+	savemoddata = P_ReadUINT8(save_p); // this one is actually necessary because savemoddata stays false otherwise for some reason.
 
 	if (numemblems != P_ReadINT32(save_p))
 		I_Error("Bad $$$.sav dearchiving Emblems (numemblems mismatch)");
@@ -5129,7 +5182,7 @@ static inline void P_NetUnArchiveEmblems(save_t *save_p)
 	data->totalplaytime = P_ReadUINT32(save_p);
 
 	// TODO put another cipher on these things? meh, I don't care...
-	for (i = 0; i < NUMMAPS; i++)
+	for (i = 0; i < numgamemaps; i++)
 		if ((data->mapvisited[i] = P_ReadUINT8(save_p)) > MV_MAX)
 			I_Error("Bad $$$.sav dearchiving Emblems (invalid visit flags)");
 
@@ -5168,7 +5221,7 @@ static inline void P_NetUnArchiveEmblems(save_t *save_p)
 	data->timesBeatenUltimate = P_ReadUINT32(save_p);
 
 	// Main records
-	for (i = 0; i < NUMMAPS; ++i)
+	for (i = 0; i < numgamemaps; ++i)
 	{
 		recscore = P_ReadUINT32(save_p);
 		rectime  = (tic_t)P_ReadUINT32(save_p);
@@ -5187,7 +5240,7 @@ static inline void P_NetUnArchiveEmblems(save_t *save_p)
 	}
 
 	// Nights records
-	for (i = 0; i < NUMMAPS; ++i)
+	for (i = 0; i < numgamemaps; ++i)
 	{
 		if ((recmares = P_ReadUINT8(save_p)) == 0)
 			continue;
@@ -5313,7 +5366,7 @@ static void P_NetUnArchiveSectorPortals(save_t *save_p)
 	}
 }
 
-static inline void P_ArchiveLuabanksAndConsistency(save_t *save_p)
+FUNCINLINE static ATTRINLINE void P_ArchiveLuabanksAndConsistency(save_t *save_p)
 {
 	UINT8 i, banksinuse = NUM_LUABANKS;
 
@@ -5331,7 +5384,7 @@ static inline void P_ArchiveLuabanksAndConsistency(save_t *save_p)
 	P_WriteUINT8(save_p, 0x1d); // consistency marker
 }
 
-static inline boolean P_UnArchiveLuabanksAndConsistency(save_t *save_p)
+FUNCINLINE static ATTRINLINE boolean P_UnArchiveLuabanksAndConsistency(save_t *save_p)
 {
 	switch (P_ReadUINT8(save_p))
 	{

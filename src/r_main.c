@@ -161,7 +161,7 @@ consvar_t cv_translucency = CVAR_INIT ("translucency", "On", CV_SAVE, CV_OnOff, 
 consvar_t cv_drawdist = CVAR_INIT ("drawdist", "Infinite", CV_SAVE, drawdist_cons_t, NULL);
 consvar_t cv_drawdist_nights = CVAR_INIT ("drawdist_nights", "2048", CV_SAVE, drawdist_cons_t, NULL);
 consvar_t cv_drawdist_precip = CVAR_INIT ("drawdist_precip", "1024", CV_SAVE, drawdist_precip_cons_t, NULL);
-consvar_t cv_fov = CVAR_INIT ("fov", "90", CV_SAVE|CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange);
+consvar_t cv_fov = CVAR_INIT ("fov", "100", CV_SAVE|CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange);
 consvar_t cv_fovchange = CVAR_INIT ("fovchange", "Off", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_maxportals = CVAR_INIT ("maxportals", "2", CV_SAVE, maxportals_cons_t, NULL);
 
@@ -206,7 +206,7 @@ void SplitScreen_OnChange(void)
 		INT32 i;
 		secondarydisplayplayer = consoleplayer;
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && i != consoleplayer)
+			if (players[i].ingame && i != consoleplayer)
 			{
 				secondarydisplayplayer = i;
 				break;
@@ -254,7 +254,7 @@ static void FlipCam2_OnChange(void)
 //
 // killough 5/2/98: reformatted
 //
-INT32 R_PointOnSide(fixed_t x, fixed_t y, node_t *restrict node)
+INT32 R_PointOnSide(fixed_t x, fixed_t y, bspnode_t *restrict node)
 {
 	if (!node->dx)
 		return x <= node->x ? node->dy > 0 : node->dy < 0;
@@ -359,35 +359,13 @@ angle_t R_PointToAngle2(fixed_t pviewx, fixed_t pviewy, fixed_t x, fixed_t y)
 
 fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1)
 {
-	angle_t angle;
-	ufixed_t dx, dy, dist;
-
-	dx = abs(px1 - px2);
-	dy = abs(py1 - py2);
-
-	if (dy > dx)
-	{
-		fixed_t temp;
-
-		temp = dx;
-		dx = dy;
-		dy = temp;
-	}
-	if (!dy)
-		return dx;
-
-	angle = (tantoangle[FixedDiv(dy, dx)>>DBITS] + ANGLE_90) >> ANGLETOFINESHIFT;
-
-	// use as cosine
-	dist = FixedDiv(dx, FINESINE(angle));
-
-	return dist;
+	return GetDistance2D(px2, py2, px1, py1);
 }
 
 // Little extra utility. Works in the same way as R_PointToAngle2
 fixed_t R_PointToDist(fixed_t x, fixed_t y)
 {
-	return R_PointToDist2(viewx, viewy, x, y);
+	return GetDistance2D(viewx, viewy, x, y);
 }
 
 line_t *R_GetFFloorLine(const line_t *line, const ffloor_t *pfloor, const sector_t *sector)
@@ -1054,7 +1032,7 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
 //
 subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y)
 {
-	node_t *node;
+	bspnode_t *node;
 	INT32 side, i;
 	size_t nodenum;
 	subsector_t *ret;
@@ -1154,11 +1132,11 @@ void R_SetupFrame(player_t *player)
 			// Calculate 3D distance from epicenter, using the camera.
 			fixed_t xydist, dist;
 			if (P_MobjWasRemoved(r_viewmobj)) {
-				xydist = R_PointToDist2(thiscam->x, thiscam->y, quake.epicenter->x, quake.epicenter->y);
-				dist = R_PointToDist2(0, thiscam->z, xydist, quake.epicenter->z);
+				xydist = GetDistance2D(thiscam->x, thiscam->y, quake.epicenter->x, quake.epicenter->y);
+				dist = GetDistance2D(0, thiscam->z, xydist, quake.epicenter->z);
 			} else {
-				xydist = R_PointToDist2(r_viewmobj->x, r_viewmobj->y, quake.epicenter->x, quake.epicenter->y);
-				dist = R_PointToDist2(0, r_viewmobj->z, xydist, quake.epicenter->z);
+				xydist = GetDistance2D(r_viewmobj->x, r_viewmobj->y, quake.epicenter->x, quake.epicenter->y);
+				dist = GetDistance2D(0, r_viewmobj->z, xydist, quake.epicenter->z);
 			}
 
 			// More effect closer to epicenter, outside of radius = no effect

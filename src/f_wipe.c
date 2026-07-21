@@ -601,13 +601,9 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 
 		if (drawMenu)
 		{
-#ifdef HAVE_THREADS
 			I_lock_mutex(&m_menu_mutex);
-#endif
 			M_Drawer(); // menu is drawn even on top of wipes
-#ifdef HAVE_THREADS
 			I_unlock_mutex(m_menu_mutex);
-#endif
 		}
 
 		I_FinishUpdate(); // page flip or blit buffer

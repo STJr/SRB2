@@ -32,23 +32,6 @@
 // used in the lumps of the WAD files.
 //
 
-// Lump order in a map WAD: each map needs a couple of lumps
-// to provide a complete scene geometry description.
-enum
-{
-	ML_LABEL,    // A separator, name, MAPxx
-	ML_THINGS,   // Enemies, rings, monitors, scenery, etc.
-	ML_LINEDEFS, // Linedefs, from editing
-	ML_SIDEDEFS, // Sidedefs, from editing
-	ML_VERTEXES, // Vertices, edited and BSP splits generated
-	ML_SEGS,     // Linesegs, from linedefs split by BSP
-	ML_SSECTORS, // Subsectors, list of linesegs
-	ML_NODES,    // BSP nodes
-	ML_SECTORS,  // Sectors, from editing
-	ML_REJECT,    // LUT, sector-sector visibility
-	ML_BLOCKMAP,  // LUT, motion clipping, walls/grid element
-};
-
 // Extra flag for objects.
 #define MTF_EXTRA 1
 
@@ -75,7 +58,32 @@ enum
 typedef struct
 {
 	INT16 x, y;
-}ATTRPACK  mapvertex_t;
+}ATTRPACK mapvertex_t;
+
+typedef enum {
+	UDMF_TYPE_STRING,
+	UDMF_TYPE_FIXED,
+	UDMF_TYPE_NUMERIC,
+	UDMF_TYPE_BOOLEAN
+} udmf_field_type_t;
+
+typedef union { // v added to avoid random compilers cry about nonsense
+	char*	vstring;
+	fixed_t vfloat;
+	INT32	vint;
+	boolean vbool;
+} udmf_field_value_t;
+
+// UDMF's Custom Arguments
+typedef struct customargs_s
+{
+	char* name;
+
+	udmf_field_type_t type;
+	udmf_field_value_t value;
+
+	struct customargs_s* next;
+}ATTRPACK customargs_t;
 
 // A SideDef, defining the visual appearance of a wall,
 // by setting textures and offsets.
@@ -220,11 +228,10 @@ typedef struct
 	fixed_t spritexscale, spriteyscale;
 	INT32 args[NUMMAPTHINGARGS];
 	char *stringargs[NUMMAPTHINGSTRINGARGS];
+	struct customargs_s* customargs;
 	struct mobj_s *mobj;
 } mapthing_t;
 
 #define ZSHIFT 4
-
-#define NUMMAPS 1035
 
 #endif // __DOOMDATA__

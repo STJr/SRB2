@@ -34,6 +34,7 @@
 #endif
 
 #include "../doomdef.h"
+#include "../d_main.h"
 
 #ifdef HWRENDER
 #include "../hardware/r_opengl/r_opengl.h"
@@ -110,11 +111,30 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 	INT32 cbpp = cv_scr_depth.value < 16 ? 16 : cv_scr_depth.value;
 	static boolean first_init = false;
 	static int majorGL = 0, minorGL = 0;
+#ifdef DEBUG_TO_FILE
+	const char *gllogdir = NULL;
+#endif
 
 	oglflags = 0;
 
 	if (!first_init)
 	{
+#ifdef DEBUG_TO_FILE
+		if (!gllogstream) 
+#endif
+		{
+#ifdef DEBUG_TO_FILE
+			gllogdir = D_Home();
+
+#ifdef DEFAULTDIR
+			if (gllogdir)
+				gllogstream = fopen(va("%s/"DEFAULTDIR"/ogllog.txt",gllogdir), "wt");
+			else
+#endif
+				gllogstream = fopen("./ogllog.txt", "wt");
+#endif
+		}
+
 		gl_version = pglGetString(GL_VERSION);
 		gl_renderer = pglGetString(GL_RENDERER);
 		gl_extensions = pglGetString(GL_EXTENSIONS);

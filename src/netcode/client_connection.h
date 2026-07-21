@@ -37,7 +37,8 @@ typedef enum
 	CL_ABORTED,
 	CL_ASKFULLFILELIST,
 	CL_CONFIRMCONNECT,
-	CL_DOWNLOADHTTPFILES
+	CL_DOWNLOADHTTPFILES,
+	CL_VIEWSERVER
 } cl_mode_t;
 
 extern serverelem_t serverlist[MAXSERVERLIST];
@@ -54,9 +55,10 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room);
 void CL_ConnectToServer(void);
 boolean CL_SendJoin(void);
 
-void PT_ServerInfo(SINT8 node);
-void PT_MoreFilesNeeded(SINT8 node);
-void PT_ServerRefuse(SINT8 node);
-void PT_ServerCFG(SINT8 node);
+void PT_ServerInfo(doomcom_t *doomcom);
+void PT_PlayerInfo(doomcom_t *doomcom);
+void PT_MoreFilesNeeded(doomcom_t *doomcom);
+void PT_ServerRefuse(doomcom_t *doomcom);
+void PT_ServerCFG(doomcom_t *doomcom);
 
 #endif

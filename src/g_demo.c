@@ -46,7 +46,7 @@ boolean nodrawers; // for comparative timing purposes
 boolean noblit; // for comparative timing purposes
 tic_t demostarttime; // for comparative timing purposes
 
-static char demoname[64];
+static char demoname[512];
 boolean demorecording;
 boolean demoplayback;
 boolean titledemo; // Title Screen demo can be cancelled by any key
@@ -1413,15 +1413,14 @@ void G_WriteMetalTic(mobj_t *metal)
 //
 void G_RecordDemo(const char *name)
 {
-	INT32 maxsize;
+	strlcpy(demoname, name, sizeof(demoname));
 
-	strcpy(demoname, name);
-	strcat(demoname, ".lmp");
-	maxsize = 1024*1024;
+	FIL_ForceExtension(demoname, ".lmp");
+
+	INT32 maxsize = 1024*1024;
 	if (M_CheckParm("-maxdemo") && M_IsNextParm())
 		maxsize = atoi(M_GetNextParm()) * 1024;
-//	if (demobuffer)
-//		free(demobuffer);
+
 	demo_p = NULL;
 	demobuffer = malloc(maxsize);
 	demoend = demobuffer + maxsize;
@@ -2285,8 +2284,9 @@ void G_DoPlayDemo(char *defdemoname)
 
 	LUA_HookInt(gamemap, HOOK(MapChange));
 	displayplayer = consoleplayer = 0;
-	memset(playeringame,0,sizeof(playeringame));
-	playeringame[0] = true;
+	for (i = 0; i < MAXPLAYERS; i++)
+		players[i].ingame = false;
+	players[0].ingame = true;
 	P_SetRandSeed(randseed);
 	G_InitNew(false, G_BuildMapName(gamemap), true, true, false);
 
@@ -2681,7 +2681,7 @@ void G_DoPlayMetal(void)
 	thinker_t *th;
 
 	// it's an internal demo
-	if ((l = W_CheckNumForName(va("%sMS",G_BuildMapName(gamemap)))) == LUMPERROR)
+	if ((l = W_CheckNumForName(G_GetMapMetalSonicReplay(gamemap))) == LUMPERROR)
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("No bot recording for this map.\n"));
 		return;
@@ -2757,13 +2757,7 @@ void G_DoneLevelLoad(void)
 static void WriteDemoChecksum(void)
 {
 	UINT8 *p = demobuffer+16; // checksum position
-#ifdef NOMD5
-	UINT8 i;
-	for (i = 0; i < 16; i++, p++)
-		*p = P_RandomByte(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
-#else
 	md5_buffer((char *)p+16, demo_p - (p+16), p); // make a checksum of everything after the checksum in the file.
-#endif
 }
 
 // Stops recording a demo.
@@ -2807,7 +2801,7 @@ ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill)
 	{
 		WRITEUINT8(demo_p, (kill) ? METALDEATH : DEMOMARKER); // add the demo end (or metal death) marker
 		WriteDemoChecksum();
-		sprintf(demoname, "%sMS.LMP", G_BuildMapName(gamemap));
+		snprintf(demoname, sizeof(demoname), "%s.lmp", G_GetMapMetalSonicReplay(gamemap));
 		saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
 	}
 	free(demobuffer);

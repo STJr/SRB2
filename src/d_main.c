@@ -15,6 +15,10 @@
 ///        plus functions to parse command line parameters, configure game
 ///        parameters, and call the startup functions.
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -93,6 +97,7 @@
 #endif
 
 #include "lua_script.h"
+#include "lua_hud.h"
 
 // Version numbers for netplay :upside_down_face:
 int    VERSION;
@@ -227,6 +232,9 @@ void D_ProcessEvents(void)
 			}
 		}
 
+		if (CON_PreResponder(ev))
+			continue;
+
 		// Screenshots over everything so that they can be taken anywhere.
 		if (M_ScreenshotResponder(ev))
 			continue; // ate the event
@@ -244,15 +252,11 @@ void D_ProcessEvents(void)
 		}
 
 		// Menu input
-#ifdef HAVE_THREADS
 		I_lock_mutex(&m_menu_mutex);
-#endif
 		{
 			eaten = M_Responder(ev);
 		}
-#ifdef HAVE_THREADS
 		I_unlock_mutex(m_menu_mutex);
-#endif
 
 		if (eaten)
 			continue; // menu ate the event
@@ -264,15 +268,11 @@ void D_ProcessEvents(void)
 		}
 
 		// console input
-#ifdef HAVE_THREADS
 		I_lock_mutex(&con_mutex);
-#endif
 		{
 			eaten = CON_Responder(ev);
 		}
-#ifdef HAVE_THREADS
 		I_unlock_mutex(con_mutex);
-#endif
 
 		if (eaten)
 			continue; // ate the event
@@ -575,7 +575,7 @@ static void D_Display(void)
 		V_SetPalette(0);
 
 	// draw pause pic
-	if (paused && cv_showhud.value && (!menuactive || netgame))
+	if (paused && cv_showhud.value && LUA_HudEnabled(hud_pause) && (!menuactive || netgame))
 	{
 #if 0
 		INT32 py;
@@ -596,13 +596,9 @@ static void D_Display(void)
 	// vid size change is now finished if it was on...
 	vid.recalc = 0;
 
-#ifdef HAVE_THREADS
 	I_lock_mutex(&m_menu_mutex);
-#endif
 	M_Drawer(); // menu is drawn even on top of everything
-#ifdef HAVE_THREADS
 	I_unlock_mutex(m_menu_mutex);
-#endif
 	// focus lost moved to M_Drawer
 
 	CON_Drawer();
@@ -705,16 +701,11 @@ static void D_Display(void)
 
 tic_t rendergametic;
 
+static void D_RunFrame(void);
+static tic_t oldentertics = 0;
+
 void D_SRB2Loop(void)
 {
-	tic_t entertic = 0, oldentertics = 0, realtics = 0, rendertimeout = INFTICS;
-	double deltatics = 0.0;
-	double deltasecs = 0.0;
-	static lumpnum_t gstartuplumpnum;
-
-	boolean interp = false;
-	boolean doDisplay = false;
-
 	if (dedicated)
 		server = true;
 
@@ -750,21 +741,68 @@ void D_SRB2Loop(void)
 	// hack to start on a nice clear console screen.
 	COM_ImmedExecute("cls;version");
 
+#ifdef __EMSCRIPTEN__
+	EM_ASM(
+		try {
+			StartedMainLoopCallback();
+		} catch (err) {
+			console.log('Faild to find StartedMainLoopCallback()');
+		}
+	);
+#endif
+
 	I_FinishUpdate(); // page flip or blit buffer
 	/*
 	LMFAO this was showing garbage under OpenGL
 	because I_FinishUpdate was called afterward
 	*/
 	/* Smells like a hack... Don't fade Sonic's ass into the title screen. */
+
 	if (gamestate != GS_TITLESCREEN)
 	{
-		gstartuplumpnum = W_CheckNumForPatchName("STARTUP");
+		lumpnum_t gstartuplumpnum = W_CheckNumForPatchName("STARTUP");
 		if (gstartuplumpnum == LUMPERROR)
 			gstartuplumpnum = W_GetNumForPatchName("MISSING");
 		V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(gstartuplumpnum, PU_PATCH));
 	}
-
+#ifdef __EMSCRIPTEN__
+	emscripten_set_main_loop(D_RunFrame, 0, 1);
+#else
 	for (;;)
+	{
+		D_RunFrame();
+	}
+#endif
+}
+
+static boolean D_LockFrame = false;
+
+#ifdef __EMSCRIPTEN__
+int EMSCRIPTEN_KEEPALIVE pause_loop(void)
+{
+	D_LockFrame = true;
+	emscripten_pause_main_loop();
+	return 0;
+}
+
+int EMSCRIPTEN_KEEPALIVE resume_loop(void)
+{
+	D_LockFrame = false;
+	emscripten_resume_main_loop();
+	return 0;
+}
+#endif
+
+static void D_RunFrame(void)
+{
+	static tic_t entertic = 0, realtics = 0, rendertimeout = INFTICS;
+	static double deltatics = 0.0;
+	static double deltasecs = 0.0;
+
+	static boolean interp = false;
+	static boolean doDisplay = false;
+
+	if (!D_LockFrame)
 	{
 		// capbudget is the minimum precise_t duration of a single loop iteration
 		precise_t capbudget;
@@ -920,6 +958,7 @@ void D_SRB2Loop(void)
 		deltasecs = (double)((INT64)(finishprecise - enterprecise)) / I_GetPrecisePrecision();
 		deltatics = deltasecs * NEWTICRATE;
 	}
+	return;
 }
 
 //
@@ -952,13 +991,7 @@ void D_StartTitle(void)
 
 			if (server)
 			{
-				char mapname[6];
-
-				strlcpy(mapname, G_BuildMapName(spstage_start), sizeof (mapname));
-				strlwr(mapname);
-				mapname[5] = '\0';
-
-				COM_BufAddText(va("map %s\n", mapname));
+				COM_BufAddText(va("map %s\n", G_BuildMapName(spstage_start)));
 			}
 		}
 
@@ -1324,8 +1357,14 @@ void D_SRB2Main(void)
 		else
 		{
 			// use user specific config file
+			if (M_CheckParm("-workdir") && M_IsNextParm())
+				snprintf(srb2home, sizeof srb2home, "%s", M_GetNextParm());
+			else
 #ifdef DEFAULTDIR
-			snprintf(srb2home, sizeof srb2home, "%s" PATHSEP DEFAULTDIR, userhome);
+				snprintf(srb2home, sizeof srb2home, "%s" PATHSEP DEFAULTDIR, userhome);
+#else // DEFAULTDIR
+				snprintf(srb2home, sizeof srb2home, "%s", userhome);
+#endif // DEFAULTDIR
 			snprintf(downloaddir, sizeof downloaddir, "%s" PATHSEP "DOWNLOAD", srb2home);
 			if (dedicated)
 				snprintf(configfile, sizeof configfile, "%s" PATHSEP "d"CONFIGFILENAME, srb2home);
@@ -1337,24 +1376,13 @@ void D_SRB2Main(void)
 			strcatbf(liveeventbackup, srb2home, PATHSEP);
 
 			snprintf(luafiledir, sizeof luafiledir, "%s" PATHSEP "luafiles", srb2home);
-#else // DEFAULTDIR
-			snprintf(srb2home, sizeof srb2home, "%s", userhome);
-			snprintf(downloaddir, sizeof downloaddir, "%s", userhome);
-			if (dedicated)
-				snprintf(configfile, sizeof configfile, "%s" PATHSEP "d"CONFIGFILENAME, userhome);
-			else
-				snprintf(configfile, sizeof configfile, "%s" PATHSEP CONFIGFILENAME, userhome);
-
-			// can't use sprintf since there is %u in savegamename
-			strcatbf(savegamename, userhome, PATHSEP);
-			strcatbf(liveeventbackup, userhome, PATHSEP);
-
-			snprintf(luafiledir, sizeof luafiledir, "%s" PATHSEP "luafiles", userhome);
-#endif // DEFAULTDIR
 		}
 
 		configfile[sizeof configfile - 1] = '\0';
 	}
+
+	// make sure workdir exists
+	I_mkdir(srb2home, 0755);
 
 	// Create addons dir
 	snprintf(addonsdir, sizeof addonsdir, "%s%s%s", srb2home, PATHSEP, "addons");
@@ -1367,15 +1395,16 @@ void D_SRB2Main(void)
 
 	P_SetRandSeed(M_RandomizedSeed());
 
-	if (M_CheckParm("-password") && M_IsNextParm())
-		D_SetPassword(M_GetNextParm());
-
 	// player setup menu colors must be initialized before
 	// any wad file is added, as they may contain colors themselves
 	M_InitPlayerSetupColors();
 
 	CONS_Printf("Z_Init(): Init zone memory allocation daemon. \n");
 	Z_Init();
+
+	if (M_CheckParm("-password") && M_IsNextParm())
+		D_SetPassword(M_GetNextParm());
+	G_InitMaps();
 
 	clientGamedata = M_NewGameDataStruct();
 	serverGamedata = M_NewGameDataStruct();
@@ -1427,9 +1456,6 @@ void D_SRB2Main(void)
 
 	CONS_Printf("I_InitializeTime()...\n");
 	I_InitializeTime();
-
-	// Make backups of some SOCcable tables.
-	P_BackupTables();
 
 	mainwads = 3; // doesn't include music.pk3
 #ifdef USE_PATCH_DTA
@@ -1690,7 +1716,7 @@ void D_SRB2Main(void)
 	{
 		pstartmap = bootmap;
 
-		if (pstartmap < 1 || pstartmap > NUMMAPS)
+		if (pstartmap < 1 || pstartmap > numgamemaps)
 			I_Error("Cannot warp to map %d (out of range)\n", pstartmap);
 		else
 		{
@@ -1737,7 +1763,7 @@ void D_SRB2Main(void)
 		if (server && !M_CheckParm("+map"))
 		{
 			// Prevent warping to nonexistent levels
-			if (W_CheckNumForName(G_BuildMapName(pstartmap)) == LUMPERROR)
+			if (!G_MapFileExists(G_BuildMapName(pstartmap)))
 				I_Error("Could not warp to %s (map not found)\n", G_BuildMapName(pstartmap));
 			else
 			{

@@ -47,7 +47,7 @@ typedef struct
 {
 	boolean init;
 	RGBA_t palette[256];
-	UINT16 table[0xFFFF];
+	UINT16 table[0x10000];
 } colorlookup_t;
 
 void InitColorLUT(colorlookup_t *lut, RGBA_t *palette, boolean makecolors);
@@ -180,7 +180,8 @@ void V_DrawContinueIcon(INT32 x, INT32 y, INT32 flags, INT32 skinnum, UINT16 ski
 void V_DrawBlock(INT32 x, INT32 y, INT32 scrn, INT32 width, INT32 height, const UINT8 *src);
 
 // fill a box with a single color
-void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c);
+void V_DrawFixedFill(fixed_t x, fixed_t y, fixed_t w, fixed_t h, INT32 c);
+#define V_DrawFill(x, y, w, h, c) V_DrawFixedFill((x)<<FRACBITS, (y)<<FRACBITS, (w)<<FRACBITS, (h)<<FRACBITS, c)
 void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c);
 // fill a box with a flat as a pattern
 void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum);

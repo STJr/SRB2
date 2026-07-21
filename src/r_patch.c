@@ -31,14 +31,12 @@ patch_t *Patch_Create(INT16 width, INT16 height)
 	return patch;
 }
 
-patch_t *Patch_CreateFromDoomPatch(softwarepatch_t *source)
+patch_t *Patch_CreateFromDoomPatch(softwarepatch_t *source, size_t insize)
 {
-	patch_t *patch = Patch_Create(0, 0);
-	if (!source)
-		return patch;
+	if (!Picture_CheckIfDoomPatch(source, insize))
+		return NULL;
 
-	patch->width      = SHORT(source->width);
-	patch->height     = SHORT(source->height);
+	patch_t *patch = Patch_Create(SHORT(source->width), SHORT(source->height));
 	patch->leftoffset = SHORT(source->leftoffset);
 	patch->topoffset  = SHORT(source->topoffset);
 

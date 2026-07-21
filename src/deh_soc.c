@@ -168,7 +168,7 @@ void clear_levels(void)
 
 	// This is potentially dangerous but if we're resetting these headers,
 	// we may as well try to save some memory, right?
-	for (i = 0; i < NUMMAPS; ++i)
+	for (i = 0; i < numgamemaps; ++i)
 	{
 		if (!mapheaderinfo[i] || i == (tutorialmap-1))
 			continue;
@@ -874,6 +874,7 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 	char *tmp;
 	INT32 value;
 	char *lastline;
+	boolean available = false;
 
 	do
 	{
@@ -925,9 +926,15 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 			value = atoi(word2); // used for numerical settings
 
 			if (fastcmp(word, "XPIVOT"))
-				sprinfo->pivot[frame].x = value;
+			{
+				sprinfo->frames[frame].pivot.x = value;
+				available = true;
+			}
 			else if (fastcmp(word, "YPIVOT"))
-				sprinfo->pivot[frame].y = value;
+			{
+				sprinfo->frames[frame].pivot.y = value;
+				available = true;
+			}
 			// TODO: 2.3: Delete
 			else if (fastcmp(word, "ROTAXIS"))
 				deh_warning("SpriteInfo: ROTAXIS is deprecated and will be removed.");
@@ -938,6 +945,10 @@ static void readspriteframe(MYFILE *f, spriteinfo_t *sprinfo, UINT8 frame)
 			}
 		}
 	} while (!myfeof(f)); // finish when the line is empty
+
+	if (available)
+		sprinfo->frames[frame].pivot.available = true;
+
 	Z_Free(s);
 }
 
@@ -955,7 +966,6 @@ void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 
 	// allocate a spriteinfo
 	spriteinfo_t *info = Z_Calloc(sizeof(spriteinfo_t), PU_STATIC, NULL);
-	info->available = true;
 
 	do
 	{
@@ -1074,6 +1084,12 @@ void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 
 				// read sprite frame and store it in the spriteinfo_t struct
 				readspriteframe(f, info, frame);
+				set_bit_array(info->available, frame);
+
+				// TODO: 2.3: Delete
+				info->frames[SPRINFO_DEFAULT_FRAME].pivot.available = true;
+				set_bit_array(info->available, SPRINFO_DEFAULT_FRAME);
+
 				if (sprite2)
 				{
 					INT32 i;
@@ -1358,6 +1374,39 @@ void readgametype(MYFILE *f, char *gtname)
 	CONS_Printf("Added gametype %s\n", Gametype_Names[newgtidx]);
 }
 
+static INT32 ParseNextLevelName(const char *name)
+{
+	if      (fastcmp(name, "TITLE"))      return NEXTMAP_TITLE;
+	else if (fastcmp(name, "EVALUATION")) return NEXTMAP_EVALUATION;
+	else if (fastcmp(name, "CREDITS"))    return NEXTMAP_CREDITS;
+	else if (fastcmp(name, "ENDING"))     return NEXTMAP_ENDING;
+	else
+	{
+		// Support using the actual map name,
+		// i.e., Nextlevel = AB, Nextlevel = FZ, etc.
+
+		// Convert to map number
+		return G_GetMapNumber(name);
+	}
+}
+
+static INT32 ConvertLevelHeaderMapNum(INT32 mapnum)
+{
+	switch (mapnum)
+	{
+	case 1100:
+		return NEXTMAP_TITLE;
+	case 1101:
+		return NEXTMAP_EVALUATION;
+	case 1102:
+		return NEXTMAP_CREDITS;
+	case 1103:
+		return NEXTMAP_ENDING;
+	default:
+		return mapnum;
+	}
+}
+
 void readlevelheader(MYFILE *f, INT32 num)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
@@ -1580,33 +1629,17 @@ void readlevelheader(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "NEXTLEVEL"))
 			{
-				if      (fastcmp(word2, "TITLE"))      i = 1100;
-				else if (fastcmp(word2, "EVALUATION")) i = 1101;
-				else if (fastcmp(word2, "CREDITS"))    i = 1102;
-				else if (fastcmp(word2, "ENDING"))     i = 1103;
-				else
-				// Support using the actual map name,
-				// i.e., Nextlevel = AB, Nextlevel = FZ, etc.
-
-				// Convert to map number
-				if (word2[0] >= 'A' && word2[0] <= 'Z' && word2[2] == '\0')
-					i = M_MapNumber(word2[0], word2[1]);
+				i = ConvertLevelHeaderMapNum(i);
+				if (i == 0)
+					i = ParseNextLevelName(word2);
 
 				mapheaderinfo[num-1]->nextlevel = (INT16)i;
 			}
 			else if (fastcmp(word, "MARATHONNEXT"))
 			{
-				if      (fastcmp(word2, "TITLE"))      i = 1100;
-				else if (fastcmp(word2, "EVALUATION")) i = 1101;
-				else if (fastcmp(word2, "CREDITS"))    i = 1102;
-				else if (fastcmp(word2, "ENDING"))     i = 1103;
-				else
-				// Support using the actual map name,
-				// i.e., MarathonNext = AB, MarathonNext = FZ, etc.
-
-				// Convert to map number
-				if (word2[0] >= 'A' && word2[0] <= 'Z' && word2[2] == '\0')
-					i = M_MapNumber(word2[0], word2[1]);
+				i = ConvertLevelHeaderMapNum(i);
+				if (i == 0)
+					i = ParseNextLevelName(word2);
 
 				mapheaderinfo[num-1]->marathonnext = (INT16)i;
 			}
@@ -2844,7 +2877,7 @@ void readframe(MYFILE *f, INT32 num)
 
 				for (z = 0; actionpointers[z].name; z++)
 				{
-					if (actionpointers[z].action.acv == states[num].action.acv)
+					if (actionpointers[z].action == states[num].action)
 						break;
 				}
 
@@ -2856,8 +2889,6 @@ void readframe(MYFILE *f, INT32 num)
 						if (fastcmp(actiontocompare, actionpointers[z].name))
 						{
 							states[num].action = actionpointers[z].action;
-							states[num].action.acv = actionpointers[z].action.acv; // assign
-							states[num].action.acp1 = actionpointers[z].action.acp1;
 							found = true;
 							break;
 						}
@@ -2868,6 +2899,10 @@ void readframe(MYFILE *f, INT32 num)
 					deh_warning("Unknown action %s", actiontocompare);
 
 				free(actiontocompare);
+			}
+			else if (fastcmp(word1, "SPRITE2NUMBER") || fastcmp(word1, "SPRITE2NAME"))
+			{
+				states[num].sprite2 = get_sprite2(word2);
 			}
 			else
 				deh_warning("Frame %d: unknown word '%s'", num, word1);
@@ -3053,12 +3088,10 @@ void reademblemdata(MYFILE *f, INT32 num)
 				emblemlocations[num-1].tag = (INT16)value;
 			else if (fastcmp(word, "MAPNUM"))
 			{
-				// Support using the actual map name,
-				// i.e., Level AB, Level FZ, etc.
-
-				// Convert to map number
-				if (word2[0] >= 'A' && word2[0] <= 'Z')
-					value = M_MapNumber(word2[0], word2[1]);
+				if (G_IsValidMapName(word2))
+					value = G_GetMapNumber(word2);
+				if (!value)
+					value = get_number(word2);
 
 				emblemlocations[num-1].level = (INT16)value;
 			}
@@ -3300,6 +3333,12 @@ void readunlockable(MYFILE *f, INT32 num)
 					// Convert to map number
 					if (word2[0] >= 'A' && word2[0] <= 'Z')
 						i = M_MapNumber(word2[0], word2[1]);
+					else if (unlockables[num].type == SECRET_WARP)
+					{
+						INT16 mapnum = G_GetMapNumber(word2);
+						if (mapnum)
+							i = mapnum;
+					}
 
 					unlockables[num].variable = (INT16)i;
 				}
@@ -3373,15 +3412,14 @@ static void readcondition(UINT8 set, UINT32 id, char *word2)
 		PARAMCHECK(1);
 		ty = UC_MAPVISITED + offset;
 
-		// Convert to map number if it appears to be one
-		if (params[1][0] >= 'A' && params[1][0] <= 'Z')
-			re = M_MapNumber(params[1][0], params[1][1]);
-		else
+		// Convert to map number
+		re = G_GetMapNumber(params[1]);
+		if (!re)
 			re = atoi(params[1]);
 
-		if (re <= 0 || re > NUMMAPS)
+		if (re <= 0 || re > numgamemaps)
 		{
-			deh_warning("Level number %d out of range (1 - %d)", re, NUMMAPS);
+			deh_warning("Level number %d out of range (1 - %d)", re, numgamemaps);
 			return;
 		}
 	}
@@ -3393,15 +3431,14 @@ static void readcondition(UINT8 set, UINT32 id, char *word2)
 		ty = UC_MAPSCORE + offset;
 		re = atoi(params[2]);
 
-		// Convert to map number if it appears to be one
-		if (params[1][0] >= 'A' && params[1][0] <= 'Z')
-			x1 = (INT16)M_MapNumber(params[1][0], params[1][1]);
-		else
+		// Convert to map number
+		x1 = G_GetMapNumber(params[1]);
+		if (!x1)
 			x1 = (INT16)atoi(params[1]);
 
-		if (x1 <= 0 || x1 > NUMMAPS)
+		if (x1 <= 0 || x1 > numgamemaps)
 		{
-			deh_warning("Level number %d out of range (1 - %d)", re, NUMMAPS);
+			deh_warning("Level number %d out of range (1 - %d)", re, numgamemaps);
 			return;
 		}
 	}
@@ -3428,15 +3465,14 @@ static void readcondition(UINT8 set, UINT32 id, char *word2)
 		else
 			re = atoi(params[i]);
 
-		// Convert to map number if it appears to be one
-		if (params[1][0] >= 'A' && params[1][0] <= 'Z')
-			x1 = (INT16)M_MapNumber(params[1][0], params[1][1]);
-		else
+		// Convert to map number
+		x1 = G_GetMapNumber(params[1]);
+		if (!x1)
 			x1 = (INT16)atoi(params[1]);
 
-		if (x1 <= 0 || x1 > NUMMAPS)
+		if (x1 <= 0 || x1 > numgamemaps)
 		{
-			deh_warning("Level number %d out of range (1 - %d)", re, NUMMAPS);
+			deh_warning("Level number %d out of range (1 - %d)", re, numgamemaps);
 			return;
 		}
 
@@ -3487,6 +3523,18 @@ static void readcondition(UINT8 set, UINT32 id, char *word2)
 		if (re <= 0 || re > MAXEXTRAEMBLEMS)
 		{
 			deh_warning("Extra emblem %d out of range (1 - %d)", re, MAXEXTRAEMBLEMS);
+			return;
+		}
+	}
+	else if (fastcmp(params[0], "LUA"))
+	{
+		PARAMCHECK(1);
+		ty = UC_LUA;
+		re = atoi(params[1]);
+
+		if (re <= 0 || re > MAXLUACONDITIONS)
+		{
+			deh_warning("Lua condition %d out of range (1 - %d)", re, MAXLUACONDITIONS);
 			return;
 		}
 	}
@@ -3616,6 +3664,17 @@ void readmaincfg(MYFILE *f)
 			word2 = tmp += 2;
 			strupr(word2);
 
+			{ /* Removing spaces from the end of word2 */
+				int wlen = strlen(word2); // Change tmp to word2 length
+				int index = 0; // word2 index
+				for (int i = 0; i < wlen; i++){
+					if (!isspace((unsigned char)word2[i])) {
+						index = i;
+					}
+				}
+				word2[(unsigned int)index + 1] = '\0'; // null terminator after finishing
+			}
+
 			value = atoi(word2); // used for numerical settings
 
 			if (fastcmp(word, "EXECCFG"))
@@ -3644,9 +3703,9 @@ void readmaincfg(MYFILE *f)
 				// i.e., Level AB, Level FZ, etc.
 
 				// Convert to map number
-				if (word2[0] >= 'A' && word2[0] <= 'Z')
-					value = M_MapNumber(word2[0], word2[1]);
-				else
+				if (G_IsValidMapName(word2))
+					value = G_GetMapNumber(word2);
+				if (!value)
 					value = get_number(word2);
 
 				spstage_start = spmarathon_start = (INT16)value;
@@ -3657,9 +3716,9 @@ void readmaincfg(MYFILE *f)
 				// i.e., Level AB, Level FZ, etc.
 
 				// Convert to map number
-				if (word2[0] >= 'A' && word2[0] <= 'Z')
-					value = M_MapNumber(word2[0], word2[1]);
-				else
+				if (G_IsValidMapName(word2))
+					value = G_GetMapNumber(word2);
+				if (!value)
 					value = get_number(word2);
 
 				spmarathon_start = (INT16)value;
@@ -3670,9 +3729,9 @@ void readmaincfg(MYFILE *f)
 				// i.e., Level AB, Level FZ, etc.
 
 				// Convert to map number
-				if (word2[0] >= 'A' && word2[0] <= 'Z')
-					value = M_MapNumber(word2[0], word2[1]);
-				else
+				if (G_IsValidMapName(word2))
+					value = G_GetMapNumber(word2);
+				if (!value)
 					value = get_number(word2);
 
 				sstage_start = (INT16)value;
@@ -3684,9 +3743,9 @@ void readmaincfg(MYFILE *f)
 				// i.e., Level AB, Level FZ, etc.
 
 				// Convert to map number
-				if (word2[0] >= 'A' && word2[0] <= 'Z')
-					value = M_MapNumber(word2[0], word2[1]);
-				else
+				if (G_IsValidMapName(word2))
+					value = G_GetMapNumber(word2);
+				if (!value)
 					value = get_number(word2);
 
 				smpstage_start = (INT16)value;
@@ -3778,9 +3837,9 @@ void readmaincfg(MYFILE *f)
 				// i.e., Level AB, Level FZ, etc.
 
 				// Convert to map number
-				if (word2[0] >= 'A' && word2[0] <= 'Z')
-					value = M_MapNumber(word2[0], word2[1]);
-				else
+				if (G_IsValidMapName(word2))
+					value = G_GetMapNumber(word2);
+				if (!value)
 					value = get_number(word2);
 
 				titlemap = (INT16)value;
@@ -3938,11 +3997,6 @@ void readmaincfg(MYFILE *f)
 				gamedataadded = true;
 				titlechanged = true;
 			}
-			else if (fastcmp(word, "RESETDATA"))
-			{
-				P_ResetData(value);
-				titlechanged = true;
-			}
 			else if (fastcmp(word, "CUSTOMVERSION"))
 			{
 				deh_strlcpy(customversionstring, word2, sizeof customversionstring, va("Maincfg: customversion"));
@@ -3954,9 +4008,9 @@ void readmaincfg(MYFILE *f)
 				// i.e., Level AB, Level FZ, etc.
 
 				// Convert to map number
-				if (word2[0] >= 'A' && word2[0] <= 'Z')
-					value = M_MapNumber(word2[0], word2[1]);
-				else
+				if (G_IsValidMapName(word2))
+					value = G_GetMapNumber(word2);
+				if (!value)
 					value = get_number(word2);
 
 				bootmap = (INT16)value;
@@ -3974,9 +4028,9 @@ void readmaincfg(MYFILE *f)
 				// i.e., Level AB, Level FZ, etc.
 
 				// Convert to map number
-				if (word2[0] >= 'A' && word2[0] <= 'Z')
-					value = M_MapNumber(word2[0], word2[1]);
-				else
+				if (G_IsValidMapName(word2))
+					value = G_GetMapNumber(word2);
+				if (!value)
 					value = get_number(word2);
 
 				tutorialmap = (INT16)value;

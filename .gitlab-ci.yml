@@ -12,6 +12,7 @@ variables:
 
 stages:
   - build
+  - osxcross
 
 default:
   interruptible: true

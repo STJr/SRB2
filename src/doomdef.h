@@ -106,8 +106,6 @@
 
 FILE *fopenfile(const char*, const char*);
 
-//#define NOMD5
-
 // If you don't disable ALL debug first, you get ALL debug enabled
 #if !defined (NDEBUG)
 #ifndef PACKETDROP
@@ -252,6 +250,19 @@ extern char logfilename[1024];
 // and the structure of some networking packets and commands.
 #define MAXSKINS 255
 #define MAXCHARACTERSLOTS (MAXSKINS * 3) // Should be higher than MAXSKINS.
+
+#define MAXMAPS 16386
+
+#define MAX_MAP_NAME_SIZE 256 // This is an arbitrary limit to prevent exceedingly long map names.
+
+#define NEXTMAP_TITLE (MAXMAPS)
+#define NEXTMAP_EVALUATION (MAXMAPS+2)
+#define NEXTMAP_CREDITS (MAXMAPS+3)
+#define NEXTMAP_ENDING (MAXMAPS+4)
+
+#define NUM_NEXTMAPS 4
+
+#define NUMBASEMAPS 1035 // MAP01 to MAPZZ
 
 #define COLORRAMPSIZE 16
 #define MAXCOLORNAME 32
@@ -466,6 +477,8 @@ extern skincolor_t skincolors[MAXSKINCOLORS];
 #define NEWTICRATE (TICRATE*NEWTICRATERATIO)
 
 #define MUSICRATE 1000 // sound timing is calculated by milliseconds
+
+#define MAX_MUSIC_NAME 64
 
 #define RING_DIST 512*FRACUNIT // how close you need to be to a ring to attract it
 
@@ -698,13 +711,6 @@ extern int
 ///	Shuffle's incomplete OpenGL sorting code.
 #define SHUFFLE // This has nothing to do with sorting, why was it disabled?
 
-///	Allow the use of the SOC RESETINFO command.
-///	\note	Builds that are tight on memory should disable this.
-///	    	This stops the game from storing backups of the states, sprites, and mobjinfo tables.
-///	    	Though this info is compressed under normal circumstances, it's still a lot of extra
-///	    	memory that never gets touched.
-#define ALLOW_RESETDATA
-
 /// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
 //#define REDSANALOG
 
@@ -731,7 +737,7 @@ extern int
 /// Maintain compatibility with older 2.2 demos
 #define OLD22DEMOCOMPAT
 
-#ifdef HAVE_CURL
+#if defined (HAVE_CURL) && !(defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__))
 #define MASTERSERVER
 #else
 #undef UPDATE_ALERT

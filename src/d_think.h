@@ -28,18 +28,11 @@
 // To compile this as "ANSI C with classes" we will need to handle the various
 //  action functions cleanly.
 //
-typedef void (*actionf_v)();
 typedef void (*actionf_p1)(void *);
-
-typedef union
-{
-	actionf_v acv;
-	actionf_p1 acp1;
-} actionf_t;
 
 // Historically, "think_t" is yet another function pointer to a routine
 // to handle an actor.
-typedef actionf_t think_t;
+typedef actionf_p1 think_t;
 
 // Doubly linked list of actors.
 typedef struct thinker_s

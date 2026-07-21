@@ -1,6 +1,7 @@
 target_sources(SRB2SDL2 PRIVATE
 	lapi.c
 	lbaselib.c
+	ldblib.c
 	ldo.c
 	lfunc.c
 	linit.c

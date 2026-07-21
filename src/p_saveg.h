@@ -20,7 +20,11 @@
 
 #include "tables.h"
 
-#define NEWSKINSAVES (INT16_MAX) // TODO: 2.3: Delete (Purely for backwards compatibility)
+#define SAVE_GAME_COMPLETE_BIT 0x01
+
+// TODO: 2.3: Delete both of these (purely for backwards compatibility)
+#define NEWSKINSAVES (INT16_MAX)
+#define NEWMAPSAVES (INT16_MAX)
 
 // Persistent storage/archiving.
 // These are the load / save game routines.

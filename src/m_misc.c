@@ -806,7 +806,7 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 	 "Unknown";
 #endif
 	char rendermodetxt[9];
-	char maptext[8];
+	char *maptext;
 	char lvlttltext[48];
 	char locationtxt[40];
 	char ctrevision[40];
@@ -827,9 +827,9 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 	}
 
 	if (gamestate == GS_LEVEL)
-		snprintf(maptext, 8, "%s", G_BuildMapName(gamemap));
+		maptext = Z_StrDup(G_BuildMapName(gamemap));
 	else
-		snprintf(maptext, 8, "Unknown");
+		maptext = Z_StrDup("Unknown");
 
 	if (gamestate == GS_LEVEL && mapheaderinfo[gamemap-1]->lvlttl[0] != '\0')
 		snprintf(lvlttltext, 48, "%s%s%s",
@@ -869,6 +869,8 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 	png_infotext[10].text = strncpy(cttime, comptime, sizeof(cttime)-1);
 
 	png_set_text(png_ptr, png_info_ptr, png_infotext, SRB2PNGTXT);
+
+	Z_Free(maptext);
 #undef SRB2PNGTXT
 #endif
 }
@@ -1720,7 +1722,7 @@ char *va(const char *format, ...)
 	static char string[1024];
 
 	va_start(argptr, format);
-	vsprintf(string, format, argptr);
+	vsnprintf(string, 1024, format, argptr);
 	va_end(argptr);
 
 	return string;
@@ -2299,6 +2301,30 @@ boolean M_StringToDecimal(const char *input, double *out)
 	return true;
 }
 
+const char *M_GetFilenameFromPath(const char *path)
+{
+	const char *slash = strrchr(path, PATHSEP[0]);
+	if (slash)
+		return slash + 1;
+	return path;
+}
+
+const char *M_GetExtensionFromFilename(const char *filename)
+{
+	const char *dot = strrchr(filename, '.');
+	if (dot)
+		return dot + 1;
+	return NULL;
+}
+
+const char *M_CheckFilenameExtension(const char *filename, const char *ext)
+{
+	const char *dot = strrchr(filename, '.');
+	if (dot && (strstr(dot, ext) || strstr(dot + 1, ext)))
+		return dot + 1;
+	return NULL;
+}
+
 // Rounds off floating numbers and checks for 0 - 255 bounds
 int M_RoundUp(double number)
 {
@@ -2311,4 +2337,35 @@ int M_RoundUp(double number)
 		return (int)number + 1;
 
 	return (int)number;
+}
+
+// Hashes some message using FNV-1a
+#define FNV1A_OFFSET_BASIS 0x811C9DC5
+#define FNV1A_PRIME        0x01000193
+
+UINT32 FNV1a_Hash(const char *message, size_t size)
+{
+	UINT32 hash = FNV1A_OFFSET_BASIS;
+
+	for (size_t i = 0; i < size; i++)
+	{
+		hash ^= message[i];
+		hash *= FNV1A_PRIME;
+	}
+
+	return hash;
+}
+
+UINT32 FNV1a_HashString(const char *message)
+{
+	UINT32 hash = FNV1A_OFFSET_BASIS;
+
+	while (*message)
+	{
+		hash ^= *message;
+		hash *= FNV1A_PRIME;
+		message++;
+	}
+
+	return hash;
 }

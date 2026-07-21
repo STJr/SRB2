@@ -333,8 +333,6 @@ INT32 P_RandomRangeD(const char *rfile, INT32 rline, INT32 a, INT32 b)
 	return (INT32)(((INT64)__internal_prng__() * (b-a+1)) >> FRACBITS) + a;
 }
 
-
-
 // ----------------------
 // PRNG seeds & debugging
 // ----------------------

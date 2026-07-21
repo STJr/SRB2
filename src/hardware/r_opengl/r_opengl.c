@@ -155,8 +155,9 @@ static const GLfloat byte2float[256] = {
 // -----------------+
 
 #ifdef DEBUG_TO_FILE
-FILE *gllogstream;
+FILE *gllogstream = NULL;
 #endif
+
 
 FUNCPRINTF void GL_DBG_Printf(const char *format, ...)
 {
@@ -164,14 +165,14 @@ FUNCPRINTF void GL_DBG_Printf(const char *format, ...)
 	char str[4096] = "";
 	va_list arglist;
 
-	if (!gllogstream)
-		gllogstream = fopen("ogllog.txt", "w");
+	if (gllogstream) 
+	{	
+		va_start(arglist, format);
+		vsnprintf(str, 4096, format, arglist);
+		va_end(arglist);
 
-	va_start(arglist, format);
-	vsnprintf(str, 4096, format, arglist);
-	va_end(arglist);
-
-	fwrite(str, strlen(str), 1, gllogstream);
+		fwrite(str, strlen(str), 1, gllogstream);
+	}
 #else
 	(void)format;
 #endif
@@ -227,7 +228,6 @@ FUNCPRINTF static void GL_MSG_Error(const char *format, ...)
 /* 1.0 functions */
 /* Miscellaneous */
 #define pglClearColor glClearColor
-//glClear
 #define pglColorMask glColorMask
 #define pglAlphaFunc glAlphaFunc
 #define pglBlendFunc glBlendFunc
@@ -237,9 +237,7 @@ FUNCPRINTF static void GL_MSG_Error(const char *format, ...)
 #define pglEnable glEnable
 #define pglDisable glDisable
 #define pglGetFloatv glGetFloatv
-//glGetIntegerv
-//glGetString
-#define pglHint glHint
+#define pglPolygonMode glPolygonMode
 
 /* Depth Buffer */
 #define pglClearDepth glClearDepth
@@ -283,6 +281,7 @@ FUNCPRINTF static void GL_MSG_Error(const char *format, ...)
 /* Texture mapping */
 #define pglTexEnvi glTexEnvi
 #define pglTexParameteri glTexParameteri
+#define pglTexImage1D glTexImage1D
 #define pglTexImage2D glTexImage2D
 #define pglTexSubImage2D glTexSubImage2D
 
@@ -668,6 +667,7 @@ void SetupGLFunc4(void)
 {
 	/* 1.2 funcs */
 	pglTexImage3D = GetGLFunc("glTexImage3D");
+
 	/* 1.3 funcs */
 	pglActiveTexture = GetGLFunc("glActiveTexture");
 	pglMultiTexCoord2f = GetGLFunc("glMultiTexCoord2f");

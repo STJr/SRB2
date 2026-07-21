@@ -58,9 +58,6 @@ extern size_t nummapthings;
 extern mapthing_t *mapthings;
 
 void P_SetupLevelSky(INT32 skynum, boolean global);
-#ifdef SCANTHINGS
-void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum);
-#endif
 void P_RespawnThings(void);
 boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate);
 #ifdef HWRENDER
@@ -72,6 +69,8 @@ boolean P_RunSOC(const char *socfilename);
 void P_LoadSoundsRange(UINT16 wadnum, UINT16 first, UINT16 num);
 void P_LoadMusicsRange(UINT16 wadnum, UINT16 first, UINT16 num);
 void P_WriteThings(const char *filepath);
+void P_LoadMapsFromFile(UINT16 wadnum, boolean added_ingame);
+
 size_t P_PrecacheLevelFlats(void);
 void P_AllocMapHeader(INT16 i);
 

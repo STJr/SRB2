@@ -89,8 +89,12 @@ int luaO_rawequalObj (const TValue *t1, const TValue *t2) {
 
 int luaO_str2d (const char *s, lua_Number *result) {
   char *endptr;
-  double r = lua_str2number(s, &endptr);
-   *result = (lua_Number)r;
+  long r = lua_str2number(s, &endptr);
+  if (r > INT32_MAX)
+    r = INT32_MAX;
+  else if (r < INT32_MIN)
+    r = INT32_MIN;
+  *result = (lua_Number)r;
   if (endptr == s) return 0;  /* conversion failed */
   if (*endptr == 'x' || *endptr == 'X')  /* maybe an hexadecimal constant? */
     *result = cast_num(strtoul(s, &endptr, 16));

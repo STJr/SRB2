@@ -44,32 +44,36 @@ typedef struct
 	/// Number of bytes in doomdata to be sent
 	INT16 datalength;
 
-	/// Info common to all nodes.
-	/// Console is always node 0.
-	INT16 numnodes;
-	/// Flag: 1 = send a backup tic in every packet.
-	INT16 extratics;
-
-	/// Number of "slots": the highest player number in use plus one.
-	INT16 numslots;
-
 	/// The packet data to be sent.
 	char data[MAXPACKETLENGTH];
 } ATTRPACK doomcom_t;
 
+#define DOOMCOM_DATA(d) (doomdata_t *)&(d)->data
+#define DOOMCOM_SETTYPE(d, t) ((d)[6] = (t))
+#define DOOMCOM_DATABUF(d) { .buf = (unsigned char *)(d)->data+8, .size = (d)->datalength, .pos = 0 }
 #if defined(_MSC_VER)
 #pragma pack()
 #endif
 
-extern doomcom_t *doomcom;
+/** \brief Number of connected nodes.
+*/
+extern INT16 numnetnodes;
+
+/** \brief Number of "slots": the highest player number in use plus one.
+*/
+extern INT16 numslots;
+
+/** \brief Flag: 1 = send a backup tic in every packet.
+*/
+extern INT16 extratics;
 
 /**	\brief return packet in doomcom struct
 */
-extern boolean (*I_NetGet)(void);
+extern boolean (*I_NetGet)(doomcom_t *doomcom);
 
 /**	\brief send packet within doomcom struct
 */
-extern void (*I_NetSend)(void);
+extern void (*I_NetSend)(doomcom_t *doomcom);
 
 /**	\brief	close a connection
 

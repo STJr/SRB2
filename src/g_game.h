@@ -31,7 +31,6 @@ extern char  player_names[MAXPLAYERS][MAXPLAYERNAME+1];
 extern INT32 player_name_changes[MAXPLAYERS];
 
 extern player_t players[MAXPLAYERS];
-extern boolean playeringame[MAXPLAYERS];
 
 // gametic at level start
 extern tic_t levelstarttic;
@@ -113,7 +112,17 @@ INT32 Joy2Axis(joyaxis_e axissel);
 #define SLOWTURNTICS (6)
 
 // build an internal map name MAPxx from map number
+const char *G_BuildClassicMapName(INT32 map);
+
 const char *G_BuildMapName(INT32 map);
+
+void G_InitMaps(void);
+UINT16 G_GetMapNumber(const char *name);
+UINT16 G_GetNextMapNumber(const char *name);
+UINT16 G_AddMap(const char *name, UINT32 lumpnum);
+lumpnum_t G_GetMapLumpnum(const char *name);
+boolean G_MapFileExists(const char *name);
+boolean G_IsValidMapName(const char *name);
 
 extern INT16 ticcmd_oldangleturn[2];
 extern boolean ticcmd_centerviewdown[2]; // For simple controls, lock the camera behind the player
@@ -141,6 +150,11 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps);
 void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer,
 	boolean skipprecutscene, boolean FLS);
 char *G_BuildMapTitle(INT32 mapnum);
+const char *G_GetMapThumbnail(INT16 map);
+const char *G_GetMapThumbnailWide(INT16 map);
+const char *G_GetDefaultMapMusic(INT16 map);
+const char *G_GetMapMetalSonicReplay(INT16 map);
+boolean G_IsGameEndMap(INT16 mapnum);
 
 struct searchdim
 {

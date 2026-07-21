@@ -124,7 +124,7 @@ void Command_Numthinkers_f(void)
 	{
 		for (think = thlist[i].next; think != &thlist[i]; think = think->next)
 		{
-			if (think->function.acp1 != action)
+			if (think->function != action)
 				continue;
 
 			count++;
@@ -228,7 +228,7 @@ void P_AddThinker(const thinklistnum_t n, thinker_t *thinker)
 static const char *MobjTypeName(const mobj_t *mobj)
 {
 	mobjtype_t type;
-	actionf_p1 p1 = mobj->thinker.function.acp1;
+	actionf_p1 p1 = mobj->thinker.function;
 
 	if (p1 == (actionf_p1)P_MobjThinker)
 		type = mobj->type;
@@ -247,7 +247,7 @@ static const char *MobjTypeName(const mobj_t *mobj)
 
 static const char *MobjThinkerName(const mobj_t *mobj)
 {
-	actionf_p1 p1 = mobj->thinker.function.acp1;
+	actionf_p1 p1 = mobj->thinker.function;
 
 	if (p1 == (actionf_p1)P_MobjThinker)
 	{
@@ -349,7 +349,7 @@ void P_RemoveThinker(thinker_t *thinker)
 {
 	LUA_InvalidateUserdata(thinker);
 	thinker->removing = true;
-	thinker->function.acp1 = (actionf_p1)P_RemoveThinkerDelayed;
+	thinker->function = (actionf_p1)P_RemoveThinkerDelayed;
 }
 
 /*
@@ -437,9 +437,9 @@ static inline void P_RunThinkers(void)
 		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = currentthinker->next)
 		{
 #ifdef PARANOIA
-			I_Assert(currentthinker->function.acp1 != NULL);
+			I_Assert(currentthinker->function != NULL);
 #endif
-			currentthinker->function.acp1(currentthinker);
+			currentthinker->function(currentthinker);
 		}
 		PS_STOP_TIMING(ps_thlist_times[i]);
 	}
@@ -474,7 +474,7 @@ static void P_DoAutobalanceTeams(void)
 	//We can then pick a random player to be forced to change teams.
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && players[i].ctfteam)
+		if (players[i].ingame && players[i].ctfteam)
 		{
 			if (players[i].ctfteam == 1)
 			{
@@ -579,7 +579,7 @@ static inline void P_DoSpecialStageStuff(void)
 	// Can't drown in a special stage
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i] || players[i].spectator)
+		if (!players[i].ingame || players[i].spectator)
 			continue;
 
 		players[i].powers[pw_underwater] = players[i].powers[pw_spacetime] = 0;
@@ -594,7 +594,7 @@ static inline void P_DoSpecialStageStuff(void)
 		// Count up the rings of all the players and see if
 		// they've collected the required amount.
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i])
+			if (players[i].ingame)
 			{
 				tic_t oldnightstime = players[i].nightstime;
 				countspheres += players[i].spheres;
@@ -612,7 +612,7 @@ static inline void P_DoSpecialStageStuff(void)
 						if (mapheaderinfo[gamemap-1]->levelflags & LF_MIXNIGHTSCOUNTDOWN)
 						{
 							S_FadeMusic(0, 10*MUSICRATE);
-							S_StartSound(NULL, sfx_timeup); // that creepy "out of time" music from NiGHTS.
+							S_StartSoundFromEverywhere(sfx_timeup); // that creepy "out of time" music from NiGHTS.
 						}
 						else
 							S_ChangeMusicInternal("_drown", false);
@@ -625,7 +625,7 @@ static inline void P_DoSpecialStageStuff(void)
 					players[i].pflags &= ~(PF_GLIDING|PF_BOUNCING);
 					players[i].nightstime = 0;
 					if (P_IsLocalPlayer(&players[i]))
-						S_StartSound(NULL, sfx_s3k66);
+						S_StartSoundFromEverywhere(sfx_s3k66);
 				}
 			}
 
@@ -635,7 +635,7 @@ static inline void P_DoSpecialStageStuff(void)
 			{
 				// Halt all the players
 				for (i = 0; i < MAXPLAYERS; i++)
-					if (playeringame[i] && !players[i].exiting)
+					if (players[i].ingame && !players[i].exiting)
 					{
 						players[i].mo->momx = players[i].mo->momy = 0;
 						players[i].exiting = (14*TICRATE)/5 + 1;
@@ -674,13 +674,13 @@ static inline void P_DoTagStuff(void)
 
 		for (i=0; i < MAXPLAYERS; i++)
 		{
-			if (playeringame[i] && !players[i].spectator)
+			if (players[i].ingame && !players[i].spectator)
 				participants++;
 		}
 
 		for (i=0; i < MAXPLAYERS; i++)
 		{
-			if (playeringame[i] && !players[i].spectator && players[i].playerstate == PST_LIVE
+			if (players[i].ingame && !players[i].spectator && players[i].playerstate == PST_LIVE
 			&& !(players[i].pflags & (PF_TAGIT|PF_GAMETYPEOVER)))
 				//points given is the number of participating players divided by two.
 				P_AddPlayerScore(&players[i], participants/2);
@@ -718,7 +718,7 @@ void P_Ticker(boolean run)
 
 	// Increment jointime even if paused
 	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i])
+		if (players[i].ingame)
 			players[i].jointime++;
 
 	if (objectplacing)
@@ -727,6 +727,7 @@ void P_Ticker(boolean run)
 		{
 			P_MapStart();
 			R_UpdateMobjInterpolators();
+			R_UpdateLevelInterpolators();
 			OP_ObjectplaceMovement(&players[0]);
 			P_MoveChaseCamera(&players[0], &camera, false);
 			R_UpdateViewInterpolation();
@@ -776,7 +777,7 @@ void P_Ticker(boolean run)
 
 		PS_START_TIMING(ps_playerthink_time);
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
+			if (players[i].ingame && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerThink(&players[i]);
 		PS_STOP_TIMING(ps_playerthink_time);
 	}
@@ -802,7 +803,7 @@ void P_Ticker(boolean run)
 
 		// Run any "after all the other thinkers" stuff
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
+			if (players[i].ingame && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerAfterThink(&players[i]);
 
 		PS_START_TIMING(ps_lua_thinkframe_time);
@@ -838,7 +839,7 @@ void P_Ticker(boolean run)
 			countdowntimeup = true;
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (!playeringame[i] || players[i].spectator)
+				if (!players[i].ingame || players[i].spectator)
 					continue;
 
 				if (!players[i].mo)
@@ -936,7 +937,7 @@ void P_PreTicker(INT32 frames)
 		LUA_HOOK(PreThinkFrame);
 
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
+			if (players[i].ingame && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 			{
 				// stupid fucking cmd hack
 				// if it isn't for this, players can move in preticker time
@@ -957,7 +958,7 @@ void P_PreTicker(INT32 frames)
 
 		// Run any "after all the other thinkers" stuff
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
+			if (players[i].ingame && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerAfterThink(&players[i]);
 
 		LUA_HookThinkFrame();

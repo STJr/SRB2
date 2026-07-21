@@ -52,6 +52,7 @@
 #include "lua_hud.h"
 #include "lua_hudlib_drawlist.h"
 #include "lua_hook.h"
+#include "lua_libs.h"
 
 // coords are scaled
 #define HU_INPUTX 0
@@ -377,7 +378,7 @@ static void HU_removeChatText_Log(void)
 void HU_AddChatText(const char *text, boolean playsound)
 {
 	if (playsound && cv_consolechat.value != 2) // Don't play the sound if we're using hidden chat.
-		S_StartSound(NULL, sfx_radio);
+		S_StartSoundFromEverywhere(sfx_radio);
 	// reguardless of our preferences, put all of this in the chat buffer in case we decide to change from oldchat mid-game.
 
 	if (chat_nummsg_log >= CHAT_BUFSIZE) // too many messages!
@@ -396,7 +397,10 @@ void HU_AddChatText(const char *text, boolean playsound)
 	if (OLDCHAT) // if we're using oldchat, print directly in console
 		CONS_Printf("%s\n", text);
 	else			// if we aren't, still save the message to log.txt
-		CON_LogMessage(va("%s\n", text));
+	{
+		CON_LogMessage(text);
+		CON_LogMessage("\n"); // Add newline. Don't use va for that, since `text` might be refering to va's buffer itself
+	}
 }
 
 /** Runs a say command, sending an ::XD_SAY message.
@@ -491,7 +495,7 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		//CONS_Printf("%d\n", target);
 
 		// check for target player, if it doesn't exist then we can't send the message!
-		if (target < MAXPLAYERS && playeringame[target]) // player exists
+		if (target < MAXPLAYERS && players[target].ingame) // player exists
 			target++; // even though playernums are from 0 to 31, target is 1 to 32, so up that by 1 to have it work!
 		else
 		{
@@ -990,7 +994,7 @@ static void HU_sendChatMessage(void)
 		target = atoi(playernum); // turn that into a number
 
 		// check for target player, if it doesn't exist then we can't send the message!
-		if (target < MAXPLAYERS && playeringame[target]) // player exists
+		if (target < MAXPLAYERS && players[target].ingame) // player exists
 			target++; // even though playernums are from 0 to 31, target is 1 to 32, so up that by 1 to have it work!
 		else
 		{
@@ -1013,7 +1017,7 @@ static void HU_sendChatMessage(void)
 void HU_clearChatChars(void)
 {
 	memset(w_chat, '\0', sizeof(w_chat));
-	I_SetTextInputMode(false);
+	I_SetTextInputMode(textinputmodeenabledbylua);
 	chat_on = false;
 	c_input = 0;
 
@@ -1150,7 +1154,7 @@ boolean HU_Responder(event_t *ev)
 			if (!CHAT_MUTE)
 				HU_sendChatMessage();
 
-			I_SetTextInputMode(false);
+			I_SetTextInputMode(textinputmodeenabledbylua);
 			chat_on = false;
 			c_input = 0; // reset input cursor
 			chat_scrollmedown = true; // you hit enter, so you might wanna autoscroll to see what you just sent. :)
@@ -1161,7 +1165,7 @@ boolean HU_Responder(event_t *ev)
 			|| c == gamecontrol[GC_TEAMKEY][0] || c == gamecontrol[GC_TEAMKEY][1])
 			&& c >= KEY_MOUSE1)) // If it's not a keyboard key, then the chat button is used as a toggle.
 		{
-			I_SetTextInputMode(false);
+			I_SetTextInputMode(textinputmodeenabledbylua);
 			chat_on = false;
 			c_input = 0; // reset input cursor
 			I_UpdateMouseGrab();
@@ -1562,7 +1566,7 @@ static void HU_DrawChat(void)
 					if (i != n) continue;
 			}
 
-			if (playeringame[i])
+			if (players[i].ingame)
 			{
 				char name[MAXPLAYERNAME+1];
 				strlcpy(name, player_names[i], 7); // shorten name to 7 characters.
@@ -1748,24 +1752,28 @@ static void HU_DrawDemoInfo(void)
 //
 void HU_Drawer(void)
 {
-	// draw chat string plus cursor
-	if (chat_on)
+
+	if (LUA_HudEnabled(hud_chat))
 	{
-		if (!OLDCHAT)
-			HU_DrawChat();
+		// draw chat string plus cursor
+		if (chat_on)
+		{
+			if (!OLDCHAT)
+				HU_DrawChat();
+			else
+				HU_DrawChat_Old();
+		}
 		else
-			HU_DrawChat_Old();
-	}
-	else
-	{
-		typelines = 1;
-		chat_scrolltime = 0;
+		{
+			typelines = 1;
+			chat_scrolltime = 0;
 
-		if (!OLDCHAT && cv_consolechat.value < 2 && netgame) // Don't display minimized chat if you set the mode to Window (Hidden)
-			HU_drawMiniChat(); // draw messages in a cool fashion.
+			if (!OLDCHAT && cv_consolechat.value < 2 && netgame) // Don't display minimized chat if you set the mode to Window (Hidden)
+				HU_drawMiniChat(); // draw messages in a cool fashion.
+		}
 	}
 
-	if (cechotimer)
+	if (cechotimer && LUA_HudEnabled(hud_cecho))
 		HU_DrawCEcho();
 
 	if (demoplayback && hu_showscores)
@@ -1854,7 +1862,7 @@ void HU_Drawer(void)
 //
 // HU_drawPing
 //
-void HU_drawPing(INT32 x, INT32 y, UINT32 ping, boolean notext, INT32 flags)
+void HU_drawPing(INT32 x, INT32 y, UINT32 ping, UINT32 pl, boolean notext, INT32 flags)
 {
 	UINT8 numbars = 0; // how many ping bars do we draw?
 	UINT8 barcolor = 31; // color we use for the bars (green, yellow, red or black)
@@ -1881,6 +1889,9 @@ void HU_drawPing(INT32 x, INT32 y, UINT32 ping, boolean notext, INT32 flags)
 
 	if (ping < UINT32_MAX && (!notext || vid.width >= 640)) // how sad, we're using a shit resolution.
 		V_DrawSmallString(dx, y+4, V_ALLOWLOWERCASE|flags, va("%dms", ping));
+
+	if (pl < UINT32_MAX && (!notext || vid.width >= 640))
+		V_DrawSmallString(dx, y+8, V_ALLOWLOWERCASE|flags, va("%d%%", pl)); // TODO: this is for testing, make a proper indicator soon
 
 	for (i=0; (i<3); i++) // Draw the ping bar
 	{
@@ -1920,7 +1931,7 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 		if (!splitscreen) // don't draw it on splitscreen,
 		{
 			if (tab[i].num != serverplayer)
-				HU_drawPing(x + 253, y, players[tab[i].num].quittime ? UINT32_MAX : playerpingtable[tab[i].num], false, 0);
+				HU_drawPing(x + 253, y, players[tab[i].num].quittime ? UINT32_MAX : playerpingtable[tab[i].num], playerpacketlosstable[tab[i].num], false, 0);
 			//else
 			//	V_DrawSmallString(x+ 246, y+4, V_YELLOWMAP, "SERVER");
 		}
@@ -2121,7 +2132,7 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		if (!splitscreen)
 		{
 			if (tab[i].num != serverplayer)
-				HU_drawPing(x + 135, y+1, players[tab[i].num].quittime ? UINT32_MAX : playerpingtable[tab[i].num], true, 0);
+				HU_drawPing(x + 135, y+1, players[tab[i].num].quittime ? UINT32_MAX : playerpingtable[tab[i].num], playerpacketlosstable[tab[i].num], true, 0);
 			//else
 				//V_DrawSmallString(x+ 129, y+4, V_YELLOWMAP, "HOST");
 		}
@@ -2246,7 +2257,7 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		if (!splitscreen)
 		{
 			if (tab[i].num != serverplayer)
-				HU_drawPing(x+ 113, y, players[tab[i].num].quittime ? UINT32_MAX : playerpingtable[tab[i].num], false, 0);
+				HU_drawPing(x+ 113, y, players[tab[i].num].quittime ? UINT32_MAX : playerpingtable[tab[i].num], playerpacketlosstable[tab[i].num], false, 0);
 			//else
 			//	V_DrawSmallString(x+ 94, y+4, V_YELLOWMAP, "SERVER");
 		}
@@ -2277,7 +2288,7 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 
 		strlcpy(name, tab[i].name, 7);
 		if (tab[i].num != serverplayer)
-			HU_drawPing(x+ 113, y, players[tab[i].num].quittime ? UINT32_MAX : playerpingtable[tab[i].num], false, 0);
+			HU_drawPing(x+ 113, y, players[tab[i].num].quittime ? UINT32_MAX : playerpingtable[tab[i].num], playerpacketlosstable[tab[i].num], false, 0);
 		//else
 		//	V_DrawSmallString(x+ 94, y+4, V_YELLOWMAP, "SERVER");
 
@@ -2386,7 +2397,7 @@ static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scor
 		if (!splitscreen) // don't draw it on splitscreen,
 		{
 			if (tab[i].num != serverplayer)
-				HU_drawPing(x+ 135, y+1, players[tab[i].num].quittime ? UINT32_MAX : playerpingtable[tab[i].num], true, 0);
+				HU_drawPing(x+ 135, y+1, players[tab[i].num].quittime ? UINT32_MAX : playerpingtable[tab[i].num], playerpacketlosstable[tab[i].num], true, 0);
 			//else
 			//	V_DrawSmallString(x+ 129, y+4, V_YELLOWMAP, "HOST");
 		}
@@ -2509,14 +2520,14 @@ static inline void HU_DrawSpectatorTicker(void)
 	int totallength = 0;
 
 	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] && players[i].spectator)
+		if (players[i].ingame && players[i].spectator)
 			totallength += (signed)strlen(player_names[i]) * 8 + 16;
 
 	length -= (leveltime % (totallength + (vid.width / vid.dup)));
 	length += (vid.width / vid.dup);
 
 	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] && players[i].spectator)
+		if (players[i].ingame && players[i].spectator)
 		{
 			if (length >= -((signed)strlen(player_names[i]) * 8 + 16) && length <= (vid.width / vid.dup))
 				V_DrawString(length, height + 8, V_TRANSLUCENT|V_ALLOWLOWERCASE|V_SNAPTOLEFT, player_names[i]);
@@ -2581,7 +2592,7 @@ static void HU_DrawRankings(void)
 
 	for (j = 0; j < MAXPLAYERS; j++)
 	{
-		if (!playeringame[j])
+		if (!players[j].ingame)
 			continue;
 
 		if (!G_PlatformGametype() && players[j].spectator)
@@ -2589,7 +2600,7 @@ static void HU_DrawRankings(void)
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (!playeringame[i])
+			if (!players[i].ingame)
 				continue;
 
 			if (!G_PlatformGametype() && players[i].spectator)

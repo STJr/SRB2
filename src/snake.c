@@ -23,7 +23,7 @@
 #define SPEED 5
 
 #define NUM_BLOCKS_X 20
-#define NUM_BLOCKS_Y 10
+#define NUM_BLOCKS_Y 8
 #define BLOCK_SIZE 12
 #define BORDER_SIZE 12
 
@@ -32,7 +32,7 @@
 
 #define LEFT_X ((BASEVIDWIDTH - MAP_WIDTH) / 2 - BORDER_SIZE)
 #define RIGHT_X (LEFT_X + MAP_WIDTH + BORDER_SIZE * 2 - 1)
-#define BOTTOM_Y (BASEVIDHEIGHT - 48)
+#define BOTTOM_Y (BASEVIDHEIGHT - 76)
 #define TOP_Y (BOTTOM_Y - MAP_HEIGHT - BORDER_SIZE * 2 + 1)
 
 enum bonustype_s {
@@ -313,7 +313,7 @@ void Snake_Update(void *opaque)
 				{
 					snake->snakebonus = BONUS_NONE;
 					snake->snakelength = i;
-					S_StartSound(NULL, sfx_adderr);
+					S_StartSoundFromEverywhere(sfx_adderr);
 				}
 				else
 					snake->gameover = true;
@@ -321,7 +321,7 @@ void Snake_Update(void *opaque)
 
 	if (snake->gameover)
 	{
-		S_StartSound(NULL, sfx_lose);
+		S_StartSoundFromEverywhere(sfx_lose);
 		return;
 	}
 
@@ -351,7 +351,7 @@ void Snake_Update(void *opaque)
 			FindFreeSlot(snake, &snake->bonusx, &snake->bonusy, x, y);
 		}
 
-		S_StartSound(NULL, sfx_s3k6b);
+		S_StartSoundFromEverywhere(sfx_s3k6b);
 	}
 
 	if (snake->snakelength > 1 && snake->snakedir[0])
@@ -395,7 +395,7 @@ void Snake_Update(void *opaque)
 	// Check collision with bonus
 	if (snake->bonustype != BONUS_NONE && x == snake->bonusx && y == snake->bonusy)
 	{
-		S_StartSound(NULL, sfx_ncchip);
+		S_StartSoundFromEverywhere(sfx_ncchip);
 
 		switch (snake->bonustype)
 		{
@@ -419,7 +419,7 @@ void Snake_Update(void *opaque)
 				snake->snakedir[i] = snake->snakedir[0];
 			}
 
-			S_StartSound(NULL, sfx_bkpoof);
+			S_StartSoundFromEverywhere(sfx_bkpoof);
 			break;
 		case BONUS_SCISSORS:
 			snake->snakebonus = BONUS_SCISSORS;
@@ -444,13 +444,13 @@ void Snake_Update(void *opaque)
 
 			snake->snakedir[0] = 0;
 
-			S_StartSound(NULL, sfx_gravch);
+			S_StartSoundFromEverywhere(sfx_gravch);
 			break;
 		default:
 			if (snake->snakebonus != BONUS_GHOST)
 			{
 				snake->gameover = true;
-				S_StartSound(NULL, sfx_lose);
+				S_StartSoundFromEverywhere(sfx_lose);
 			}
 		}
 

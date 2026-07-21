@@ -78,7 +78,7 @@ fireflicker_t *P_SpawnAdjustableFireFlicker(sector_t *sector, INT16 lighta, INT1
 
 	P_AddThinker(THINK_MAIN, &flick->thinker);
 
-	flick->thinker.function.acp1 = (actionf_p1)T_FireFlicker;
+	flick->thinker.function = (actionf_p1)T_FireFlicker;
 	flick->sector = sector;
 	flick->maxlight = max(lighta, lightb);
 	flick->minlight = min(lighta, lightb);
@@ -136,7 +136,7 @@ void P_SpawnLightningFlash(sector_t *sector)
 
 	if (sector->lightingdata)
 	{
-		if (((lightflash_t *)sector->lightingdata)->thinker.function.acp1
+		if (((lightflash_t *)sector->lightingdata)->thinker.function
 			== (actionf_p1)T_LightningFlash)
 		{
 			// lightning was already flashing in this sector
@@ -153,7 +153,7 @@ void P_SpawnLightningFlash(sector_t *sector)
 
 	P_AddThinker(THINK_MAIN, &flash->thinker);
 
-	flash->thinker.function.acp1 = (actionf_p1)T_LightningFlash;
+	flash->thinker.function = (actionf_p1)T_LightningFlash;
 	flash->sector = sector;
 	flash->maxlight = 255;
 	flash->minlight = minlight;
@@ -215,7 +215,7 @@ strobe_t *P_SpawnAdjustableStrobeFlash(sector_t *sector, INT16 lighta, INT16 lig
 	flash->sector = sector;
 	flash->darktime = darktime;
 	flash->brighttime = brighttime;
-	flash->thinker.function.acp1 = (actionf_p1)T_StrobeFlash;
+	flash->thinker.function = (actionf_p1)T_StrobeFlash;
 	flash->maxlight = max(lighta, lightb);
 	flash->minlight = min(lighta, lightb);
 
@@ -285,7 +285,7 @@ glow_t *P_SpawnAdjustableGlowingLight(sector_t *sector, INT16 lighta, INT16 ligh
 	g->sector = sector;
 	g->minlight = min(lighta, lightb);
 	g->maxlight = max(lighta, lightb);
-	g->thinker.function.acp1 = (actionf_p1)T_Glow;
+	g->thinker.function = (actionf_p1)T_Glow;
 	g->direction = 1;
 	g->speed = (INT16)(length/4);
 	if (g->speed > (g->maxlight - g->minlight)/2) // don't make it ridiculous speed
@@ -333,7 +333,7 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 	}
 
 	ll = Z_Calloc(sizeof (*ll), PU_LEVSPEC, NULL);
-	ll->thinker.function.acp1 = (actionf_p1)T_LightFade;
+	ll->thinker.function = (actionf_p1)T_LightFade;
 	sector->lightingdata = ll; // set it to the lightlevel_t
 
 	P_AddThinker(THINK_MAIN, &ll->thinker); // add thinker
@@ -368,7 +368,7 @@ void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased, bool
 	{
 		if (!force && ticbased // always let speed fader execute
 			&& sectors[i].lightingdata
-			&& ((lightlevel_t*)sectors[i].lightingdata)->thinker.function.acp1 == (actionf_p1)T_LightFade)
+			&& ((lightlevel_t*)sectors[i].lightingdata)->thinker.function == (actionf_p1)T_LightFade)
 			// && ((lightlevel_t*)sectors[i].lightingdata)->timer > 2)
 		{
 			CONS_Debug(DBG_GAMELOGIC, "Line type 420 Executor: Fade light thinker already exists, timer: %d\n", ((lightlevel_t*)sectors[i].lightingdata)->timer);

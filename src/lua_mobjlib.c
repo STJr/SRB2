@@ -47,7 +47,7 @@ enum mobj_e {
 	mobj_floorspriteslope,
 	mobj_drawonlyforplayer,
 	mobj_dontdrawforviewmobj,
-	mobj_touching_sectorlist,
+	mobj_sectors,
 	mobj_subsector,
 	mobj_floorz,
 	mobj_ceilingz,
@@ -88,6 +88,7 @@ enum mobj_e {
 	mobj_tracer,
 	mobj_friction,
 	mobj_movefactor,
+	mobj_gravity,
 	mobj_fuse,
 	mobj_watertop,
 	mobj_waterbottom,
@@ -129,7 +130,7 @@ static const char *const mobj_opt[] = {
 	"floorspriteslope",
 	"drawonlyforplayer",
 	"dontdrawforviewmobj",
-	"touching_sectorlist",
+	"sectors",
 	"subsector",
 	"floorz",
 	"ceilingz",
@@ -170,6 +171,7 @@ static const char *const mobj_opt[] = {
 	"tracer",
 	"friction",
 	"movefactor",
+	"gravity",
 	"fuse",
 	"watertop",
 	"waterbottom",
@@ -189,6 +191,53 @@ static const char *const mobj_opt[] = {
 	NULL};
 
 #define UNIMPLEMENTED luaL_error(L, LUA_QL("mobj_t") " field " LUA_QS " is not implemented for Lua and cannot be accessed.", mobj_opt[field])
+
+// iterates through a mobj's 'touching' sectorlist!
+static int lib_iterateMobjSectors(lua_State *L)
+{
+	sector_t *state = NULL;
+	sector_t *sec = NULL;
+	INLEVEL
+
+	if (lua_gettop(L) < 2)
+		return luaL_error(L, "Don't call mobj.sectors() directly, use it as 'for rover in mobj.sectors do <block> end'.");
+
+	msecnode_t *node = (msecnode_t *)lua_touserdata(L, lua_upvalueindex(1));
+	if (node == NULL)
+		return 0; // no sectorlist to iterate through sorry!
+
+	state = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+
+	lua_settop(L, 2);
+	lua_remove(L, 1); // remove state now.
+
+	if (!lua_isnil(L, 1))
+	{
+		sec = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+		sec = node->m_sector;
+	}
+	else
+		sec = state; // state is used as the "start" of the sectorlist
+
+	if (sec)
+	{
+		node = node->m_sectorlist_next;
+		lua_pushlightuserdata(L, node);
+		lua_replace(L, lua_upvalueindex(1));			
+		LUA_PushUserdata(L, sec, META_SECTOR);
+		return 1;
+	}
+	return 0;
+}
+
+static int mobj_iterate(lua_State *L)
+{
+	lua_pushvalue(L, lua_upvalueindex(1)); // iterator function, or the "generator"
+	lua_pushvalue(L, lua_upvalueindex(2)); // state (used as the "start" of the list for our purposes
+	lua_pushnil(L); // initial value (unused)
+	return 3;
+}
+
 
 static int mobj_fields_ref = LUA_NOREF;
 
@@ -282,8 +331,12 @@ static int mobj_get(lua_State *L)
 		}
 		LUA_PushUserdata(L, mo->dontdrawforviewmobj, META_MOBJ);
 		break;
-	case mobj_touching_sectorlist:
-		return UNIMPLEMENTED;
+	case mobj_sectors:
+		lua_pushlightuserdata(gL, mo->touching_sectorlist);
+		lua_pushcclosure(L, lib_iterateMobjSectors, 1);
+		LUA_PushUserdata(L, mo->touching_sectorlist ? mo->touching_sectorlist->m_sector : NULL, META_SECTOR);
+		lua_pushcclosure(L, mobj_iterate, 2);
+		return 1;
 	case mobj_subsector:
 		LUA_PushUserdata(L, mo->subsector, META_SUBSECTOR);
 		break;
@@ -436,6 +489,9 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_movefactor:
 		lua_pushfixed(L, mo->movefactor);
+		break;
+	case mobj_gravity:
+		lua_pushfixed(L, mo->gravity);
 		break;
 	case mobj_fuse:
 		lua_pushinteger(L, mo->fuse);
@@ -606,8 +662,8 @@ static int mobj_set(lua_State *L)
 			P_SetTarget(&mo->dontdrawforviewmobj, dontdrawforviewmobj);
 		}
 		break;
-	case mobj_touching_sectorlist:
-		return UNIMPLEMENTED;
+	case mobj_sectors:
+		return NOSETPOS;
 	case mobj_subsector:
 		return NOSETPOS;
 	case mobj_floorz:
@@ -835,6 +891,9 @@ static int mobj_set(lua_State *L)
 	case mobj_movefactor:
 		mo->movefactor = luaL_checkfixed(L, 3);
 		break;
+	case mobj_gravity:
+		mo->gravity = luaL_checkfixed(L, 3);
+		break;
 	case mobj_fuse:
 		mo->fuse = luaL_checkinteger(L, 3);
 		break;
@@ -973,6 +1032,7 @@ enum mapthing_e {
 	mapthing_taglist,
 	mapthing_args,
 	mapthing_stringargs,
+	mapthing_customargs,
 	mapthing_mobj,
 };
 
@@ -994,6 +1054,7 @@ const char *const mapthing_opt[] = {
 	"taglist",
 	"args",
 	"stringargs",
+	"customargs",
 	"mobj",
 	NULL,
 };
@@ -1071,6 +1132,9 @@ static int mapthing_get(lua_State *L)
 			break;
 		case mapthing_stringargs:
 			LUA_PushUserdata(L, mt->stringargs, META_THINGSTRINGARGS);
+			break;
+		case mapthing_customargs:
+			LUA_PushUserdata(L, mt->customargs, META_THINGCUSTOMARGS);
 			break;
 		case mapthing_mobj:
 			LUA_PushUserdata(L, mt->mobj, META_MOBJ);

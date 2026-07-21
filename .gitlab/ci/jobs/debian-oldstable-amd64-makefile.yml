@@ -1,6 +1,8 @@
 Debian oldstable:amd64 Makefile:
   extends: Debian stable:amd64 Makefile
 
+  stage: build
+
   when: manual
 
   image: git.do.srb2.org:5050/stjr/srb2ci/srb2ci:oldstable
@@ -18,7 +20,7 @@ Debian oldstable:amd64 Makefile:
     - - |
           # apt_toolchain
           echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
-      - apt-get install gcc-x86-64-linux-gnu || apt-get install gcc
+      - apt-get install g++-x86-64-linux-gnu || apt-get install g++
       - |
           # apt_toolchain
           echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"

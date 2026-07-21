@@ -355,7 +355,7 @@ static boolean P_CrossBSPNode(INT32 bspnum, register los_t *los)
 {
 	while (!(bspnum & NF_SUBSECTOR))
 	{
-		register node_t *bsp = nodes + bspnum;
+		register bspnode_t *bsp = nodes + bspnum;
 		INT32 side = P_DivlineSide(los->strace.x,los->strace.y,(divline_t *)bsp)&1;
 		if (side == P_DivlineSide(los->t2x, los->t2y, (divline_t *) bsp))
 			bspnum = bsp->children[side]; // doesn't touch the other side

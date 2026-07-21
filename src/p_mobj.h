@@ -391,6 +391,7 @@ typedef struct mobj_s
 
 	fixed_t friction;
 	fixed_t movefactor;
+	fixed_t gravity;
 
 	INT32 fuse; // Does something in P_MobjThinker on reaching 0.
 	fixed_t watertop; // top of the water FOF the mobj is in
@@ -534,7 +535,7 @@ void P_XYMovement(mobj_t *mo);
 void P_RingXYMovement(mobj_t *mo);
 void P_SceneryXYMovement(mobj_t *mo);
 boolean P_ZMovement(mobj_t *mo);
-void P_RingZMovement(mobj_t *mo);
+boolean P_RingZMovement(mobj_t *mo);
 boolean P_SceneryZMovement(mobj_t *mo);
 void P_PlayerZMovement(mobj_t *mo);
 void P_EmeraldManager(void);

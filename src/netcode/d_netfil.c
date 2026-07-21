@@ -112,6 +112,7 @@ static pauseddownload_t *pauseddownload = NULL;
 file_download_t filedownload;
 
 static CURL *http_handle;
+static char curl_errbuf[CURL_ERROR_SIZE];
 static CURLM *multi_handle;
 static UINT32 curl_dlnow;
 static UINT32 curl_dltotal;
@@ -129,7 +130,7 @@ boolean waitingforluafilecommand = false;
 char luafiledir[256 + 16] = "luafiles";
 
 // max file size to send to a player (in kilobytes)
-static CV_PossibleValue_t maxsend_cons_t[] = {{0, "MIN"}, {204800, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t maxsend_cons_t[] = {{-1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 consvar_t cv_maxsend = CVAR_INIT ("maxsend", "4096", CV_SAVE|CV_NETVAR, maxsend_cons_t, NULL);
 
 consvar_t cv_noticedownload = CVAR_INIT ("noticedownload", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
@@ -165,7 +166,7 @@ enum
   * Used to have size limiting built in - now handled via W_InitFile in w_wad.c
   *
   */
-UINT8 *PutFileNeeded(UINT16 firstfile)
+UINT8 *PutFileNeeded(doomdata_t *netbuffer, UINT16 firstfile)
 {
 	UINT8 count = 0;
 	UINT8 *p_start = netbuffer->packettype == PT_MOREFILESNEEDED ? netbuffer->u.filesneededcfg.files : netbuffer->u.serverinfo.fileneeded;
@@ -206,10 +207,10 @@ UINT8 *PutFileNeeded(UINT16 firstfile)
 			// Store in the upper four bits
 			if (!cv_downloading.value)
 				filestatus += (WILLSEND_NO << 4); // Won't send
-			else if (wadfiles[i]->filesize <= (UINT32)cv_maxsend.value * 1024)
+			else if (cv_maxsend.value == -1 || wadfiles[i]->filesize <= (UINT32)cv_maxsend.value * 1024)
 				filestatus += (WILLSEND_YES << 4); // Will send if requested
-			// else
-				// filestatus += (0 << 4); -- Won't send, too big
+			else
+				filestatus += (WILLSEND_TOOLARGE << 4); // Won't send, too big
 		}
 
 		WRITEUINT8(p, filestatus);
@@ -362,6 +363,8 @@ void CL_AbortDownloadResume(void)
   */
 boolean CL_SendFileRequest(void)
 {
+	doomcom_t *doomcom = D_NewPacket(PT_REQUESTFILE, servernode, 0);
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	char *p;
 	INT64 totalfreespaceneeded = 0, availablefreespace;
 
@@ -398,7 +401,6 @@ boolean CL_SendFileRequest(void)
 		return false;
 	}
 
-	netbuffer->packettype = PT_REQUESTFILE;
 	p = (char *)netbuffer->u.textcmd;
 	for (INT32 i = 0; i < fileneedednum; i++)
 		if (fileneeded[i].status == FS_NOTFOUND || fileneeded[i].status == FS_MD5SUMBAD)
@@ -414,7 +416,8 @@ boolean CL_SendFileRequest(void)
 
 	WRITEUINT8(p, 0xFF);
 
-	if (!HSendPacket(servernode, true, 0, p - (char *)netbuffer->u.textcmd))
+	doomcom->datalength = p - (char *)netbuffer->u.textcmd;
+	if (!HSendPacket(doomcom, true, 0))
 	{
 		CONS_Printf("Could not send download request packet to server\n");
 		return false;
@@ -427,8 +430,10 @@ boolean CL_SendFileRequest(void)
 }
 
 // get request filepak and put it on the send queue
-void PT_RequestFile(SINT8 node)
+void PT_RequestFile(doomcom_t *doomcom)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+	UINT8 node = doomcom->remotenode;
 	UINT8 *p = netbuffer->u.textcmd;
 
 	if (client || !cv_downloading.value)
@@ -657,8 +662,8 @@ static void SV_PrepareSendLuaFileToNextNode(void)
 		if (luafiletransfers->nodestatus[i] == LFTNS_WAITING) // Node waiting
 		{
 			// Tell the client we're about to send them the file
-			netbuffer->packettype = PT_SENDINGLUAFILE;
-			if (!HSendPacket(i, true, 0, 0))
+			doomcom_t *doomcom = D_NewPacket(PT_SENDINGLUAFILE, i, 0);
+			if (!HSendPacket(doomcom, true, 0))
 				I_Error("Failed to send a PT_SENDINGLUAFILE packet\n"); // !!! Todo: Handle failure a bit better lol
 
 			luafiletransfers->nodestatus[i] = LFTNS_ASKED;
@@ -754,6 +759,7 @@ void SV_AbortLuaFileTransfer(INT32 node)
 
 void CL_PrepareDownloadLuaFile(void)
 {
+	doomcom_t *doomcom = D_NewPacket(PT_ASKLUAFILE, servernode, 0);
 	// If there is no transfer in the list, this normally means the server
 	// called io.open before us, so we have to wait until we call it too
 	if (!luafiletransfers)
@@ -769,8 +775,7 @@ void CL_PrepareDownloadLuaFile(void)
 	}
 
 	// Tell the server we are ready to receive the file
-	netbuffer->packettype = PT_ASKLUAFILE;
-	HSendPacket(servernode, true, 0, 0);
+	HSendPacket(doomcom, true, 0);
 
 	FreeFileNeeded();
 	AllocFileNeeded(1);
@@ -849,7 +854,7 @@ static boolean AddFileToSendQueue(INT32 node, UINT8 fileid)
 	strlcpy(p->id.filename, wadfiles[wadnum]->filename, MAX_WADPATH);
 
 	// Handle huge file requests (i.e. bigger than cv_maxsend.value KB)
-	if (wadfiles[wadnum]->filesize > (UINT32)cv_maxsend.value * 1024)
+	if (cv_maxsend.value != -1 && wadfiles[wadnum]->filesize > (UINT32)cv_maxsend.value * 1024)
 	{
 		// Too big
 		// Don't inform client (client sucks, man)
@@ -1032,8 +1037,6 @@ void FileSendTicker(void)
 
 	packetsent = cv_downloadspeed.value;
 
-	netbuffer->packettype = PT_FILEFRAGMENT;
-
 	while (packetsent-- && filestosend != 0)
 	{
 		for (i = currentnode, j = 0; j < MAXNETNODES;
@@ -1113,10 +1116,13 @@ void FileSendTicker(void)
 		}
 
 		// Build a packet containing a file fragment
-		p = &netbuffer->u.filetxpak;
 		fragmentsize = FILEFRAGMENTSIZE;
 		if (f->size-transfer[i].position < fragmentsize)
 			fragmentsize = f->size-transfer[i].position;
+
+		doomcom_t *doomcom = D_NewPacket(PT_FILEFRAGMENT, i, FILETXHEADER + fragmentsize);
+		doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+		p = &netbuffer->u.filetxpak;
 		if (ram)
 			M_Memcpy(p->data, &f->id.ram[transfer[i].position], fragmentsize);
 		else
@@ -1133,7 +1139,7 @@ void FileSendTicker(void)
 		p->size = SHORT((UINT16)FILEFRAGMENTSIZE);
 
 		// Send the packet
-		if (HSendPacket(i, false, 0, FILETXHEADER + fragmentsize)) // Don't use the default acknowledgement system
+		if (HSendPacket(doomcom, false, 0)) // Don't use the default acknowledgement system
 		{ // Success
 			transfer[i].position = (UINT32)(transfer[i].position + fragmentsize);
 			if (transfer[i].position >= f->size)
@@ -1153,8 +1159,10 @@ void FileSendTicker(void)
 	}
 }
 
-void PT_FileAck(SINT8 node)
+void PT_FileAck(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	fileack_pak *packet = &netbuffer->u.fileack;
 	filetran_t *trans = &transfer[node];
 
@@ -1207,8 +1215,10 @@ void PT_FileAck(SINT8 node)
 	}
 }
 
-void PT_FileReceived(SINT8 node)
+void PT_FileReceived(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	filetx_t *trans = transfer[node].txlist;
 
 	if (server && trans && netbuffer->u.filereceived == trans->fileid)
@@ -1217,9 +1227,9 @@ void PT_FileReceived(SINT8 node)
 
 static void SendAckPacket(fileack_pak *packet, UINT8 fileid)
 {
-	size_t packetsize;
-
-	packetsize = sizeof(*packet) + packet->numsegments * sizeof(*packet->segments);
+	size_t packetsize = sizeof(*packet) + packet->numsegments * sizeof(*packet->segments);
+	doomcom_t *doomcom = D_NewPacket(PT_FILEACK, servernode, packetsize);
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 
 	// Finalise the packet
 	packet->fileid = fileid;
@@ -1230,9 +1240,8 @@ static void SendAckPacket(fileack_pak *packet, UINT8 fileid)
 	}
 
 	// Send the packet
-	netbuffer->packettype = PT_FILEACK;
 	M_Memcpy(&netbuffer->u.fileack, packet, packetsize);
-	HSendPacket(servernode, false, 0, packetsize);
+	HSendPacket(doomcom, false, 0);
 
 	// Clear the packet
 	memset(packet, 0, sizeof(*packet) + 512);
@@ -1294,7 +1303,7 @@ void FileReceiveTicker(void)
 	}
 }
 
-static void OpenNewFileForDownload(fileneeded_t *file, const char *filename)
+static void OpenNewFileForDownload(doomdata_t *netbuffer, fileneeded_t *file, const char *filename)
 {
 	file->file = fopen(filename, "wb");
 	if (!file->file)
@@ -1309,8 +1318,10 @@ static void OpenNewFileForDownload(fileneeded_t *file, const char *filename)
 		I_Error("FileSendTicker: No more memory\n");
 }
 
-void PT_FileFragment(SINT8 node, INT32 netconsole)
+void PT_FileFragment(doomcom_t *doomcom, INT32 netconsole)
 {
+	UINT8 node = doomcom->remotenode;
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	if (netnodes[node].ingame)
 	{
 		// Only accept PT_FILEFRAGMENT from the server.
@@ -1382,7 +1393,7 @@ void PT_FileFragment(SINT8 node, INT32 netconsole)
 
 				CONS_Printf("Restarting download of addon \"%s\"...\n", filename);
 
-				OpenNewFileForDownload(file, file->filename);
+				OpenNewFileForDownload(netbuffer, file, file->filename);
 			}
 			else
 			{
@@ -1398,7 +1409,7 @@ void PT_FileFragment(SINT8 node, INT32 netconsole)
 		else
 		{
 			CL_AbortDownloadResume();
-			OpenNewFileForDownload(file, file->filename);
+			OpenNewFileForDownload(netbuffer, file, file->filename);
 			CONS_Printf("Downloading addon \"%s\" from the server...\n", filename);
 		}
 
@@ -1435,15 +1446,16 @@ void PT_FileFragment(SINT8 node, INT32 netconsole)
 				file->justdownloaded = true;
 
 				// Tell the server we have received the file
-				netbuffer->packettype = PT_FILERECEIVED;
+				doomcom = D_NewPacket(PT_FILERECEIVED, servernode, 1);
+				netbuffer = DOOMCOM_DATA(doomcom);
 				netbuffer->u.filereceived = filenum;
-				HSendPacket(servernode, true, 0, 1);
+				HSendPacket(doomcom, true, 0);
 
 				if (luafiletransfers)
 				{
 					// Tell the server we have received the file
-					netbuffer->packettype = PT_HASLUAFILE;
-					HSendPacket(servernode, true, 0, 0);
+					doomcom = D_NewPacket(PT_HASLUAFILE, servernode, 0);
+					HSendPacket(doomcom, true, 0);
 					FreeFileNeeded();
 				}
 				else
@@ -1604,6 +1616,10 @@ static int curlprogress_callback(void *clientp, curl_off_t dltotal, curl_off_t d
 boolean CURLPrepareFile(const char* url, int dfilenum)
 {
 	HTTP_login *login;
+	CURLcode cc;
+
+	if (!I_can_thread())
+		return false;
 
 #ifdef PARANOIA
 	if (M_CheckParm("-nodownload"))
@@ -1612,13 +1628,32 @@ boolean CURLPrepareFile(const char* url, int dfilenum)
 
 	if (!multi_handle)
 	{
-		curl_global_init(CURL_GLOBAL_ALL);
-		multi_handle = curl_multi_init();
+		cc = curl_global_init(CURL_GLOBAL_ALL);
+		if (cc < 0)
+		{
+			I_OutputMsg("libcurl: curl_global_init() returned %d\n", cc);
+		}
+		else
+		{
+			multi_handle = curl_multi_init();
+		}
+		if (!multi_handle)
+		{
+			I_OutputMsg("libcurl: curl_multi_init() failed\n");
+			curl_global_cleanup();
+			return false;
+		}
 	}
 
 	http_handle = curl_easy_init();
-	if (http_handle && multi_handle)
+	if (http_handle)
 	{
+		CURLMcode mc;
+
+		cc = curl_easy_setopt(http_handle, CURLOPT_ERRORBUFFER, curl_errbuf);
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: CURLOPT_ERRORBUFFER failed\n");
+		curl_errbuf[0] = 0x00;
+
 		I_mkdir(downloaddir, 0755);
 
 		curl_curfile = &fileneeded[dfilenum];
@@ -1632,50 +1667,76 @@ boolean CURLPrepareFile(const char* url, int dfilenum)
 		for (INT32 j = 0; j < 16; j++)
 			sprintf(&md5tmp[j*2], "%02x", curl_curfile->md5sum[j]);
 
-		curl_easy_setopt(http_handle, CURLOPT_URL, va("%s/%s?md5=%s", url, curl_realname, md5tmp));
+		cc = curl_easy_setopt(http_handle, CURLOPT_URL, va("%s/%s?md5=%s", url, curl_realname, md5tmp));
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", curl_errbuf);
 
 		// Only allow HTTP and HTTPS
 #if (LIBCURL_VERSION_MAJOR <= 7) && (LIBCURL_VERSION_MINOR < 85)
-		curl_easy_setopt(http_handle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP|CURLPROTO_HTTPS);
+		cc = curl_easy_setopt(http_handle, CURLOPT_PROTOCOLS, CURLPROTO_HTTP|CURLPROTO_HTTPS);
 #else
-		curl_easy_setopt(http_handle, CURLOPT_PROTOCOLS_STR, "http,https");
+		cc = curl_easy_setopt(http_handle, CURLOPT_PROTOCOLS_STR, "http,https");
 #endif
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", curl_errbuf);
 
 		// Set user agent, as some servers won't accept invalid user agents.
-		curl_easy_setopt(http_handle, CURLOPT_USERAGENT, va("Sonic Robo Blast 2/%s", VERSIONSTRING));
+		cc = curl_easy_setopt(http_handle, CURLOPT_USERAGENT, va("Sonic Robo Blast 2/%s", VERSIONSTRING));
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", curl_errbuf);
 
 		// Authenticate if the user so wishes
 		login = CURLGetLogin(url, NULL);
 
 		if (login)
 		{
-			curl_easy_setopt(http_handle, CURLOPT_USERPWD, login->auth);
+			cc = curl_easy_setopt(http_handle, CURLOPT_USERPWD, login->auth);
+			if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", curl_errbuf);
 		}
 
 		// Follow a redirect request, if sent by the server.
-		curl_easy_setopt(http_handle, CURLOPT_FOLLOWLOCATION, 1L);
+		cc = curl_easy_setopt(http_handle, CURLOPT_FOLLOWLOCATION, 1L);
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", curl_errbuf);
 
-		curl_easy_setopt(http_handle, CURLOPT_FAILONERROR, 1L);
+		cc = curl_easy_setopt(http_handle, CURLOPT_FAILONERROR, 1L);
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", curl_errbuf);
 
 		CONS_Printf("Downloading addon \"%s\" from %s\n", curl_realname, url);
 
 		strcatbf(curl_curfile->filename, downloaddir, "/");
 		curl_curfile->file = fopen(curl_curfile->filename, "wb");
-		curl_easy_setopt(http_handle, CURLOPT_WRITEDATA, curl_curfile->file);
-		curl_easy_setopt(http_handle, CURLOPT_WRITEFUNCTION, curlwrite_data);
-		curl_easy_setopt(http_handle, CURLOPT_NOPROGRESS, 0L);
-		curl_easy_setopt(http_handle, CURLOPT_XFERINFOFUNCTION, curlprogress_callback);
+
+		cc = curl_easy_setopt(http_handle, CURLOPT_WRITEDATA, curl_curfile->file);
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", curl_errbuf);
+
+		cc = curl_easy_setopt(http_handle, CURLOPT_WRITEFUNCTION, curlwrite_data);
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", curl_errbuf);
+
+		cc = curl_easy_setopt(http_handle, CURLOPT_NOPROGRESS, 0L);
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", curl_errbuf);
+
+		cc = curl_easy_setopt(http_handle, CURLOPT_XFERINFOFUNCTION, curlprogress_callback);
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", curl_errbuf);
 
 		curl_curfile->status = FS_DOWNLOADING;
-		curl_multi_add_handle(multi_handle, http_handle);
 
-		curl_multi_perform(multi_handle, &curl_runninghandles);
+		mc = curl_multi_add_handle(multi_handle, http_handle);
+		if (mc != CURLM_OK) I_OutputMsg("libcurl: %s\n", curl_multi_strerror(mc));
+
+		mc = curl_multi_perform(multi_handle, &curl_runninghandles);
+		if (mc != CURLM_OK) I_OutputMsg("libcurl: %s\n", curl_multi_strerror(mc));
+
 		curl_starttime = time(NULL);
 
 		filedownload.current = dfilenum;
 		filedownload.http_running = true;
 
-		I_spawn_thread("http-download", (I_thread_fn)CURLGetFile, NULL);
+		if (!I_spawn_thread("http-download", (I_thread_fn)CURLGetFile, NULL))
+		{
+			mc = curl_multi_cleanup(multi_handle);
+			if (mc != CURLM_OK) I_OutputMsg("libcurl: %s\n",  curl_multi_strerror(mc));
+			curl_global_cleanup();
+			multi_handle = NULL;
+			filedownload.http_running = false;
+			return false;
+		}
 
 		return true;
 	}
@@ -1709,14 +1770,15 @@ void CURLGetFile(void)
 	{
 		if (curl_runninghandles)
 		{
-			curl_multi_perform(multi_handle, &curl_runninghandles);
+			mc = curl_multi_perform(multi_handle, &curl_runninghandles);
+			if (mc != CURLM_OK) I_OutputMsg("libcurl: %s\n", curl_multi_strerror(mc));
 
 			/* wait for activity, timeout or "nothing" */
 			mc = curl_multi_wait(multi_handle, NULL, 0, 1000, NULL);
 
 			if (mc != CURLM_OK)
 			{
-				CONS_Alert(CONS_WARNING, "curl_multi_wait() failed, code %d.\n", mc);
+				CONS_Alert(CONS_WARNING, "curl_multi_wait() failed: %s.\n", curl_multi_strerror(mc));
 				continue;
 			}
 			curl_curfile->currentsize = curl_dlnow;
@@ -1740,7 +1802,10 @@ void CURLGetFile(void)
 					long response_code = 0;
 
 					if (easyres == CURLE_HTTP_RETURNED_ERROR)
-						curl_easy_getinfo(e, CURLINFO_RESPONSE_CODE, &response_code);
+					{
+						CURLcode cc = curl_easy_getinfo(e, CURLINFO_RESPONSE_CODE, &response_code);
+						if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", curl_errbuf);
+					}
 
 					if (response_code == 404)
 						curl_curfile->failed = FDOWNLOAD_FAIL_NOTFOUND;
@@ -1781,7 +1846,8 @@ void CURLGetFile(void)
 
 				curl_curfile->file = NULL;
 				filedownload.remaining--;
-				curl_multi_remove_handle(multi_handle, e);
+				mc = curl_multi_remove_handle(multi_handle, e);
+				if (mc != CURLM_OK) I_OutputMsg("libcurl: %s\n", curl_multi_strerror(mc));
 				curl_easy_cleanup(e);
 
 				if (!filedownload.remaining)
@@ -1792,7 +1858,8 @@ void CURLGetFile(void)
 
 	if (!filedownload.remaining || !filedownload.http_running)
 	{
-		curl_multi_cleanup(multi_handle);
+		mc = curl_multi_cleanup(multi_handle);
+		if (mc != CURLM_OK) I_OutputMsg("libcurl: %s\n", curl_multi_strerror(mc));
 		curl_global_cleanup();
 		multi_handle = NULL;
 	}
@@ -1859,10 +1926,6 @@ size_t nameonlylength(const char *s)
 
 filestatus_t checkfilemd5(char *filename, const UINT8 *wantedmd5sum)
 {
-#if defined (NOMD5)
-	(void)wantedmd5sum;
-	(void)filename;
-#else
 	FILE *fhandle;
 	UINT8 md5sum[16];
 
@@ -1880,7 +1943,6 @@ filestatus_t checkfilemd5(char *filename, const UINT8 *wantedmd5sum)
 	}
 
 	I_Error("Couldn't open %s for md5 check", filename);
-#endif
 	return FS_FOUND; // will never happen, but makes the compiler shut up
 }
 
@@ -1909,6 +1971,18 @@ filestatus_t findfile(char *filename, const UINT8 *wantedmd5sum, boolean complet
 	else if (homecheck == FS_MD5SUMBAD) // file has a bad md5; move on and look for a file with the right md5
 		badmd5 = true;
 	// if not found at all, just move on without doing anything
+
+	if (cv_addons_option.value == 3 && *cv_addons_folder.string != '\0')
+	{
+		// next, check any custom directory if specified
+		homecheck = filesearch(filename, cv_addons_folder.string, wantedmd5sum, completepath, 10);
+
+		if (homecheck == FS_FOUND) // we found the file, so return that we have :)
+			return FS_FOUND;
+		else if (homecheck == FS_MD5SUMBAD) // file has a bad md5; move on and look for a file with the right md5
+			badmd5 = true;
+		// if not found at all, just move on without doing anything
+	}
 
 	// finally check "." directory
 	homecheck = filesearch(filename, ".", wantedmd5sum, completepath, 10);

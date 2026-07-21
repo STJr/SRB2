@@ -27,6 +27,7 @@ LOCAL_SRC_FILES :=      am_map.c \
                         m_queue.c \
                         m_random.c \
                         md5.c \
+                        lonesha256.c \
                         p_ceilng.c \
                         p_enemy.c \
                         p_fab.c \

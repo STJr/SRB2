@@ -78,7 +78,7 @@ void M_CopyGameData(gamedata_t *dest, gamedata_t *src)
 	memcpy(dest->mapvisited, src->mapvisited, sizeof(dest->mapvisited));
 
 	// Main records
-	for (i = 0; i < NUMMAPS; ++i)
+	for (i = 0; i < MAXMAPS; ++i)
 	{
 		if (!src->mainrecords[i])
 			continue;
@@ -90,7 +90,7 @@ void M_CopyGameData(gamedata_t *dest, gamedata_t *src)
 	}
 
 	// Nights records
-	for (i = 0; i < NUMMAPS; ++i)
+	for (i = 0; i < MAXMAPS; ++i)
 	{
 		if (!src->nightsrecords[i] || !src->nightsrecords[i]->nummares)
 			continue;
@@ -155,6 +155,8 @@ void M_ClearSecrets(gamedata_t *data)
 		data->unlocked[i] = false;
 	for (i = 0; i < MAXCONDITIONSETS; ++i)
 		data->achieved[i] = false;
+	for (i = 0; i < MAXLUACONDITIONS; ++i)
+		data->lua[i] = false;
 
 	data->timesBeaten = data->timesBeatenWithEmeralds = data->timesBeatenUltimate = 0;
 
@@ -214,6 +216,8 @@ static UINT8 M_CheckCondition(condition_t *cn, gamedata_t *data)
 			return data->collected[cn->requirement-1];
 		case UC_EXTRAEMBLEM: // Requires extra emblem x to be obtained
 			return data->extraCollected[cn->requirement-1];
+		case UC_LUA:
+			return data->lua[cn->requirement-1];
 		case UC_CONDITIONSET: // requires condition set x to already be achieved
 			return M_Achieved(cn->requirement-1, data);
 	}
@@ -583,7 +587,7 @@ UINT8 M_GotHighEnoughScore(INT32 tscore, gamedata_t *data)
 	INT32 mscore = 0;
 	INT32 i;
 
-	for (i = 0; i < NUMMAPS; ++i)
+	for (i = 0; i < numgamemaps; ++i)
 	{
 		if (!mapheaderinfo[i] || !(mapheaderinfo[i]->menuflags & LF2_RECORDATTACK))
 			continue;
@@ -601,7 +605,7 @@ UINT8 M_GotLowEnoughTime(INT32 tictime, gamedata_t *data)
 	INT32 curtics = 0;
 	INT32 i;
 
-	for (i = 0; i < NUMMAPS; ++i)
+	for (i = 0; i < numgamemaps; ++i)
 	{
 		if (!mapheaderinfo[i] || !(mapheaderinfo[i]->menuflags & LF2_RECORDATTACK))
 			continue;
@@ -619,7 +623,7 @@ UINT8 M_GotHighEnoughRings(INT32 trings, gamedata_t *data)
 	INT32 mrings = 0;
 	INT32 i;
 
-	for (i = 0; i < NUMMAPS; ++i)
+	for (i = 0; i < numgamemaps; ++i)
 	{
 		if (!mapheaderinfo[i] || !(mapheaderinfo[i]->menuflags & LF2_RECORDATTACK))
 			continue;

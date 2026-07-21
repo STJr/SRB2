@@ -100,7 +100,7 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 				);
 
 		// NOTE: FV3_Magnitude() doesn't work properly in some cases, and chaining FixedHypot() seems to give worse results.
-		m = R_PointToDist2(0, 0, R_PointToDist2(0, 0, slope->normal.x, slope->normal.y), slope->normal.z);
+		m = GetDistance3D(0, 0, 0, slope->normal.x, slope->normal.y, slope->normal.z);
 
 		// Invert normal if it's facing down.
 		if (slope->normal.z < 0)
@@ -109,7 +109,7 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 		FV3_Divide(&slope->normal, m);
 
 		// Get direction vector
-		m = FixedHypot(slope->normal.x, slope->normal.y);
+		m = GetDistance2D(0, 0, slope->normal.x, slope->normal.y);
 		slope->d.x = -FixedDiv(slope->normal.x, m);
 		slope->d.y = -FixedDiv(slope->normal.y, m);
 
@@ -153,7 +153,7 @@ static void ReconfigureViaConstants (pslope_t *slope, const double pa, const dou
 		FV3_Negate(normal);
 
 	// Get direction vector
-	m = FixedHypot(normal->x, normal->y);
+	m = GetDistance2D(0, 0, normal->x, normal->y);
 	slope->d.x = -FixedDiv(normal->x, m);
 	slope->d.y = -FixedDiv(normal->y, m);
 
@@ -248,7 +248,7 @@ void T_DynamicSlopeVert (dynvertexplanethink_t* th)
 static inline void P_AddDynLineSlopeThinker (pslope_t* slope, dynplanetype_t type, line_t* sourceline, fixed_t extent)
 {
 	dynlineplanethink_t* th = Z_Calloc(sizeof (*th), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_DynamicSlopeLine;
+	th->thinker.function = (actionf_p1)T_DynamicSlopeLine;
 	th->slope = slope;
 	th->type = type;
 	th->sourceline = sourceline;
@@ -264,7 +264,7 @@ static inline void P_AddDynVertexSlopeThinker (pslope_t* slope, const INT16 tags
 	dynvertexplanethink_t* th = Z_Calloc(sizeof (*th), PU_LEVSPEC, NULL);
 	size_t i;
 	INT32 l;
-	th->thinker.function.acp1 = (actionf_p1)T_DynamicSlopeVert;
+	th->thinker.function = (actionf_p1)T_DynamicSlopeVert;
 	th->slope = slope;
 
 	for (i = 0; i < 3; i++) {
@@ -330,13 +330,13 @@ static fixed_t GetExtent(sector_t *sector, line_t *line)
 			continue;
 
 		P_ClosestPointOnLine(li->v1->x, li->v1->y, line, &tempv);
-		dist = R_PointToDist2(tempv.x, tempv.y, li->v1->x, li->v1->y);
+		dist = GetDistance2D(tempv.x, tempv.y, li->v1->x, li->v1->y);
 		if(dist > fardist)
 			fardist = dist;
 
 		// Okay, maybe do it for v2 as well?
 		P_ClosestPointOnLine(li->v2->x, li->v2->y, line, &tempv);
-		dist = R_PointToDist2(tempv.x, tempv.y, li->v2->x, li->v2->y);
+		dist = GetDistance2D(tempv.x, tempv.y, li->v2->x, li->v2->y);
 		if(dist > fardist)
 			fardist = dist;
 	}
@@ -400,7 +400,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 	}
 
 	{
-		fixed_t len = R_PointToDist2(0, 0, line->dx, line->dy);
+		fixed_t len = GetDistance2D(0, 0, line->dx, line->dy);
 		nx = FixedDiv(line->dy, len);
 		ny = -FixedDiv(line->dx, len);
 	}
@@ -827,7 +827,7 @@ static void P_UpdateSolidMidtextureSlope(line_t *line, pslope_t *ref)
 	point.z = P_GetSlopeZAt(ref, point.x, point.y);
 
 	// Get length of the line
-	fixed_t extent = R_PointToDist2(0, 0, line->dx, line->dy);
+	fixed_t extent = GetDistance2D(0, 0, line->dx, line->dy);
 
 	// Precalculate variables
 	slope->zdelta = FixedDiv(origin.z - point.z, extent);
@@ -1046,15 +1046,37 @@ fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope)
 {
 	vector3_t slopemom, axis;
 	angle_t ang;
+	angle_t advanceAng = ANG15;
+	const boolean upwards = (slope->zangle < ANGLE_180);
 
 	if (slope->flags & SL_NOPHYSICS)
 		return 0;
 
 	// If there's physics, time for launching.
 	// Doesn't kill the vertical momentum as much as P_SlopeLaunch does.
-	ang = slope->zangle + ANG15*((slope->zangle > 0) ? 1 : -1);
-	if (ang > ANGLE_90 && ang < ANGLE_180)
-		ang = ((slope->zangle > 0) ? ANGLE_90 : InvAngle(ANGLE_90)); // hard cap of directly upwards
+	ang = slope->zangle;
+
+	// for the time being, let's pretend the slope inclines upwards only
+	if (!upwards)
+	{
+		ang += ANGLE_180;
+	}
+
+	// angles past 90 degrees need to shrink to get closer to 90 degrees
+	if (ang > ANGLE_90)
+	{
+		advanceAng = InvAngle(advanceAng);
+	}
+
+	// now we set the actual final angle
+	if ((ang > ANGLE_90) != (ang + advanceAng > ANGLE_90)) // does advancing the angle push it past directly upwards?
+	{
+		ang = (upwards ? ANGLE_90 : InvAngle(ANGLE_90)); // hard cap of directly upwards
+	}
+	else
+	{
+		ang = slope->zangle + advanceAng;
+	}
 
 	slopemom.x = mo->momx;
 	slopemom.y = mo->momy;

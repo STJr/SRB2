@@ -44,7 +44,7 @@ static int iterationState_gc(lua_State *L)
 }
 
 #define push_thinker(th) {\
-	if ((th)->function.acp1 == (actionf_p1)P_MobjThinker) \
+	if ((th)->function == (actionf_p1)P_MobjThinker) \
 		LUA_PushUserdata(L, (th), META_MOBJ); \
 	else \
 		lua_pushlightuserdata(L, (th)); \
@@ -93,7 +93,7 @@ static int lib_iterateThinkers(lua_State *L)
 		return luaL_error(L, "next thinker invalidated during iteration");
 
 	for (; next != &thlist[THINK_MOBJ]; next = next->next)
-		if (!it->filter || next->function.acp1 == it->filter)
+		if (!it->filter || next->function == it->filter)
 		{
 			push_thinker(next);
 			if (next->next != &thlist[THINK_MOBJ])

@@ -114,12 +114,19 @@ boolean M_StringToNumber(const char *input, int *out);
 
 // Converts a string containing a number into a double. Returns false if the conversion failed.
 boolean M_StringToDecimal(const char *input, double *out);
+const char *M_GetFilenameFromPath(const char *path);
+const char *M_GetExtensionFromFilename(const char *filename);
+const char *M_CheckFilenameExtension(const char *filename, const char *ext);
 
 // counting bits, for weapon ammo code, usually
 FUNCMATH UINT8 M_CountBits(UINT32 num, UINT8 size);
 
 // Rounds off floating numbers and checks for 0 - 255 bounds
 int M_RoundUp(double number);
+
+// Hashes some message using FNV-1a
+UINT32 FNV1a_Hash(const char *message, size_t size);
+UINT32 FNV1a_HashString(const char *message);
 
 #include "w_wad.h"
 extern char configfile[MAX_WADPATH];

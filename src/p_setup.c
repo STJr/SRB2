@@ -11,6 +11,9 @@
 /// \file  p_setup.c
 /// \brief Do all the WAD I/O, get map description, set up initial state and misc. LUTs
 
+
+#include <errno.h>
+
 #include "doomdef.h"
 #include "d_main.h"
 #include "byteptr.h"
@@ -108,7 +111,7 @@ vertex_t *vertexes;
 seg_t *segs;
 sector_t *sectors;
 subsector_t *subsectors;
-node_t *nodes;
+bspnode_t *nodes;
 line_t *lines;
 side_t *sides;
 mapthing_t *mapthings;
@@ -238,7 +241,7 @@ mobj_t *P_GetClosestWaypoint(UINT8 sequence, mobj_t *mo)
 		if (!mo2)
 			continue;
 
-		curdist = P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z);
+		curdist = P_GetMobjDistance3D(mo, mo2);
 
 		if (result && curdist > bestdist)
 			continue;
@@ -363,8 +366,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->ssspheres = 1;
 	mapheaderinfo[num]->gravity = FRACUNIT/2;
 	mapheaderinfo[num]->keywords[0] = '\0';
-	snprintf(mapheaderinfo[num]->musname, 7, "%sM", G_BuildMapName(i));
-	mapheaderinfo[num]->musname[6] = 0;
+	snprintf(mapheaderinfo[num]->musname, MAX_MUSIC_NAME+1, "%s", G_GetDefaultMapMusic(i));
 	mapheaderinfo[num]->mustrack = 0;
 	mapheaderinfo[num]->muspos = 0;
 	mapheaderinfo[num]->musinterfadeout = 0;
@@ -609,15 +611,15 @@ Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 	levelflat->type = LEVELFLAT_TEXTURE;
 
 	// Look for a flat
-	int texturenum = R_CheckFlatNumForName(levelflat->name);
+	int texturenum = R_CheckTextureNumForName(levelflat->name, TEXTURETYPE_FLAT);
 	if (texturenum < 0)
 	{
 		// If we can't find a flat, try looking for a texture!
-		texturenum = R_CheckTextureNumForName(levelflat->name);
+		texturenum = R_CheckTextureNumForName(levelflat->name, TEXTURETYPE_TEXTURE);
 		if (texturenum < 0)
 		{
 			// Use "not found" texture
-			texturenum = R_CheckTextureNumForName("REDWALL");
+			texturenum = R_CheckTextureNumForName("REDWALL", TEXTURETYPE_TEXTURE);
 
 			// Give up?
 			if (texturenum < 0)
@@ -765,69 +767,6 @@ void P_SwitchSpheresBonusMode(boolean bonustime)
 		P_SetMobjState(mo, ((bonustime) ? mo->info->raisestate : mo->info->spawnstate));
 	}
 }
-
-#ifdef SCANTHINGS
-void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
-{
-	size_t i, n;
-	UINT8 *data, *datastart;
-	UINT16 type, maprings;
-	INT16 tol;
-	UINT32 flags;
-
-	tol = mapheaderinfo[mapnum-1]->typeoflevel;
-	if (!(tol & TOL_SP))
-		return;
-	flags = mapheaderinfo[mapnum-1]->levelflags;
-
-	n = W_LumpLengthPwad(wadnum, lumpnum) / (5 * sizeof (INT16));
-	//CONS_Printf("%u map things found!\n", n);
-
-	maprings = 0;
-	data = datastart = W_CacheLumpNumPwad(wadnum, lumpnum, PU_STATIC);
-	for (i = 0; i < n; i++)
-	{
-		data += 3 * sizeof (INT16); // skip x y position, angle
-		type = READUINT16(data) & 4095;
-		data += sizeof (INT16); // skip options
-
-		switch (type)
-		{
-		case 300: // MT_RING
-		case 1800: // MT_COIN
-		case 308: // red team ring
-		case 309: // blue team ring
-			maprings++;
-			break;
-		case 400: // MT_SUPERRINGBOX
-		case 414: // red ring box
-		case 415: // blue ring box
-		case 603: // 10 diagonal rings
-			maprings += 10;
-			break;
-		case 600: // 5 vertical rings
-		case 601: // 5 vertical rings
-		case 602: // 5 diagonal rings
-			maprings += 5;
-			break;
-		case 604: // 8 circle rings
-		case 609: // 16 circle rings & wings
-			maprings += 8;
-			break;
-		case 605: // 16 circle rings
-			maprings += 16;
-			break;
-		case 608: // 8 circle rings & wings
-			maprings += 4;
-			break;
-		}
-	}
-	Z_Free(datastart);
-
-	if (maprings)
-		CONS_Printf("%s has %u rings\n", G_BuildMapName(mapnum), maprings);
-}
-#endif
 
 static void P_SpawnEmeraldHunt(void)
 {
@@ -1077,6 +1016,7 @@ static void P_LoadSectors(UINT8 *data)
 		ss->triggerer = TO_PLAYER;
 
 		ss->friction = ORIG_FRICTION;
+		ss->customargs = NULL;
 
 		P_InitializeSector(ss);
 	}
@@ -1198,6 +1138,8 @@ static void P_LoadLinedefs(UINT8 *data)
 			ld->sidenum[0] = NO_SIDEDEF;
 		if (ld->sidenum[1] == 0xffff)
 			ld->sidenum[1] = NO_SIDEDEF;
+
+		ld->customargs = NULL;
 
 		P_InitializeLinedef(ld);
 	}
@@ -1370,6 +1312,8 @@ static void P_LoadSidedefs(UINT8 *data)
 		sd->flags = 0;
 		sd->light = sd->light_top = sd->light_mid = sd->light_bottom = 0;
 		sd->lightabsolute = sd->lightabsolute_top = sd->lightabsolute_mid = sd->lightabsolute_bottom = false;
+
+		sd->customargs = NULL;
 
 		P_SetSidedefSector(i, (UINT16)SHORT(msd->sector));
 
@@ -1554,6 +1498,7 @@ static void P_LoadThings(UINT8 *data)
 			mt->z = mt->options >> ZSHIFT;
 
 		mt->mobj = NULL;
+		mt->customargs = NULL;
 	}
 }
 
@@ -1658,6 +1603,89 @@ static boolean TextmapCount(size_t size)
 	return true;
 }
 
+static void ParseTextmapCustomFields(const char* param, const char* val, customargs_t** headptr)
+{
+	if (val[0] == '\0')
+		return;
+
+	//
+	// GET latest node
+	//
+
+	customargs_t* newnode = Z_Malloc(sizeof(customargs_t), PU_LEVEL, NULL);
+
+	if (!newnode)
+		return;
+
+	newnode->next = NULL;
+
+	if (*headptr == NULL) {
+		*headptr = newnode;
+	}
+	else {
+		customargs_t* curr = *headptr;
+
+		while (curr->next != NULL) {
+			curr = curr->next;
+		}
+
+		curr->next = newnode;
+
+	}
+
+	//
+	// Setup
+	//
+
+	newnode->name = Z_Malloc(strlen(param + 5) + 1, PU_LEVEL, NULL);
+	M_Memcpy(newnode->name, param + 5, strlen(param + 5) + 1);
+
+	if (fastcmp(val, "true"))
+	{
+		newnode->type = UDMF_TYPE_BOOLEAN;
+		newnode->value.vbool = true;
+	}
+	else if (fastcmp(val, "false"))
+	{
+		newnode->type = UDMF_TYPE_BOOLEAN;
+		newnode->value.vbool = false;
+	}
+	else
+	{
+		char* endptr;
+		long lval;
+		float fval;
+
+		// Eval integer
+
+		errno = 0;
+		lval = strtol(val, &endptr, 10);
+
+		if (*endptr == '\0' && endptr != val && errno == 0) {
+			newnode->type = UDMF_TYPE_NUMERIC;
+			newnode->value.vint = lval;
+			return;
+		}
+
+		// Eval float
+
+		errno = 0;
+		fval = strtof(val, &endptr);
+
+		if (*endptr == '\0' && endptr != val && errno == 0) {
+			newnode->type = UDMF_TYPE_FIXED;
+			newnode->value.vfloat = FLOAT_TO_FIXED(fval);
+			return;
+		}
+
+		// Just string
+
+		newnode->type = UDMF_TYPE_STRING;
+		newnode->value.vstring = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
+		M_Memcpy(newnode->value.vstring, val, strlen(val) + 1);
+	}
+}
+
 static void ParseTextmapVertexParameter(UINT32 i, const char *param, const char *val)
 {
 	if (fastcmp(param, "x"))
@@ -1757,6 +1785,8 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 		sectors[i].floorangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 	else if (fastcmp(param, "rotationceiling"))
 		sectors[i].ceilingangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 5)
+		ParseTextmapCustomFields(param, val, &sectors[i].customargs);
 	else if (fastcmp(param, "floorplane_a"))
 	{
 		textmap_planefloor.defined |= PD_A;
@@ -1999,6 +2029,8 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 		sides[i].lightabsolute_mid = true;
 	else if (fastcmp(param, "lightabsolute_bottom") && fastcmp("true", val))
 		sides[i].lightabsolute_bottom = true;
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 5)
+		ParseTextmapCustomFields(param, val, &sides[i].customargs);
 }
 
 static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char *val)
@@ -2093,6 +2125,9 @@ static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char
 		lines[i].flags |= ML_BOUNCY;
 	else if (fastcmp(param, "transfer") && fastcmp("true", val))
 		lines[i].flags |= ML_TFERLINE;
+
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 5)
+		ParseTextmapCustomFields(param, val, &lines[i].customargs);
 }
 
 static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *val)
@@ -2152,6 +2187,8 @@ static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *
 			return;
 		mapthings[i].args[argnum] = atol(val);
 	}
+	else if (fastncmp(param, "user_", 5) && strlen(param) > 5)
+		ParseTextmapCustomFields(param, val, &mapthings[i].customargs);
 }
 
 /** From a given position table, run a specified parser function through a {}-encapsuled text.
@@ -3060,6 +3097,7 @@ static void P_LoadTextmap(void)
 		sc->triggerer = TO_PLAYER;
 
 		sc->friction = ORIG_FRICTION;
+		sc->customargs = NULL;
 
 		textmap_colormap.used = false;
 		textmap_colormap.lightcolor = 0;
@@ -3121,6 +3159,7 @@ static void P_LoadTextmap(void)
 		ld->executordelay = 0;
 		ld->sidenum[0] = NO_SIDEDEF;
 		ld->sidenum[1] = NO_SIDEDEF;
+		ld->customargs = NULL;
 
 		TextmapParse(linedefBlocks.pos[i], i, ParseTextmapLinedefParameter);
 
@@ -3151,6 +3190,7 @@ static void P_LoadTextmap(void)
 		sd->flags = 0;
 		sd->light = sd->light_top = sd->light_mid = sd->light_bottom = 0;
 		sd->lightabsolute = sd->lightabsolute_top = sd->lightabsolute_mid = sd->lightabsolute_bottom = false;
+		sd->customargs = NULL;
 
 		TextmapParse(sidedefBlocks.pos[i], i, ParseTextmapSidedefParameter);
 
@@ -3175,6 +3215,7 @@ static void P_LoadTextmap(void)
 		memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 		memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 		mt->mobj = NULL;
+		mt->customargs = NULL;
 
 		TextmapParse(mapthingBlocks.pos[i], i, ParseTextmapThingParameter);
 	}
@@ -3375,7 +3416,7 @@ static void P_LoadNodes(UINT8 *data)
 {
 	UINT8 j, k;
 	mapnode_t *mn = (mapnode_t*)data;
-	node_t *no = nodes;
+	bspnode_t *no = nodes;
 	size_t i;
 
 	for (i = 0; i < numnodes; i++, no++, mn++)
@@ -3751,7 +3792,7 @@ static UINT16 ShrinkNodeID(UINT32 x) {
 
 static void P_LoadExtendedNodes(UINT8 **data, nodetype_t nodetype)
 {
-	node_t *mn;
+	bspnode_t *mn;
 	size_t i, j, k;
 	boolean xgl3 = (nodetype == NT_XGL3);
 
@@ -5633,7 +5674,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			}
 			else
 			{
-				lines[i].args[2] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> (FRACBITS + 1);
+				lines[i].args[2] = GetDistance2D(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> (FRACBITS + 1);
 				lines[i].args[3] = lines[i].args[2] / 4;
 			}
 			lines[i].special = 429;
@@ -5662,7 +5703,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			break;
 		case 435: //Change plane scroller direction
 			lines[i].args[0] = tag;
-			lines[i].args[1] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
+			lines[i].args[1] = GetDistance2D(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
 			break;
 		case 436: //Shatter FOF
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
@@ -6063,7 +6104,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = tag;
 			lines[i].args[1] = ((lines[i].special % 10) < 6) ? (((lines[i].special % 10) < 3) ? TMP_FLOOR : TMP_CEILING) : TMP_BOTH;
 			lines[i].args[2] = ((lines[i].special - 510)/10 + 1) % 3;
-			lines[i].args[3] = ((lines[i].flags & ML_EFFECT6) ? sides[lines[i].sidenum[0]].textureoffset : R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y)) >> FRACBITS;
+			lines[i].args[3] = ((lines[i].flags & ML_EFFECT6) ? sides[lines[i].sidenum[0]].textureoffset : GetDistance2D(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y)) >> FRACBITS;
 			lines[i].args[4] = (lines[i].special % 10) % 3;
 			if (lines[i].args[2] != TMS_SCROLLONLY && !(lines[i].flags & ML_NOCLIMB))
 				lines[i].args[4] |= TMST_NONEXCLUSIVE;
@@ -6095,7 +6136,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 545: //Upwards current
 		case 546: //Downwards current
 		{
-			fixed_t strength = (lines[i].flags & ML_EFFECT6) ? sides[lines[i].sidenum[0]].textureoffset : R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y);
+			fixed_t strength = (lines[i].flags & ML_EFFECT6) ? sides[lines[i].sidenum[0]].textureoffset : GetDistance2D(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y);
 			lines[i].args[0] = tag;
 			switch ((lines[i].special - 541) % 3)
 			{
@@ -6800,7 +6841,7 @@ static void P_ConvertBinaryThingTypes(void)
 				break;
 			}
 			mapthings[i].args[0] = mapthings[i].z;
-			mapthings[i].args[1] = R_PointToDist2(lines[j].v1->x, lines[j].v1->y, lines[j].v2->x, lines[j].v2->y) >> FRACBITS;
+			mapthings[i].args[1] = GetDistance2D(lines[j].v1->x, lines[j].v1->y, lines[j].v2->x, lines[j].v2->y) >> FRACBITS;
 			mapthings[i].args[2] = sides[lines[j].sidenum[0]].textureoffset >> FRACBITS;
 			mapthings[i].args[3] = sides[lines[j].sidenum[0]].rowoffset >> FRACBITS;
 			mapthings[i].args[4] = lines[j].backsector ? sides[lines[j].sidenum[1]].textureoffset >> FRACBITS : 0;
@@ -7098,19 +7139,12 @@ static void P_ConvertBinaryMap(void)
   */
 static INT32 P_MakeBufferMD5(const char *buffer, size_t len, void *resblock)
 {
-#ifdef NOMD5
-	(void)buffer;
-	(void)len;
-	memset(resblock, 0x00, 16);
-	return 1;
-#else
 	tic_t t = I_GetTime();
 	CONS_Debug(DBG_SETUP, "Making MD5\n");
 	if (md5_buffer(buffer, len, resblock) == NULL)
 		return 1;
 	CONS_Debug(DBG_SETUP, "MD5 calc took %f seconds\n", (float)(I_GetTime() - t)/NEWTICRATE);
 	return 0;
-#endif
 }
 
 static void P_MakeMapMD5(virtres_t *virt, void *dest)
@@ -7149,9 +7183,9 @@ static void P_MakeMapMD5(virtres_t *virt, void *dest)
 	M_Memcpy(dest, &resmd5, 16);
 }
 
-static boolean P_LoadMapFromFile(void)
+static boolean P_LoadMapFromFile(lumpnum_t lumpnum)
 {
-	virtres_t *virt = vres_GetMap(lastloadedmaplumpnum);
+	virtres_t *virt = vres_GetMap(lumpnum);
 	virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
 	size_t i;
 	udmf = textmap != NULL;
@@ -7217,9 +7251,6 @@ void P_SetupLevelSky(INT32 skynum, boolean global)
 	R_SetupSkyDraw();
 }
 
-static const char *maplumpname;
-lumpnum_t lastloadedmaplumpnum; // for comparative savegame
-
 //
 // P_LevelInitStuff
 //
@@ -7253,7 +7284,7 @@ static void P_InitLevelSettings(void)
 		countdowntimer = mapheaderinfo[gamemap-1]->countdown * TICRATE;
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (!playeringame[i])
+			if (!players[i].ingame)
 				continue;
 			if (players[i].starposttime > maxtime)
 				maxtime = players[i].starposttime;
@@ -7287,7 +7318,7 @@ static void P_InitLevelSettings(void)
 	{
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (playeringame[i] && players[i].lives > 0)
+			if (players[i].ingame && players[i].lives > 0)
 			{
 				canresetlives = false;
 				break;
@@ -7301,7 +7332,7 @@ static void P_InitLevelSettings(void)
 	{
 		G_PlayerReborn(i, true);
 
-		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (G_CompetitionGametype() || players[i].lives <= 0))
+		if (canresetlives && (netgame || multiplayer) && players[i].ingame && (G_CompetitionGametype() || players[i].lives <= 0))
 		{
 			// In Co-Op, replenish a user's lives if they are depleted.
 			players[i].lives = cv_startinglives.value;
@@ -7394,7 +7425,7 @@ static void P_ForceCharacter(const char *forcecharskin)
 
 	for (unsigned i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			continue;
 
 		INT32 skinnum = R_SkinAvailable(forcecharskin);
@@ -7430,14 +7461,15 @@ static void P_ResetSpawnpoints(void)
 
 static void P_LoadRecordGhosts(void)
 {
-	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
+	const char *mapname = G_BuildMapName(gamemap);
+	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen(mapname)+1;
 	char *gpath = malloc(glen);
 	INT32 i;
 
 	if (!gpath)
 		return;
 
-	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
+	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, mapname);
 
 	// Best Score ghost
 	if (cv_ghost_bestscore.value)
@@ -7500,14 +7532,15 @@ static void P_LoadRecordGhosts(void)
 
 static void P_LoadNightsGhosts(void)
 {
-	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
+	const char *mapname = G_BuildMapName(gamemap);
+	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen(mapname)+1;
 	char *gpath = malloc(glen);
 	INT32 i;
 
 	if (!gpath)
 		return;
 
-	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
+	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, mapname);
 
 	// Best Score ghost
 	if (cv_ghost_bestscore.value)
@@ -7569,7 +7602,7 @@ static void P_InitTagGametype(void)
 	//Also, you'd never have to loop through all 32 players slots to find anything ever again.
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && !(players[i].spectator || players[i].quittime))
+		if (players[i].ingame && !(players[i].spectator || players[i].quittime))
 		{
 			playersactive[realnumplayers] = i; //stores the player's node in the array.
 			realnumplayers++;
@@ -7676,12 +7709,12 @@ static void P_RunSpecialStageWipe(void)
 	tic_t endtime = starttime + (3*TICRATE)/2;
 	tic_t nowtime;
 
-	S_StartSound(NULL, sfx_s3kaf);
+	S_StartSoundFromEverywhere(sfx_s3kaf);
 
 	// Fade music! Time it to S3KAF: 0.25 seconds is snappy.
 	if (RESETMUSIC ||
 		strnicmp(S_MusicName(),
-		(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap - 1]->musname : mapmusname, 7))
+		(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap - 1]->musname : mapmusname, MAX_MUSIC_NAME))
 		S_FadeOutStopMusic(MUSICRATE/4); //FixedMul(FixedDiv(F_GetWipeLength(wipedefs[wipe_speclevel_towhite])*NEWTICRATERATIO, NEWTICRATE), MUSICRATE)
 
 	F_WipeStartScreen();
@@ -7746,7 +7779,7 @@ static void P_InitPlayers(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			continue;
 
 		// Start players with pity shields if possible
@@ -7821,7 +7854,7 @@ static void P_InitGametype(void)
 		tic_t maxstarposttime = 0;
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (playeringame[i] && players[i].starposttime > maxstarposttime)
+			if (players[i].ingame && players[i].starposttime > maxstarposttime)
 				maxstarposttime = players[i].starposttime;
 		}
 		leveltime = maxstarposttime;
@@ -7854,7 +7887,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
 	INT32 i, ranspecialwipe = 0;
-	sector_t *ss;
+	lumpnum_t maplumpnum;
+	const char *maplumpname;
+
 	levelloading = true;
 
 	// This is needed. Don't touch.
@@ -7953,7 +7988,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// But don't halt the music! S_Start will take care of that. This dodges a MIDI crash bug.
 	if (!(reloadinggamestate || titlemapinaction) && (RESETMUSIC ||
 		strnicmp(S_MusicName(),
-			(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7)))
+			(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, MAX_MUSIC_NAME)))
 	{
 		S_FadeMusic(0, FixedMul(
 			FixedDiv((F_GetWipeLength(wipedefs[wipe_level_toblack])-2)*NEWTICRATERATIO, NEWTICRATE), MUSICRATE));
@@ -7969,7 +8004,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		if (ranspecialwipe == 2)
 		{
 			pausedelay = -3; // preticker plus one
-			S_StartSound(NULL, sfx_s3k73);
+			S_StartSoundFromEverywhere(sfx_s3k73);
 		}
 
 		// Print "SPEEDING OFF TO [ZONE] [ACT 1]..."
@@ -7999,7 +8034,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	LUA_InvalidateLevel();
 
-	for (ss = sectors; sectors+numsectors != ss; ss++)
+	for (sector_t *ss = sectors; sectors+numsectors != ss; ss++)
 	{
 		Z_Free(ss->attached);
 		Z_Free(ss->attachedsolid);
@@ -8033,9 +8068,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);
-	lastloadedmaplumpnum = W_CheckNumForMap(maplumpname);
-	if (lastloadedmaplumpnum == LUMPERROR)
-		I_Error("Map %s not found.\n", maplumpname);
+	maplumpnum = G_GetMapLumpnum(maplumpname);
+	if (maplumpnum == LUMPERROR)
+		I_Error("Map %s not found\n", maplumpname);
 
 	R_ReInitColormaps(mapheaderinfo[gamemap-1]->palette);
 	CON_SetupBackColormap();
@@ -8051,7 +8086,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	P_InitSlopes();
 
-	if (!P_LoadMapFromFile())
+	if (!P_LoadMapFromFile(maplumpnum))
 		return false;
 
 	if (!demoplayback)
@@ -8063,7 +8098,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 		if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
 		{
-			S_StartSound(NULL, sfx_s3k68);
+			S_StartSoundFromEverywhere(sfx_s3k68);
 			G_SaveGameData(clientGamedata);
 		}
 		else if (!reloadinggamestate)
@@ -8128,7 +8163,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		R_PrecacheLevel();
 
 	nextmapoverride = 0;
-	skipstats = 0;
+	mapexitflags = 0;
 
 	levelloading = false;
 
@@ -8157,7 +8192,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		INT32 buf = gametic % BACKUPTICS;
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (playeringame[i])
+			if (players[i].ingame)
 				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
 		}
 		P_PreTicker(2);
@@ -8277,6 +8312,175 @@ static lumpinfo_t* FindFolder(const char *folName, UINT16 *start, UINT16 *end, l
 	return lumpinfo;
 }
 
+static int P_AddMap(const char *name, UINT32 lumpnum)
+{
+	// Check filename length
+	size_t name_len = strlen(name);
+	if (name_len > MAX_MAP_NAME_SIZE)
+	{
+		CONS_Alert(CONS_WARNING, "Map name's length of %s exceeds maximum of %d -- skipping\n", sizeu1(name_len), MAX_MAP_NAME_SIZE);
+		return 0;
+	}
+
+	if (!G_IsValidMapName(name))
+	{
+		CONS_Alert(CONS_WARNING, "Map name %s is invalid -- skipping\n", name);
+		return 0;
+	}
+
+	INT16 num = G_AddMap(name, lumpnum);
+	if (num == 0)
+	{
+		CONS_Alert(CONS_ERROR, "Too many maps loaded!\n");
+		return -1;
+	}
+
+	//If you replaced the map you're on, end the level when done.
+	if (gamestate == GS_LEVEL && num == gamemap)
+		replacedcurrentmap = true;
+
+	return 1;
+}
+
+void P_LoadMapsFromFile(UINT16 wadnum, boolean added_ingame)
+{
+	boolean mapsadded = false;
+
+	lumpinfo_t *lumpinfo = NULL;
+	UINT16 numlumps = 0;
+
+	const char *name;
+
+	if (W_FileHasFolders(wadfiles[wadnum]))
+	{
+		UINT32 *list = NULL;
+		UINT16 capacity = 0;
+
+		W_GetFolderLumpsPwad("Maps/", wadnum, &list, &capacity, &numlumps);
+
+		for (UINT16 i = 0; i < numlumps; i++)
+		{
+			UINT32 lumpnum = list[i];
+
+			lumpinfo = wadfiles[wadnum]->lumpinfo + LUMPNUM(lumpnum);
+
+			name = W_GetFilenameFromFullname(lumpinfo->fullname); // Full lump name, with its extension
+
+			// Extension must be .wad
+			if (!M_CheckFilenameExtension(name, "wad"))
+				continue;
+
+			// Get the name without the extension
+			name = lumpinfo->longname;
+
+			int status = P_AddMap(name, lumpnum);
+			if (status == 1)
+			{
+				if (added_ingame)
+					CONS_Printf("%s\n", name);
+				mapsadded = true;
+			}
+			else if (status < 0)
+				break;
+		}
+
+		Z_Free(list);
+	}
+	else
+	{
+		boolean usefilename = true;
+		lumpinfo = wadfiles[wadnum]->lumpinfo;
+		numlumps = wadfiles[wadnum]->numlumps;
+
+		for (size_t i = 0; i < numlumps; i++, lumpinfo++)
+		{
+			name = lumpinfo->name;
+
+			if (name != NULL)
+			{
+				if (fastncmp(name, "MAP", 3))
+				{
+					int status = P_AddMap(name, (wadnum << 16) + i);
+					if (status == 1)
+					{
+						if (added_ingame)
+							CONS_Printf("%s\n", name);
+
+						usefilename = false; // Disable using file name as map name throughout lump iteration
+						mapsadded = true;
+					}
+					else if (status < 0)
+						break;
+				} 
+				else if (fastncmp(name, "TEXTMAP", 7)) // Use base file name if theres a missing map marker (UDMF only)
+				{
+					if (!usefilename) // Skip if a map marker has been read already.
+						continue;
+
+					char filename[MAX_MAP_NAME_SIZE]; // This will have no file extension
+
+					// Copy full file name (with extension)
+					strncpy(filename, M_GetFilenameFromPath(wadfiles[wadnum]->filename), MAX_MAP_NAME_SIZE - 1);
+
+					// null termination 
+					filename[MAX_MAP_NAME_SIZE - 1] = '\0';
+
+					// delete extension...
+					FIL_ForceExtension(filename, "");
+
+					int status = P_AddMap(filename, (wadnum << 16) + i);
+					if (status == 1)
+					{
+						if (added_ingame)
+							CONS_Printf("%s\n", filename);
+						mapsadded = true;
+					}
+					else if (status < 0)
+						break;
+				}
+			}
+		}
+
+		// Now do markers
+		UINT16 start = W_CheckNumForMarkerStartPwad("LV_START", wadnum, 0);
+		UINT16 end = W_CheckNumForNamePwad("LV_END", wadnum, start);
+
+		lumpinfo = wadfiles[wadnum]->lumpinfo + start;
+
+		for (UINT16 l = start; l < end; l++, lumpinfo++)
+		{
+			name = lumpinfo->name;
+
+			// Ignore any of these lump names
+			if (stricmp(name, "THINGS") == 0
+			|| stricmp(name, "LINEDEFS") == 0
+			|| stricmp(name, "SIDEDEFS") == 0
+			|| stricmp(name, "VERTEXES") == 0
+			|| stricmp(name, "SEGS") == 0
+			|| stricmp(name, "SSECTORS") == 0
+			|| stricmp(name, "NODES") == 0
+			|| stricmp(name, "SECTORS") == 0
+			|| stricmp(name, "REJECT") == 0
+			|| stricmp(name, "BLOCKMAP") == 0
+			|| stricmp(name, "BEHAVIOR") == 0)
+				continue;
+
+			int status = P_AddMap(name, (wadnum << 16) + l);
+			if (status == 1)
+			{
+				if (added_ingame)
+					CONS_Printf("%s\n", name);
+				mapsadded = true;
+			}
+			else if (status < 0)
+				break;
+		}
+	}
+
+	if (!mapsadded && added_ingame)
+		CONS_Printf(M_GetText("No maps added\n"));
+}
+
 //
 // Add a wadfile to the active wad files,
 // replace sounds, musics, patches, textures, sprites and maps
@@ -8290,8 +8494,6 @@ static boolean P_LoadAddon(UINT16 numlumps)
 	lumpinfo_t *lumpinfo;
 
 	//boolean texturechange = false; ///\todo Useless; broken when back-frontporting PK3 changes?
-	boolean mapsadded = false;
-	boolean replacedcurrentmap = false;
 
 	// Vars to help us with the position start and amount of each resource type.
 	// Useful for PK3s since they use folders.
@@ -8433,32 +8635,7 @@ static boolean P_LoadAddon(UINT16 numlumps)
 	//
 	S_LoadMusicDefs(wadnum);
 
-	//
-	// search for maps
-	//
-	lumpinfo = wadfiles[wadnum]->lumpinfo;
-	for (i = 0; i < numlumps; i++, lumpinfo++)
-	{
-		name = lumpinfo->name;
-		if (name[0] == 'M' && name[1] == 'A' && name[2] == 'P') // Ignore the headers
-		{
-			INT16 num;
-			if (name[5]!='\0')
-				continue;
-			num = (INT16)M_MapNumber(name[3], name[4]);
-
-			//If you replaced the map you're on, end the level when done.
-			if (num == gamemap)
-				replacedcurrentmap = true;
-
-			CONS_Printf("%s\n", name);
-			mapsadded = true;
-		}
-	}
-	if (!mapsadded)
-		CONS_Printf(M_GetText("No maps added\n"));
-
-	R_LoadSpriteInfoLumps(wadnum, numlumps);
+	R_LoadSpriteInfoLumps(wadnum);
 
 #ifdef HWRENDER
 	HWR_ReloadModels();
@@ -8472,11 +8649,16 @@ static boolean P_LoadAddon(UINT16 numlumps)
 	if (modifiedgame && (cursaveslot > 0))
 		cursaveslot = 0;
 
-	if (replacedcurrentmap && gamestate == GS_LEVEL && (netgame || multiplayer))
+	if (replacedcurrentmap)
 	{
-		CONS_Printf(M_GetText("Current map %d replaced by added file, ending the level to ensure consistency.\n"), gamemap);
-		if (server)
-			SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+		replacedcurrentmap = false;
+
+		if (gamestate == GS_LEVEL && (netgame || multiplayer))
+		{
+			CONS_Printf(M_GetText("Current map %s replaced by added file, ending the level to ensure consistency.\n"), G_BuildMapName(gamemap));
+			if (server)
+				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+		}
 	}
 
 	return true;

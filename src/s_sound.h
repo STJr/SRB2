@@ -19,6 +19,8 @@
 #include "m_fixed.h"
 #include "command.h"
 #include "tables.h" // angle_t
+#include "r_defs.h" // S_StartSoundFromSector
+#include "p_mobj.h" // S_StartSoundFromMobj
 
 #ifdef HAVE_OPENMPT
 #include "libopenmpt/libopenmpt.h"
@@ -73,6 +75,14 @@ typedef enum
 	SF_NOINTERRUPT   = 32, // Only play this sound if it isn't already playing on the origin
 	SF_X2AWAYSOUND   = 64, // Hear it from 2x the distance away
 } soundflags_t;
+
+typedef enum
+{
+    SOUNDORIGIN_EVERYWHERE    =  -1, //Null
+    SOUNDORIGIN_MOBJ        =  0, //Mobj
+    SOUNDORIGIN_SECTOR        =  1, //Sector
+
+} soundorigin_t;
 
 typedef struct {
 	fixed_t x, y, z;
@@ -142,10 +152,16 @@ boolean S_SoundDisabled(void);
 //
 // Start sound for thing at <origin> using <sound_id> from sounds.h
 //
-void S_StartSound(const void *origin, sfxenum_t sound_id);
+void S_StartSound(void *origin, sfxenum_t sound_id, soundorigin_t soundorigin);
+void S_StartSoundFromEverywhere(sfxenum_t sound_id);
+void S_StartSoundFromMobj(mobj_t *origin, sfxenum_t sound_id);
+void S_StartSoundFromSector(sector_t *origin, sfxenum_t sound_id);
 
 // Will start a sound at a given volume.
-void S_StartSoundAtVolume(const void *origin, sfxenum_t sound_id, INT32 volume);
+void S_StartSoundAtVolume(void *origin, sfxenum_t sound_id, INT32 volume, soundorigin_t soundorigin);
+void S_StartSoundFromEverywhereVol(sfxenum_t sfx_id, INT32 volume);
+void S_StartSoundFromMobjVol(mobj_t* origin, sfxenum_t sfx_id, INT32 volume);
+void S_StartSoundFromSectorVol(sector_t* origin, sfxenum_t sfx_id, INT32 volume);
 
 // Stop sound for thing at <origin>
 void S_StopSound(void *origin);
@@ -182,7 +198,7 @@ boolean S_SpeedMusic(float speed);
 // Music definitions
 typedef struct musicdef_s
 {
-	char name[7];
+	char name[MAX_MUSIC_NAME+1];
 	char title[32];
 	char alttitle[64];
 	char authors[256];
@@ -220,6 +236,9 @@ boolean S_PrepareSoundTest(void);
 // Get Length of Music
 UINT32 S_GetMusicLength(void);
 
+// Get MUSICDEF of Music
+musicdef_t *S_MusicInfo(const char *name);
+
 // Set LoopPoint of Music
 boolean S_SetMusicLoopPoint(UINT32 looppoint);
 
@@ -238,7 +257,7 @@ UINT32 S_GetMusicPosition(void);
 
 typedef struct musicstack_s
 {
-	char musname[7+1];
+	char musname[MAX_MUSIC_NAME+1];
 	UINT16 musflags;
 	boolean looping;
 	UINT32 position;
@@ -251,7 +270,7 @@ typedef struct musicstack_s
     struct musicstack_s *next;
 } musicstack_t;
 
-extern char music_stack_nextmusname[7];
+extern char music_stack_nextmusname[MAX_MUSIC_NAME+1];
 extern boolean music_stack_noposition;
 extern UINT32 music_stack_fadeout;
 extern UINT32 music_stack_fadein;
@@ -325,8 +344,8 @@ void S_StopSoundByID(void *origin, sfxenum_t sfx_id);
 void S_StopSoundByNum(sfxenum_t sfxnum);
 
 #ifndef HW3SOUND
-#define S_StartAttackSound S_StartSound
-#define S_StartScreamSound S_StartSound
+#define S_StartAttackSound S_StartSoundFromMobj
+#define S_StartScreamSound S_StartSoundFromMobj
 #endif
 
 #endif

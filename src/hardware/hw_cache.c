@@ -483,10 +483,13 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex, GLMipmap_t 
 				realpatch = W_CachePatchNumPwad(wadnum, lumpnum, PU_PATCH);
 		}
 
-		HWR_DrawTexturePatchInCache(mipmap, blockwidth, blockheight, texture, patch, realpatch);
+		if (realpatch != NULL)
+		{
+			HWR_DrawTexturePatchInCache(mipmap, blockwidth, blockheight, texture, patch, realpatch);
 
-		if (free_patch)
-			Patch_Free(realpatch);
+			if (free_patch)
+				Patch_Free(realpatch);
+		}
 	}
 	//Hurdler: not efficient at all but I don't remember exactly how HWR_DrawPatchInCache works :(
 	if (format2bpp(mipmap->format)==4)

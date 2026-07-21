@@ -12,7 +12,7 @@ Debian stable:amd64 Makefile:
 
   variables:
     CC: x86_64-linux-gnu-gcc
-    LDFLAGS: -Wl,-fuse-ld=gold
+    CXX: x86_64-linux-gnu-g++
     OBJCOPY: x86_64-linux-gnu-objcopy
     OBJDUMP: x86_64-linux-gnu-objdump
     PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig
@@ -23,7 +23,7 @@ Debian stable:amd64 Makefile:
     - - |
           # apt_toolchain
           echo -e "\e[0Ksection_start:`date +%s`:apt_toolchain[collapsed=true]\r\e[0KInstalling toolchain packages"
-      - apt-get install gcc-x86-64-linux-gnu || apt-get install gcc
+      - apt-get install g++-x86-64-linux-gnu || apt-get install g++
       - |
           # apt_toolchain
           echo -e "\e[0Ksection_end:`date +%s`:apt_toolchain\r\e[0K"

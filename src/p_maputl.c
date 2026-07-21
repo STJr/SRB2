@@ -63,7 +63,7 @@ void P_ClosestPointOnLine(fixed_t x, fixed_t y, line_t *line, vertex_t *result)
 	vy = dy;
 
 	//Normalize (&V, &V);
-	magnitude = R_PointToDist2(line->v2->x, line->v2->y, startx, starty);
+	magnitude = GetDistance2D(line->v2->x, line->v2->y, startx, starty);
 	vx = FixedDiv(vx, magnitude);
 	vy = FixedDiv(vy, magnitude);
 
@@ -89,7 +89,7 @@ void P_ClosestPointOnLine3D(const vector3_t *p, const vector3_t *Line, vector3_t
 	FV3_SubEx(v2, v1, &V);
 	FV3_SubEx(p, v1, &c);
 
-	d = R_PointToDist2(0, v2->z, R_PointToDist2(v2->x, v2->y, v1->x, v1->y), v1->z);
+	d = GetDistance3D(v2->x, v2->y, v2->z, v1->x, v1->y, v1->z);
 	FV3_Copy(&n, &V);
 	FV3_Divide(&n, d);
 
@@ -743,6 +743,31 @@ static void P_ReleaseBlockNode(blocknode_t *node)
 //
 // P_UnsetThingPosition
 // Unlinks a thing from block map and sectors.
+//
+void P_UnsetBlockmapEntry(mobj_t *thing)
+{
+	if (!(thing->flags & MF_NOBLOCKMAP))
+	{
+		// [RH] Unlink from all blocks this actor uses
+		blocknode_t *block = thing->blocknode;
+
+		while (block != NULL)
+		{
+			if (block->mnext != NULL)
+				block->mnext->mprev = block->mprev;
+			*(block->mprev) = block->mnext;
+			blocknode_t *next = block->bnext;
+			P_ReleaseBlockNode(block);
+			block = next;
+		}
+
+		thing->blocknode = NULL;
+	}
+}
+
+//
+// P_UnsetThingPosition
+// Unlinks a thing from block map and sectors.
 // On each position change, BLOCKMAP and other
 // lookups maintaining lists ot things inside
 // these structures need to be updated.
@@ -783,23 +808,7 @@ void P_UnsetThingPosition(mobj_t *thing)
 		thing->touching_sectorlist = NULL; //to be restored by P_SetThingPosition
 	}
 
-	if (!(thing->flags & MF_NOBLOCKMAP))
-	{
-		// [RH] Unlink from all blocks this actor uses
-		blocknode_t *block = thing->blocknode;
-
-		while (block != NULL)
-		{
-			if (block->mnext != NULL)
-				block->mnext->mprev = block->mprev;
-			*(block->mprev) = block->mnext;
-			blocknode_t *next = block->bnext;
-			P_ReleaseBlockNode(block);
-			block = next;
-		}
-
-		thing->blocknode = NULL;
-	}
+	P_UnsetBlockmapEntry(thing);
 }
 
 void P_UnsetPrecipThingPosition(precipmobj_t *thing)
@@ -814,9 +823,62 @@ void P_UnsetPrecipThingPosition(precipmobj_t *thing)
 }
 
 //
+// P_SetBlockmapEntry
+// Links a thing into a block based on its x y.
+// Used when objects are scaled to ensure they are in the right blocknode
+//
+void P_SetBlockmapEntry(mobj_t *thing)
+{
+	// link into blockmap
+	if (!(thing->flags & MF_NOBLOCKMAP))
+	{
+		// inert things don't need to be in blockmap
+		INT32 x1 = (unsigned)(thing->x - thing->radius - bmaporgx)>>MAPBLOCKSHIFT;
+		INT32 y1 = (unsigned)(thing->y - thing->radius - bmaporgy)>>MAPBLOCKSHIFT;
+		INT32 x2 = (unsigned)(thing->x + thing->radius - bmaporgx)>>MAPBLOCKSHIFT;
+		INT32 y2 = (unsigned)(thing->y + thing->radius - bmaporgy)>>MAPBLOCKSHIFT;
+
+		thing->blocknode = NULL;
+
+		blocknode_t **alink = &thing->blocknode;
+
+		if (!(x1 >= bmapwidth || x2 < 0 || y1 >= bmapheight || y2 < 0))
+		{
+			// [RH] Link into every block this actor touches, not just the center one
+			x1 = max(0, x1);
+			y1 = max(0, y1);
+			x2 = min(bmapwidth - 1, x2);
+			y2 = min(bmapheight - 1, y2);
+			for (int y = y1; y <= y2; ++y)
+			{
+				for (int x = x1; x <= x2; ++x)
+				{
+					blocknode_t **link = &blocklinks[y*bmapwidth + x];
+					blocknode_t *node = P_CreateBlockNode(thing, x, y);
+
+					// Link in to block
+					if ((node->mnext = *link) != NULL)
+					{
+						(*link)->mprev = &node->mnext;
+					}
+					node->mprev = link;
+					*link = node;
+
+					// Link in to actor
+					node->bprev = alink;
+					node->bnext = NULL;
+					(*alink) = node;
+					alink = &node->bnext;
+				}
+			}
+		}
+	}
+}
+
+//
 // P_SetThingPosition
 // Links a thing into both a block and a subsector
-// based on it's x y.
+// based on its x y.
 // Sets thing->subsector properly
 //
 void P_SetThingPosition(mobj_t *thing)
@@ -865,50 +927,7 @@ void P_SetThingPosition(mobj_t *thing)
 		sector_list = NULL; // clear for next time
 	}
 
-	// link into blockmap
-	if (!(thing->flags & MF_NOBLOCKMAP))
-	{
-		// inert things don't need to be in blockmap
-		INT32 x1 = (unsigned)(thing->x - thing->radius - bmaporgx)>>MAPBLOCKSHIFT;
-		INT32 y1 = (unsigned)(thing->y - thing->radius - bmaporgy)>>MAPBLOCKSHIFT;
-		INT32 x2 = (unsigned)(thing->x + thing->radius - bmaporgx)>>MAPBLOCKSHIFT;
-		INT32 y2 = (unsigned)(thing->y + thing->radius - bmaporgy)>>MAPBLOCKSHIFT;
-
-		thing->blocknode = NULL;
-
-		blocknode_t **alink = &thing->blocknode;
-
-		if (!(x1 >= bmapwidth || x2 < 0 || y1 >= bmapheight || y2 < 0))
-		{
-			// [RH] Link into every block this actor touches, not just the center one
-			x1 = max(0, x1);
-			y1 = max(0, y1);
-			x2 = min(bmapwidth - 1, x2);
-			y2 = min(bmapheight - 1, y2);
-			for (int y = y1; y <= y2; ++y)
-			{
-				for (int x = x1; x <= x2; ++x)
-				{
-					blocknode_t **link = &blocklinks[y*bmapwidth + x];
-					blocknode_t *node = P_CreateBlockNode(thing, x, y);
-
-					// Link in to block
-					if ((node->mnext = *link) != NULL)
-					{
-						(*link)->mprev = &node->mnext;
-					}
-					node->mprev = link;
-					*link = node;
-
-					// Link in to actor
-					node->bprev = alink;
-					node->bnext = NULL;
-					(*alink) = node;
-					alink = &node->bnext;
-				}
-			}
-		}
-	}
+	P_SetBlockmapEntry(thing);
 
 	// Allows you to 'step' on a new linedef exec when the previous
 	// sector's floor is the same height.
@@ -1050,9 +1069,13 @@ boolean P_BlockLinesIterator(INT32 x, INT32 y, boolean (*func)(line_t *))
 //
 // P_BlockThingsIterator
 //
-boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *))
+boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *), mobj_t *thing)
 {
 	blocknode_t *block, *next = NULL;
+
+	boolean checkthing = false;
+	if (thing)
+		checkthing = true;
 
 	if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
 		return true;
@@ -1065,20 +1088,20 @@ boolean P_BlockThingsIterator(INT32 x, INT32 y, boolean (*func)(mobj_t *))
 		if (!func(block->mobj))
 			return false;
 
-		if (P_MobjWasRemoved(tmthing)) // func just popped our tmthing, cannot continue.
+		if (checkthing && P_MobjWasRemoved(thing)) // func just popped our tmthing, cannot continue.
 			return true;
 	}
 
 	return true;
 }
 
-boolean P_DoBlockThingsIterate(int x1, int y1, int x2, int y2, boolean (*func)(mobj_t *))
+boolean P_DoBlockThingsIterate(int x1, int y1, int x2, int y2, boolean (*func)(mobj_t *), mobj_t *thing)
 {
 	boolean status = true;
 
 	for (INT32 bx = x1; bx <= x2; bx++)
 		for (INT32 by = y1; by <= y2; by++)
-			if (!P_BlockThingsIterator(bx, by, func))
+			if (!P_BlockThingsIterator(bx, by, func, thing))
 				status = false;
 
 	return status;
@@ -1430,7 +1453,7 @@ static boolean P_TraverseIntercepts(traverser_t func, fixed_t maxfrac)
 
 		if (dist > maxfrac)
 			return true; // Checked everything in range.
-
+		
 		if (!func(in))
 			return false; // Don't bother going farther.
 
@@ -1451,14 +1474,14 @@ boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 	INT32 flags, traverser_t trav)
 {
 	fixed_t xt1, yt1, xt2, yt2;
-	fixed_t xstep, ystep, partial, xintercept, yintercept;
+	fixed_t xstep, ystep, partialx, partialy, xintercept, yintercept;
 	INT32 mapx, mapy, mapxstep, mapystep, count;
 
 	earlyout = flags & PT_EARLYOUT;
 
 	validcount++;
 	intercept_p = intercepts;
-
+	
 	if (((px1 - bmaporgx) & (MAPBLOCKSIZE-1)) == 0)
 		px1 += FRACUNIT; // Don't side exactly on a line.
 
@@ -1470,56 +1493,82 @@ boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 	trace.dx = px2 - px1;
 	trace.dy = py2 - py1;
 
-	px1 -= bmaporgx;
-	py1 -= bmaporgy;
-	xt1 = (unsigned)px1>>MAPBLOCKSHIFT;
-	yt1 = (unsigned)py1>>MAPBLOCKSHIFT;
+	xt1 = px1>>MAPBLOCKSHIFT;
+	yt1 = py1>>MAPBLOCKSHIFT;
+	px1 = (unsigned)(px1 - bmaporgx);
+	py1 = (unsigned)(py1 - bmaporgy);
 
-	px2 -= bmaporgx;
-	py2 -= bmaporgy;
-	xt2 = (unsigned)px2>>MAPBLOCKSHIFT;
-	yt2 = (unsigned)py2>>MAPBLOCKSHIFT;
+	xt2 = px2>>MAPBLOCKSHIFT;
+	yt2 = py2>>MAPBLOCKSHIFT;
+	px2 = (unsigned)(px2 - bmaporgx);
+	py2 = (unsigned)(py2 - bmaporgy);
 
 	if (xt2 > xt1)
 	{
 		mapxstep = 1;
-		partial = FRACUNIT - ((px1>>MAPBTOFRAC) & FRACMASK);
+		partialx = FRACUNIT - (((unsigned)px1>>MAPBTOFRAC) & FRACMASK);
 		ystep = FixedDiv(py2 - py1, abs(px2 - px1));
 	}
 	else if (xt2 < xt1)
 	{
 		mapxstep = -1;
-		partial = (px1>>MAPBTOFRAC) & FRACMASK;
+		partialx = ((unsigned)px1>>MAPBTOFRAC) & FRACMASK;
 		ystep = FixedDiv(py2 - py1, abs(px2 - px1));
 	}
 	else
 	{
 		mapxstep = 0;
-		partial = FRACUNIT;
+		partialx = FRACUNIT;
 		ystep = 256*FRACUNIT;
 	}
 
-	yintercept = (py1>>MAPBTOFRAC) + FixedMul(partial, ystep);
+	yintercept = ((unsigned)py1>>MAPBTOFRAC) + FixedMul(partialx, ystep);
 
 	if (yt2 > yt1)
 	{
 		mapystep = 1;
-		partial = FRACUNIT - ((py1>>MAPBTOFRAC) & FRACMASK);
+		partialy = FRACUNIT - (((unsigned)py1>>MAPBTOFRAC) & FRACMASK);
 		xstep = FixedDiv(px2 - px1, abs(py2 - py1));
 	}
 	else if (yt2 < yt1)
 	{
 		mapystep = -1;
-		partial = (py1>>MAPBTOFRAC) & FRACMASK;
+		partialy = ((unsigned)py1>>MAPBTOFRAC) & FRACMASK;
 		xstep = FixedDiv(px2 - px1, abs(py2 - py1));
 	}
 	else
 	{
 		mapystep = 0;
-		partial = FRACUNIT;
+		partialy = FRACUNIT;
 		xstep = 256*FRACUNIT;
 	}
-	xintercept = (px1>>MAPBTOFRAC) + FixedMul(partial, xstep);
+	xintercept = ((unsigned)px1>>MAPBTOFRAC) + FixedMul(partialy, xstep);
+
+	// [RH] Fix for traces that pass only through blockmap corners. In that case,
+	// xintercept and yintercept can both be set ahead of mapx and mapy, so the
+	// for loop would never advance anywhere.
+
+	if (abs(xstep) == 1 && abs(ystep) == 1)
+	{
+		if (ystep < 0)
+		{
+			partialx = FRACUNIT - partialx;
+		}
+		if (xstep < 0)
+		{
+			partialy = FRACUNIT - partialy;
+		}
+		if (partialx == partialy)
+		{
+			xintercept = xt1;
+			yintercept = yt1;
+		}
+	}
+
+	xt1 = (unsigned)px1>>MAPBLOCKSHIFT;
+	yt1 = (unsigned)py1>>MAPBLOCKSHIFT;
+	xt2 = (unsigned)px2>>MAPBLOCKSHIFT;
+	yt2 = (unsigned)py2>>MAPBLOCKSHIFT;
 
 	// Step through map blocks.
 	// Count is present to prevent a round off error
@@ -1534,23 +1583,67 @@ boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 				return false; // early out
 
 		if (flags & PT_ADDTHINGS)
-			if (!P_BlockThingsIterator(mapx, mapy, PIT_AddThingIntercepts))
+			if (!P_BlockThingsIterator(mapx, mapy, PIT_AddThingIntercepts, NULL))
 				return false; // early out
 
-		if (mapx == xt2 && mapy == yt2)
+		// both coordinates reached the end, so end the traversing.
+		if ((mapxstep | mapystep) == 0)
 			break;
 
-		if ((yintercept >> FRACBITS) == mapy)
+		// [RH] Handle corner cases properly instead of pretending they don't exist.
+		switch ((((yintercept >> FRACBITS) == mapy) << 1) | ((xintercept >> FRACBITS) == mapx))
 		{
-			yintercept += ystep;
-			mapx += mapxstep;
-		}
-		else if ((xintercept >> FRACBITS) == mapx)
-		{
-			xintercept += xstep;
-			mapy += mapystep;
+			case 0: // neither xintercept nor yintercept match!
+				count = 64; // Stop traversing, because somebody screwed up.
+				break;
+
+			case 1: // xintercept matches
+				xintercept += xstep;
+				mapy += mapystep;
+				if (mapy == yt2)
+					mapystep = 0;
+				break;
+
+			case 2: // yintercept matches
+				yintercept += ystep;
+				mapx += mapxstep;
+				if (mapx == xt2)
+					mapxstep = 0;
+				break;
+
+			case 3: // xintercept and yintercept both match
+				// The trace is exiting a block through its corner. Not only does the block
+				// being entered need to be checked (which will happen when this loop
+				// continues), but the other two blocks adjacent to the corner also need to
+				// be checked.
+				if (flags & PT_ADDLINES)
+				{
+					if (!P_BlockLinesIterator(mapx + mapxstep, mapy, PIT_AddLineIntercepts))
+						return false; // early out
+					if (!P_BlockLinesIterator(mapx, mapy + mapystep, PIT_AddLineIntercepts))
+						return false; // early out
+				}
+
+				if (flags & PT_ADDTHINGS)
+				{
+					if (!P_BlockThingsIterator(mapx + mapxstep, mapy, PIT_AddThingIntercepts, NULL))
+						return false; // early out
+					if (!P_BlockThingsIterator(mapx, mapy + mapystep, PIT_AddThingIntercepts, NULL))
+						return false; // early out
+				}
+
+				xintercept += xstep;
+				yintercept += ystep;
+				mapx += mapxstep;
+				mapy += mapystep;
+				if (mapx == xt2)
+					mapxstep = 0;
+				if (mapy == yt2)
+					mapystep = 0;
+				break;
 		}
 	}
+	
 	// Go through the sorted list
 	return P_TraverseIntercepts(trav, FRACUNIT);
 }

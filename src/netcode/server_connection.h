@@ -13,14 +13,15 @@
 #ifndef __D_SERVER_CONNECTION__
 #define __D_SERVER_CONNECTION__
 
+#include "i_net.h"
 #include "../command.h"
 #include "../doomdef.h"
 #include "../doomtype.h"
 
-void PT_ClientJoin(SINT8 node);
-void PT_AskInfoViaMS(SINT8 node);
-void PT_TellFilesNeeded(SINT8 node);
-void PT_AskInfo(SINT8 node);
+void PT_ClientJoin(doomcom_t *doomcom);
+void PT_AskInfoViaMS(doomcom_t *doomcom);
+void PT_TellFilesNeeded(doomcom_t *doomcom);
+void PT_AskInfo(doomcom_t *doomcom);
 
 extern tic_t jointimeout;
 extern tic_t joindelay;
