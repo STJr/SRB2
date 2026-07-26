@@ -7366,7 +7366,7 @@ void A_Boss2TakeDamage(void *data)
 		return;
 
 	A_Pain(actor);
-	actor->reactiontime = 1; // turn around
+
 	if (locvar1 == 0) // old A_Invincibilerize behavior
 		actor->movecount = TICRATE;
 	else
