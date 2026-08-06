@@ -1076,7 +1076,7 @@ static void P_InitializeLinedef(line_t *ld)
 
 	if ((ld->sidenum[1] == NO_SIDEDEF) && (ld->flags & ML_TWOSIDED))
 	{
-		ld->flags &= ~(ML_TWOSIDED);  // Clear 2s flag for missing left side
+		ld->flags &= ~ML_TWOSIDED;  // Clear 2s flag for missing left side
 		// cph - print a warning about the bug
 		CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s has two-sided flag set, but no second sidedef\n", sizeu1((size_t)(ld - lines)));
 	}
@@ -1121,7 +1121,7 @@ static void P_LoadLinedefs(UINT8 *data)
 
 	for (i = 0; i < numlines; i++, mld++, ld++)
 	{
-		ld->flags = (UINT32)SHORT(mld->flags);
+		ld->flags = SHORT(mld->flags);
 		ld->special = SHORT(mld->special);
 		Tag_FSet(&ld->tags, SHORT(mld->tag));
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
@@ -7090,14 +7090,14 @@ static void P_ConvertBinaryLinedefFlags(void)
 		if (!!(lines[i].flags & ML_DONTPEGBOTTOM) ^ !!(lines[i].flags & ML_MIDPEG))
 			lines[i].flags |= ML_MIDPEG;
 		else
-			lines[i].flags &= ~(ML_MIDPEG);
+			lines[i].flags &= ~ML_MIDPEG;
 
 		if (lines[i].special >= 100 && lines[i].special < 300)
 		{
 			if (lines[i].flags & ML_DONTPEGTOP)
 				lines[i].flags |= ML_SKEWTD;
 			else
-				lines[i].flags &= ~(ML_SKEWTD);
+				lines[i].flags &= ~ML_SKEWTD;
 
 			if ((lines[i].flags & ML_TFERLINE) && lines[i].frontsector)
 			{
@@ -7108,7 +7108,7 @@ static void P_ConvertBinaryLinedefFlags(void)
 					if (lines[i].frontsector->lines[j]->flags & ML_DONTPEGTOP)
 						lines[i].frontsector->lines[j]->flags |= ML_SKEWTD;
 					else
-						lines[i].frontsector->lines[j]->flags &= ~(ML_SKEWTD);
+						lines[i].frontsector->lines[j]->flags &= ~ML_SKEWTD;
 				}
 			}
 		}
