@@ -409,7 +409,7 @@ static void CheckFrame(const char *sprname)
 		{
 		case SRF_NONE:
 			// no rotations were found for that frame at all
-			I_Error("R_AddSingleSpriteDef: No patches found for %s", framedescription);
+			CONS_Alert(CONS_ERROR, "R_AddSingleSpriteDef: No patches found for %s\n", framedescription);
 			break;
 
 		case SRF_SINGLE:
@@ -419,8 +419,8 @@ static void CheckFrame(const char *sprname)
 		case SRF_2D: // both Left and Right rotations
 			// we test to see whether the left and right slots are present
 			if ((spriteframe->lumppat[2] == LUMPERROR) || (spriteframe->lumppat[6] == LUMPERROR))
-				I_Error("R_AddSingleSpriteDef: Sprite %s is missing rotations (L-R mode)",
-				framedescription);
+				CONS_Alert(CONS_ERROR, "R_AddSingleSpriteDef: Sprite %s is missing rotations (L-R mode)\n",
+					framedescription);
 			break;
 
 		default:
@@ -432,7 +432,7 @@ static void CheckFrame(const char *sprname)
 					// we test the patch lump, or the id lump whatever
 					// if it was not loaded the two are LUMPERROR
 					if (spriteframe->lumppat[rotation] == LUMPERROR)
-						I_Error("R_AddSingleSpriteDef: Sprite %s is missing rotations (1-%c mode)",
+						CONS_Alert(CONS_ERROR, "R_AddSingleSpriteDef: Sprite %s is missing rotations (1-%c mode)\n",
 								framedescription, ((spriteframe->rotate & SRF_3DGE) ? 'G' : '8'));
 				}
 			}
@@ -485,7 +485,10 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	for (l = startlump; l < endlump; l++)
 	{
 		if (longname && W_IsLumpFolder(wadnum, l))
-			I_Error("R_AddSingleSpriteDef: all frame lumps for a sprite should be contained inside a single folder\n");
+		{
+			CONS_Alert(CONS_ERROR, "R_AddSingleSpriteDef: all frame lumps for a sprite should be contained inside a single folder\n");
+			return false;
+		}
 
 		// For long sprites, the startlump-endlump range only includes
 		// relevant lumps, so no check needed in that case
@@ -502,7 +505,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 
 			if (!good) // Give an actual NAME error -_-...
 			{
-				CONS_Alert(CONS_WARNING, M_GetText("Bad sprite name: %s\n"), W_CheckNameForNumPwad(wadnum,l));
+				CONS_Alert(CONS_ERROR, M_GetText("Bad sprite name: %s\n"), W_CheckNameForNumPwad(wadnum,l));
 				continue;
 			}
 

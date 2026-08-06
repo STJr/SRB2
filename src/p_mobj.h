@@ -119,6 +119,7 @@ typedef enum
 	//  or changing it actively.
 	MF_NOGRAVITY        = 1<<9,
 	// This object is an ambient sound.
+	// TODO: 2.3: Remove this flag and just check for MT_AMBIENT instead
 	MF_AMBIENT          = 1<<10,
 	// Slide this object when it hits a wall.
 	MF_SLIDEME          = 1<<11,

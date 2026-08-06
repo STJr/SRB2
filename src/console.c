@@ -736,6 +736,7 @@ void CON_ToggleOff(void)
 		return;
 	}
 
+	I_SetTextInputMode(textinputmodeenabledbylua);
 	con_destlines = 0;
 	con_curlines = 0;
 	CON_ClearHUD();

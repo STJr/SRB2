@@ -11322,6 +11322,7 @@ void P_RemoveMobj(mobj_t *mobj)
 			// no references, dump it directly in the mobj cache
 			mobj->hnext = mobjcache;
 			mobjcache = mobj;
+			LUA_InvalidateUserdata(mobj);
 			return;
 		}
 

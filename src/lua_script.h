@@ -48,6 +48,8 @@ void LUA_ClearExtVars(void);
 
 extern INT32 lua_lumploading; // is LUA_LoadLump being called?
 
+extern int mobjmovement_ref; // Used by mobj collision hooks
+
 int LUA_GetErrorMessage(lua_State *L);
 int LUA_Call(lua_State *L, int nargs, int nresults, int errorhandlerindex);
 boolean LUA_LoadLump(UINT16 wad, UINT16 lump);

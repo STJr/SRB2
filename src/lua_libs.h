@@ -41,6 +41,7 @@ extern boolean ignoregameinputs;
 #define META_TAGLIST "TAGLIST"
 
 #define META_MOBJ "MOBJ_T*"
+#define META_MOBJMOVEMENT "MOBJMOVEMENT_T*"
 #define META_MAPTHING "MAPTHING_T*"
 
 #define META_PLAYER "PLAYER_T*"

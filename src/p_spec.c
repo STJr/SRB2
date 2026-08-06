@@ -4572,6 +4572,7 @@ static void P_ProcessExitSector(player_t *player, mtag_t sectag)
 	// TODO: 2.3: Remove UDMF nextmap arg[0] and arg[2], and move arg[1] to arg[0].
 
 	// Special goodies depending on emeralds collected
+	bool usecompat = true;
 	if ((lines[lineindex].args[1] & TMEF_EMERALDCHECK) && ALL7EMERALDS(emeralds))
 	{
 		if (udmf) 
@@ -4579,6 +4580,7 @@ static void P_ProcessExitSector(player_t *player, mtag_t sectag)
 			if (lines[lineindex].stringargs[1])
 			{
 				nextmapoverride = (INT16)(G_GetMapNumber(lines[lineindex].stringargs[1]));
+				usecompat = false;
 			}
 			else
 			{
@@ -4597,6 +4599,7 @@ static void P_ProcessExitSector(player_t *player, mtag_t sectag)
 			if (lines[lineindex].stringargs[0])
 			{
 				nextmapoverride = (INT16)(G_GetMapNumber(lines[lineindex].stringargs[0]));
+				usecompat = false;
 			}
 			else
 			{
@@ -4608,7 +4611,19 @@ static void P_ProcessExitSector(player_t *player, mtag_t sectag)
 			nextmapoverride = (INT16)(lines[lineindex].frontsector->floorheight>>FRACBITS);
 		}
 	}
-	
+
+	if (usecompat)
+	{
+		if (nextmapoverride == 1100)
+			nextmapoverride = NEXTMAP_TITLE;
+		else if (nextmapoverride == 1101)
+			nextmapoverride = NEXTMAP_EVALUATION;
+		else if (nextmapoverride == 1102)
+			nextmapoverride = NEXTMAP_CREDITS;
+		else if (nextmapoverride == 1103)
+			nextmapoverride = NEXTMAP_ENDING;
+	}
+
 	if (lines[lineindex].args[1] & TMEF_SKIPTALLY)
 		mapexitflags |= EXITMAP_SKIPSTATS;
 

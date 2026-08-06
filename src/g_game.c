@@ -2164,11 +2164,6 @@ void G_DoLoadLevel(boolean resetplayer)
 	Z_CheckHeap(-2);
 #endif
 
-	if (camera.chase)
-		P_ResetCamera(&players[displayplayer], &camera);
-	if (camera2.chase && splitscreen)
-		P_ResetCamera(&players[secondarydisplayplayer], &camera2);
-
 	// clear cmd building stuff
 	memset(gamekeydown, 0, sizeof (gamekeydown));
 	for (i = 0;i < JOYAXISSET; i++)
@@ -4419,9 +4414,13 @@ static void G_DoCompleted(void)
 {
 	INT32 i;
 
+	//Get and set prevmap/nextmap
+	prevmap = (INT16)(gamemap-1);
+	nextmap = G_GetNextMap(false, false);
+
 	tokenlist = 0; // Reset the list
 
-	boolean spec = G_IsSpecialStage(gamemap);
+	automapactive = false;
 
 	if (modeattacking && pausedelay)
 		pausedelay = 0;
@@ -4444,115 +4443,6 @@ static void G_DoCompleted(void)
 		AM_Stop();
 
 	S_StopSounds();
-
-	//Get and set prevmap/nextmap
-	prevmap = (INT16)(gamemap-1);
-	nextmap = G_GetNextMap(false, false);
-
-	// go to next level
-	// nextmap is 0-based, unlike gamemap
-	if (nextmapoverride != 0)
-		nextmap = (INT16)(nextmapoverride-1);
-	else if (marathonmode && mapheaderinfo[gamemap-1]->marathonnext)
-		nextmap = (INT16)(mapheaderinfo[gamemap-1]->marathonnext-1);
-	else
-	{
-		nextmap = (INT16)(mapheaderinfo[gamemap-1]->nextlevel-1);
-		if (marathonmode && nextmap == spmarathon_start-1)
-			nextmap = NEXTMAP_TITLE-1; // No infinite loop for you
-	}
-
-	INT16 gametype_to_use;
-
-	if (nextgametype >= 0 && nextgametype < gametypecount)
-		gametype_to_use = nextgametype;
-	else
-		gametype_to_use = gametype;
-
-	// If nextmap is actually going to get used, make sure it points to
-	// a map of the proper gametype -- skip levels that don't support
-	// the current gametype. (Helps avoid playing boss levels in Race,
-	// for instance).
-	if (!spec || nextmapoverride)
-	{
-		if (nextmap >= 0 && nextmap < numgamemaps)
-		{
-			INT16 cm = nextmap;
-			UINT32 tolflag = G_TOLFlag(gametype_to_use);
-			UINT8 *visitedmap = Z_Calloc(((numgamemaps+7)/8) * sizeof(UINT8), PU_STATIC, NULL);
-
-			while (!mapheaderinfo[cm] || !(mapheaderinfo[cm]->typeoflevel & tolflag))
-			{
-				visitedmap[cm/8] |= (1<<(cm&7));
-				if (!mapheaderinfo[cm])
-					cm = -1; // guarantee error execution
-				else if (marathonmode && mapheaderinfo[cm]->marathonnext)
-					cm = (INT16)(mapheaderinfo[cm]->marathonnext-1);
-				else
-					cm = (INT16)(mapheaderinfo[cm]->nextlevel-1);
-
-				if (cm >= numgamemaps || cm < 0) // out of range (either NEXTMAP_* or error)
-				{
-					cm = nextmap; //Start the loop again so that the error checking below is executed.
-
-					//Make sure the map actually exists before you try to go to it!
-					if (!G_MapFileExists(G_BuildMapName(cm + 1)))
-					{
-						CONS_Alert(CONS_ERROR, M_GetText("Next map given (MAP %d) doesn't exist! Reverting to MAP01.\n"), cm+1);
-						cm = 0;
-						break;
-					}
-				}
-
-				if (visitedmap[cm/8] & (1<<(cm&7))) // smells familiar
-				{
-					// We got stuck in a loop, came back to the map we started on
-					// without finding one supporting the current gametype.
-					// Thus, print a warning, and just use this map anyways.
-					CONS_Alert(CONS_WARNING, M_GetText("Can't find a compatible map after map %d; using map %d anyway\n"), prevmap+1, cm+1);
-					break;
-				}
-			}
-
-			Z_Free(visitedmap);
-
-			nextmap = cm;
-		}
-
-		// wrap around in race
-		if (G_IsGameEndMap(nextmap+1) && !(gametyperules & GTR_CAMPAIGN))
-			nextmap = (INT16)(spstage_start-1);
-
-		if (nextmap < 0 || (nextmap >= numgamemaps && !G_IsGameEndMap(nextmap+1)))
-			I_Error("Followed map %d to invalid map %d\n", prevmap + 1, nextmap + 1);
-
-		if (!spec)
-			lastmap = nextmap; // Remember last map for when you come out of the special stage.
-	}
-
-	if ((gottoken = ((gametyperules & GTR_SPECIALSTAGES) && token)))
-	{
-		token--;
-
-//		if (!nextmapoverride) // Having a token should pull the player into the special stage before going to the overridden map (Issue #933)
-			for (i = 0; i < 7; i++)
-				if (!(emeralds & (1<<i)))
-				{
-					nextmap = ((netgame || multiplayer) ? smpstage_start : sstage_start) + i - 1; // to special stage!
-					break;
-				}
-
-		if (i == 7)
-		{
-			gottoken = false;
-			token = 0;
-		}
-	}
-
-	if (spec && !gottoken && !nextmapoverride)
-		nextmap = lastmap; // Exiting from a special stage? Go back to the game. Tails 08-11-2001
-
-	automapactive = false;
 
 	// We are committed to this map now.
 	// We may as well allocate its header if it doesn't exist

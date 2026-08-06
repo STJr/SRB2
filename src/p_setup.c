@@ -832,7 +832,9 @@ static void P_SpawnMapThings(boolean spawnemblems)
 
 		if (mt->type >= 600 && mt->type <= 611) // item patterns
 			P_SpawnItemPattern(mt, false);
-		else if (mt->type == 1713) // hoops
+		// Check for spawnemblems here so the hoops don't spawn ghost variants for players joining a netgame mid-level
+		// ...It's a long story.
+		else if (mt->type == 1713 && spawnemblems) // hoops
 			P_SpawnHoop(mt);
 		else // Everything else
 			P_SpawnMapThing(mt);
@@ -7932,7 +7934,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	if (mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0')
 		P_ForceCharacter(mapheaderinfo[gamemap-1]->forcecharacter);
 
-	if (!dedicated)
+	if (!dedicated && !reloadinggamestate)
 	{
 		// chasecam on in first-person gametypes and 2D
 		boolean chase = (!(gametyperules & GTR_FIRSTPERSON)) || (maptol & TOL_2D);
@@ -7974,7 +7976,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		}
 		G_ClearModeAttackRetryFlag();
 	}
-	else if (rendermode != render_none && G_IsSpecialStage(gamemap))
+	else if (rendermode != render_none && G_IsSpecialStage(gamemap) && !reloadinggamestate)
 	{
 		P_RunSpecialStageWipe();
 		ranspecialwipe = 1;
@@ -8137,6 +8139,12 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		HWR_LoadLevel();
 #endif
 
+	if (!reloadinggamestate)
+	{
+		P_InitCamera();
+		localaiming = 0;
+		localaiming2 = 0;
+	}
 	// oh god I hope this helps
 	// (addendum: apparently it does!
 	//  none of this needs to be done because it's not the beginning of the map when
@@ -8144,13 +8152,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	//  the client's view of the data.)
 	if (!fromnetsave)
 		P_InitGametype();
-
-	if (!reloadinggamestate)
-	{
-		P_InitCamera();
-		localaiming = 0;
-		localaiming2 = 0;
-	}
 
 	// clear special respawning que
 	iquehead = iquetail = 0;
@@ -8189,11 +8190,10 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	if (!fromnetsave) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
-		INT32 buf = gametic % BACKUPTICS;
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (players[i].ingame)
-				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
+				memset(&players[i].cmd, 0, sizeof(players[i].cmd));
 		}
 		P_PreTicker(2);
 		P_MapStart(); // just in case MapLoad modifies tmthing
