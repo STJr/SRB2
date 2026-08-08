@@ -5490,6 +5490,8 @@ boolean P_LoadNetGame(save_t *save_p, boolean reloading)
 		P_NetUnArchiveSectorPortals(save_p);
 		P_RelinkPointers();
 		P_FinishMobjs();
+		if (gametyperules & GTR_EMERALDHUNT)
+			P_FindEmerald(); // Do this here so emerald hunt maps don't break when resyncing
 	}
 	LUA_UnArchive(save_p);
 
