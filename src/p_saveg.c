@@ -2485,6 +2485,10 @@ static void SaveMobjThinker(save_t *save_p, const thinker_t *th, const UINT8 typ
 		P_WriteFixed(save_p, mobj->gravity);
 
 	P_WriteUINT32(save_p, mobj->mobjnum);
+
+	P_WriteUINT8(save_p, hunt1 == mobj);
+	P_WriteUINT8(save_p, hunt2 == mobj);
+	P_WriteUINT8(save_p, hunt3 == mobj);
 }
 
 static void SaveNoEnemiesThinker(save_t *save_p, const thinker_t *th, const UINT8 type)
@@ -3590,6 +3594,13 @@ static thinker_t* LoadMobjThinker(save_t *save_p, actionf_p1 thinker)
 	mobj->info = (mobjinfo_t *)next; // temporarily, set when leave this function
 
 	R_AddMobjInterpolator(mobj);
+
+	if (P_ReadUINT8(save_p))
+		hunt1 = mobj;
+	if (P_ReadUINT8(save_p))
+		hunt2 = mobj;
+	if (P_ReadUINT8(save_p))
+		hunt3 = mobj;
 
 	return &mobj->thinker;
 }
@@ -5490,8 +5501,6 @@ boolean P_LoadNetGame(save_t *save_p, boolean reloading)
 		P_NetUnArchiveSectorPortals(save_p);
 		P_RelinkPointers();
 		P_FinishMobjs();
-		if (gametyperules & GTR_EMERALDHUNT)
-			P_FindEmerald(); // Do this here so emerald hunt maps don't break when resyncing
 	}
 	LUA_UnArchive(save_p);
 
