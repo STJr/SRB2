@@ -11126,8 +11126,8 @@ static void P_MinecartThink(player_t *player)
 
 	if (!minecart || P_MobjWasRemoved(minecart) || !minecart->health)
 	{
-		// Minecart died on you, so kill yourself.
-		P_KillMobj(player->mo, NULL, NULL, 0);
+		//Clear player's carry flag.
+		player->powers[pw_carry] = CR_NONE;
 		return;
 	}
 
@@ -11166,7 +11166,7 @@ static void P_MinecartThink(player_t *player)
 	if (!P_TryMove(minecart, minecart->x + FINECOSINE(fa), minecart->y + FINESINE(fa), true))
 	{
 		if (!P_MobjWasRemoved(minecart))
-			P_KillMobj(minecart, NULL, NULL, 0);
+			P_KillMobj(minecart, NULL, NULL, DMG_INSTAKILL);
 		return;
 	}
 
@@ -11203,7 +11203,7 @@ static void P_MinecartThink(player_t *player)
 
 			if (!axis)
 			{
-				P_KillMobj(minecart, NULL, NULL, 0);
+				P_KillMobj(minecart, NULL, NULL, DMG_INSTAKILL);
 				return;
 			}
 
@@ -11331,10 +11331,14 @@ static void P_MinecartThink(player_t *player)
 		else
 		{
 			minecart->movefactor++;
-			if ((P_IsObjectOnGround(minecart) && minecart->movefactor >= 5) // off rail
-			|| (abs(minecart->momx) < minecart->scale/2 && abs(minecart->momy) < minecart->scale/2)) // hit a wall
+			if (P_IsObjectOnGround(minecart) && minecart->movefactor >= 5) // off rail
 			{
-				P_KillMobj(minecart, NULL, NULL, 0);
+				P_KillMobj(minecart, NULL, NULL, DMG_DEATHPIT);
+				return;
+			}
+			if (abs(minecart->momx) < minecart->scale/2 && abs(minecart->momy) < minecart->scale/2) // hit a wall
+			{
+				P_KillMobj(minecart, NULL, NULL, DMG_INSTAKILL);
 				return;
 			}
 		}
