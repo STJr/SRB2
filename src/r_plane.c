@@ -376,8 +376,8 @@ visplane_t *R_FindPlane(sector_t *sector, fixed_t height, INT32 picnum, INT32 li
 	visplane_t *check;
 	unsigned hash;
 
-	float offset_xd = FixedToFloat(xoff) / FixedToFloat(xscale ? xscale : 1);
-	float offset_yd = FixedToFloat(yoff) / FixedToFloat(yscale ? yscale : 1);
+	float offset_xd = FixedToFloat(xoff);
+	float offset_yd = FixedToFloat(yoff);
 
 	INT64 offset_x = offset_xd * FRACUNIT;
 	INT64 offset_y = offset_yd * FRACUNIT;

@@ -2226,25 +2226,30 @@ static void TextmapFixFlatOffsets(sector_t *sec)
 	{
 		fixed_t pc = FINECOSINE(sec->floorangle>>ANGLETOFINESHIFT);
 		fixed_t ps = FINESINE  (sec->floorangle>>ANGLETOFINESHIFT);
-		fixed_t xoffs = sec->floorxoffset;
-		fixed_t yoffs = sec->flooryoffset;
-		sec->floorxoffset = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
-		sec->flooryoffset = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+		fixed_t xoffs = FixedDiv(sec->floorxoffset, sec->floorxscale);
+		fixed_t yoffs = FixedDiv(sec->flooryoffset, sec->flooryscale);
+		const fixed_t maxFlatSizeX = FixedDiv(MAXFLATSIZE, sec->floorxscale);
+		const fixed_t maxFlatSizeY = FixedDiv(MAXFLATSIZE, sec->flooryscale);
+		sec->floorxoffset = (FixedMul(xoffs, pc) % maxFlatSizeX) - (FixedMul(yoffs, ps) % maxFlatSizeY);
+		sec->flooryoffset = (FixedMul(xoffs, ps) % maxFlatSizeX) + (FixedMul(yoffs, pc) % maxFlatSizeY);
 	}
 
 	if (sec->ceilingangle)
 	{
 		fixed_t pc = FINECOSINE(sec->ceilingangle>>ANGLETOFINESHIFT);
 		fixed_t ps = FINESINE  (sec->ceilingangle>>ANGLETOFINESHIFT);
-		fixed_t xoffs = sec->ceilingxoffset;
-		fixed_t yoffs = sec->ceilingyoffset;
-		sec->ceilingxoffset = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
-		sec->ceilingyoffset = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+		fixed_t xoffs = FixedDiv(sec->ceilingxoffset, sec->ceilingxscale);
+		fixed_t yoffs = FixedDiv(sec->ceilingyoffset, sec->ceilingyscale);
+		const fixed_t maxFlatSizeX = FixedDiv(MAXFLATSIZE, sec->floorxscale);
+		const fixed_t maxFlatSizeY = FixedDiv(MAXFLATSIZE, sec->flooryscale);
+		sec->ceilingxoffset = (FixedMul(xoffs, pc) % maxFlatSizeX) - (FixedMul(yoffs, ps) % maxFlatSizeY);
+		sec->ceilingyoffset = (FixedMul(xoffs, ps) % maxFlatSizeX) + (FixedMul(yoffs, pc) % maxFlatSizeY);
 	}
 }
 
 static void TextmapUnfixFlatOffsets(sector_t *sec)
 {
+	// Don't account for the scale variables here since Binary doesn't do flat scaling
 	if (sec->floorangle)
 	{
 		fixed_t pc = FINECOSINE(sec->floorangle >> ANGLETOFINESHIFT);

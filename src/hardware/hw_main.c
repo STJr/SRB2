@@ -472,8 +472,8 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 
 #define SETUP3DVERT(vert, vx, vy) {\
 		/* Hurdler: add scrolling texture on floor/ceiling */\
-		vert->s = ((vx) / fflatwidth) + (scrollx / xscale);\
-		vert->t = -((vy) / fflatheight) + (scrolly / yscale);\
+		vert->s = ((vx) / fflatwidth) + scrollx;\
+		vert->t = -((vy) / fflatheight) + scrolly;\
 \
 		/* Need to rotate before translate */\
 		if (angle) /* Only needs to be done if there's an altered angle */\
@@ -2227,8 +2227,8 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	{
 		// Go from the polysector's original vertex locations
 		// Means the flat is offset based on the original vertex locations
-		v3d->s = (FixedToFloat(polysector->origVerts[i].x) / fflatwidth) + (scrollx / xscale);
-		v3d->t = -(FixedToFloat(polysector->origVerts[i].y) / fflatheight) + (scrolly / yscale);
+		v3d->s = (FixedToFloat(polysector->origVerts[i].x) / fflatwidth) + scrollx;
+		v3d->t = -(FixedToFloat(polysector->origVerts[i].y) / fflatheight) + scrolly;
 
 		// Need to rotate before translate
 		if (angle) // Only needs to be done if there's an altered angle
