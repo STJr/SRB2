@@ -11423,7 +11423,7 @@ void P_SpawnPrecipitation(void)
 		// Don't set height yet...
 		height = precipsector->sector->ceilingheight;
 
-		if (curWeather == PRECIP_SNOW)
+		if (curWeather == PRECIP_SNOW || curWeather == PRECIP_THUNDERSNOW || curWeather == PRECIP_THUNDERSNOW_NOSTRIKES)
 		{
 			// Not in a sector with visible sky -- exception for NiGHTS.
 			if ((!(maptol & TOL_NIGHTS) && (precipsector->sector->ceilingpic != skyflatnum)) == !(precipsector->sector->flags & MSF_INVERTPRECIP))
@@ -11474,7 +11474,8 @@ void P_PrecipitationEffects(void)
 	// If the global weather has lightning strikes,
 	// EVERYONE gets them at the SAME time!
 	else if (globalweather == PRECIP_STORM
-	 || globalweather == PRECIP_STORM_NORAIN)
+	 || globalweather == PRECIP_STORM_NORAIN
+	 || globalweather == PRECIP_THUNDERSNOW)
 		thunderchance = (P_RandomKey(8192));
 	// But on the other hand, if the global weather is ANYTHING ELSE,
 	// don't sync lightning strikes.
@@ -11496,7 +11497,14 @@ void P_PrecipitationEffects(void)
 			break;
 		case PRECIP_STORM_NORAIN: // no rain, lightning and thunder allowed
 			sounds_rain = false;
+			/* FALLTHRU */
 		case PRECIP_STORM: // everything.
+			break;
+		case PRECIP_THUNDERSNOW_NOSTRIKES: // no lightning strikes specifically
+			effects_lightning = false;
+			/* FALLTHRU */
+		case PRECIP_THUNDERSNOW: // everything.
+			sounds_rain = false;
 			break;
 		default:
 			// Other weathers need not apply.
@@ -11555,7 +11563,7 @@ void P_PrecipitationEffects(void)
 		volume = 255;
 
 	if (sounds_rain && (!leveltime || leveltime % 80 == 1))
-	S_StartSoundFromMobjVol(players[displayplayer].mo, sfx_rainin, volume);
+		S_StartSoundFromMobjVol(players[displayplayer].mo, sfx_rainin, volume);
 
 	if (!sounds_thunder)
 		return;

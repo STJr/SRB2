@@ -2004,6 +2004,8 @@ static boolean is_rain_type (INT32 weathernum)
 		case PRECIP_RAIN:
 		case PRECIP_STORM:
 		case PRECIP_STORM_NOSTRIKES:
+		case PRECIP_THUNDERSNOW:
+		case PRECIP_THUNDERSNOW_NOSTRIKES:
 		case PRECIP_BLANK:
 			return true;
 
@@ -2070,7 +2072,7 @@ void P_SwitchWeather(INT32 weathernum)
 				precipmobj->precipflags |= PCF_RAIN;
 				//think->function = (actionf_p1)P_RainThinker;
 			}
-			else if (weathernum == PRECIP_SNOW) // Rain To Snow
+			else if (weathernum == PRECIP_SNOW || weathernum == PRECIP_THUNDERSNOW || weathernum == PRECIP_THUNDERSNOW_NOSTRIKES) // Rain To Snow
 			{
 				INT32 z;
 
@@ -2107,33 +2109,14 @@ void P_SwitchWeather(INT32 weathernum)
 	switch (weathernum)
 	{
 		case PRECIP_SNOW: // snow
-			curWeather = PRECIP_SNOW;
-
-			if (purge)
-				P_SpawnPrecipitation();
-
-			break;
 		case PRECIP_RAIN: // rain
-		{
-			curWeather = PRECIP_RAIN;
-
-			if (purge)
-				P_SpawnPrecipitation();
-
-			break;
-		}
 		case PRECIP_STORM: // storm
-		{
-			curWeather = PRECIP_STORM;
-
-			if (purge)
-				P_SpawnPrecipitation();
-
-			break;
-		}
 		case PRECIP_STORM_NOSTRIKES: // storm w/o lightning
+		case PRECIP_THUNDERSNOW: // snow
+		case PRECIP_THUNDERSNOW_NOSTRIKES: // snow
+		case PRECIP_BLANK: //preloaded
 		{
-			curWeather = PRECIP_STORM_NOSTRIKES;
+			curWeather = weathernum;
 
 			if (purge)
 				P_SpawnPrecipitation();
@@ -2141,14 +2124,7 @@ void P_SwitchWeather(INT32 weathernum)
 			break;
 		}
 		case PRECIP_STORM_NORAIN: // storm w/o rain
-			curWeather = PRECIP_STORM_NORAIN;
-
-			break;
-		case PRECIP_BLANK: //preloaded
-			curWeather = PRECIP_BLANK;
-
-			if (purge)
-				P_SpawnPrecipitation();
+			curWeather = weathernum;
 
 			break;
 		default:
@@ -6094,6 +6070,8 @@ void P_InitSpecials(void)
 		case PRECIP_STORM: // storm
 		case PRECIP_STORM_NORAIN: // storm w/o rain
 		case PRECIP_STORM_NOSTRIKES: // storm w/o lightning
+		case PRECIP_THUNDERSNOW: // storm w/o lightning
+		case PRECIP_THUNDERSNOW_NOSTRIKES: // storm w/o lightning
 			curWeather = mapheaderinfo[gamemap-1]->weather;
 			break;
 		default: // blank/none
