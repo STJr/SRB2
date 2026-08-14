@@ -393,27 +393,41 @@ visplane_t *R_FindPlane(sector_t *sector, fixed_t height, INT32 picnum, INT32 li
 			float ang = ANG2RAD(plangle);
 			float x = offset_x / (float)FRACUNIT;
 			float y = offset_y / (float)FRACUNIT;
+			if (polyobj)
+			{
+				// TODO: Figure out how to fix offsets properly
+				// float polyang = ANG2RAD(polyobj->angle);
+				x -= FixedToFloat(polyobj->spawnSpot.x);
+				y += FixedToFloat(polyobj->spawnSpot.y);
+				// x -= (offset_xd * cos(polyang) + offset_yd * sin(polyang));
+				// y -= (offset_xd * sin(polyang) - offset_yd * cos(polyang));
+			}
 			offset_x = (x * cos(ang) + y * sin(ang)) * FRACUNIT;
 			offset_y = (-x * sin(ang) + y * cos(ang)) * FRACUNIT;
 		}
+		else if (polyobj)
+		{
+			offset_x -= polyobj->spawnSpot.x;
+			offset_y += polyobj->spawnSpot.y;
+		}
 	}
 
-	if (polyobj)
-	{
-		if (polyobj->angle != 0)
-		{
-			float ang = ANG2RAD(polyobj->angle);
-			float x = FixedToFloat(polyobj->centerPt.x);
-			float y = FixedToFloat(polyobj->centerPt.y);
-			offset_x -= (x * cos(ang) + y * sin(ang)) * FRACUNIT;
-			offset_y -= (x * sin(ang) - y * cos(ang)) * FRACUNIT;
-		}
-		else
-		{
-			offset_x -= polyobj->centerPt.x;
-			offset_y += polyobj->centerPt.y;
-		}
-	}
+	// if (polyobj)
+	// {
+	// 	if (polyobj->angle != 0)
+	// 	{
+	// 		float ang = ANG2RAD(polyobj->angle);
+	// 		float x = FixedToFloat(polyobj->centerPt.x);
+	// 		float y = FixedToFloat(polyobj->centerPt.y);
+	// 		offset_x -= (x * cos(ang) + y * sin(ang)) * FRACUNIT;
+	// 		offset_y -= (x * sin(ang) - y * cos(ang)) * FRACUNIT;
+	// 	}
+	// 	else
+	// 	{
+	// 		offset_x -= polyobj->centerPt.x;
+	// 		offset_y += polyobj->centerPt.y;
+	// 	}
+	// }
 
 	offset_x = ((INT64)offset_x * xscale) / FRACUNIT;
 	offset_y = ((INT64)offset_y * yscale) / FRACUNIT;
