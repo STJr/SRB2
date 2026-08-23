@@ -161,8 +161,10 @@ typedef enum
 	// Run the action thinker on spawn.
 	MF_RUNSPAWNFUNC     = 1<<29,
 	// Apply slope physics to mobj if on slope
-	MF_APPLYSLOPE       = 1<<30
-	// free: 1<<31
+	MF_APPLYSLOPE       = 1<<30,
+	// Prevent mobj from stepping up or down stairs
+	MF_NOSTEPMOVE       = 1<<31
+	// free: none
 } mobjflag_t;
 
 typedef enum

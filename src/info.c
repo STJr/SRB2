@@ -4469,7 +4469,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_ENEMY|MF_SPECIAL|MF_NOGRAVITY|MF_SHOOTABLE, // flags
+		MF_ENEMY|MF_SPECIAL|MF_NOGRAVITY|MF_SHOOTABLE|MF_NOSTEPMOVE, // flags
 		(statenum_t)MT_MINE// raisestate
 	},
 

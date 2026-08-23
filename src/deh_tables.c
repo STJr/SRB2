@@ -4386,6 +4386,7 @@ const char *const MOBJFLAG_LIST[] = {
 	"GRENADEBOUNCE",
 	"RUNSPAWNFUNC",
 	"APPLYSLOPE",
+	"NOSTEPMOVE",
 	NULL
 };
 
