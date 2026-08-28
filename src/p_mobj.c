@@ -11027,8 +11027,8 @@ mobj_t *P_SpawnScaledMobj(fixed_t x, fixed_t y, fixed_t z, fixed_t scale, mobjty
 	mobj->scalespeed = scale/12;
 
 	// TODO: 2.3: Remove in favor of mapobjectscale and mapthing_t->scale
-	if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))
-		mobj->destscale = FRACUNIT/2;
+	if ((maptol & TOL_ERZ3) && (mobj->type == MT_BLACKEGGMAN))
+		mobj->destscale *= 2;
 
 	// Sprite rendering
 	mobj->blendmode = AST_TRANSLUCENT;

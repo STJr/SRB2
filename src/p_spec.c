@@ -6064,6 +6064,9 @@ void P_InitSpecials(void)
 {
 	// Set the map object scale
 	mapobjectscale = mapheaderinfo[gamemap-1]->mobj_scale;
+	// TODO: 2.3: Delete
+	if (maptol & TOL_ERZ3)
+		mapobjectscale /= 2;
 	
 	// Set the default gravity. Custom gravity overrides this setting.
 	gravity = mapheaderinfo[gamemap-1]->gravity;

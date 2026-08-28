@@ -186,7 +186,7 @@ boolean P_CheckMissileRange(mobj_t *actor)
 	if (!actor->info->meleestate)
 		dist -= FixedMul(128*FRACUNIT, actor->scale); // no melee attack, so fire more
 
-	dist >>= FRACBITS;
+	dist /= actor->scale;
 
 	if (actor->type == MT_EGGMOBILE)
 		dist >>= 1;
@@ -11015,7 +11015,7 @@ void A_Repeat(void *data)
 void A_SetScale(void *data)
 {
 	mobj_t *actor = data;
-	INT32 locvar1 = var1;
+	INT32 locvar1 = FixedMul(var1, mapobjectscale);
 	INT32 locvar2 = var2;
 	mobj_t *target;
 
@@ -12064,8 +12064,8 @@ void A_FlickyCenter(void *data)
 				actor->flags |= MF_GRENADEBOUNCE;
 			if (actor->spawnpoint->args[1] & TMFF_HOP)
 				actor->flags |= MF_NOCLIPTHING;
-			actor->extravalue1 = actor->spawnpoint->args[0] ? abs(actor->spawnpoint->args[0])*FRACUNIT
-				: locvar2 ? abs(locvar2) : 384*FRACUNIT;
+			actor->extravalue1 = actor->spawnpoint->args[0] ? FixedMul(abs(actor->spawnpoint->args[0])*FRACUNIT, actor->scale)
+				: locvar2 ? FixedMul(abs(locvar2), actor->scale) : FixedMul(384*FRACUNIT, actor->scale);
 			actor->extravalue2 = actor->spawnpoint->args[2];
 			actor->friction = actor->spawnpoint->x*FRACUNIT;
 			actor->movefactor = actor->spawnpoint->y*FRACUNIT;
@@ -12080,7 +12080,7 @@ void A_FlickyCenter(void *data)
 				actor->flags |= MF_GRENADEBOUNCE;
 			if (flickyflags & TMFF_HOP)
 				actor->flags |= MF_NOCLIPTHING;
-			actor->extravalue1 = abs(locvar2);
+			actor->extravalue1 = FixedMul(abs(locvar2), actor->scale);
 			actor->extravalue2 = flickycolor;
 			actor->friction = actor->x;
 			actor->movefactor = actor->y;
@@ -12172,7 +12172,7 @@ void A_FlickyAim(void *data)
 {
 	mobj_t *actor = data;
 	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
+	INT32 locvar2 = FixedMul(var2, actor->scale);
 	boolean flickyhitwall = false;
 
 	if (LUA_CallAction(A_FLICKYAIM, actor))
@@ -12233,9 +12233,9 @@ void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fi
 	var2 = 32*FRACUNIT;
 	A_FlickyAim(actor);
 
-	chasez *= 8;
+	chasez = FixedMul(chasez * 8, actor->scale);
 	if (!actor->target || !(actor->fuse > 2*TICRATE))
-		chasez += ((actor->eflags & MFE_VERTICALFLIP) ? actor->ceilingz - 24*FRACUNIT : actor->floorz + 24*FRACUNIT);
+		chasez += ((actor->eflags & MFE_VERTICALFLIP) ? actor->ceilingz - 24*actor->scale : actor->floorz + 24*actor->scale);
 	else
 	{
 		fixed_t add = actor->target->z + (actor->target->height - actor->height)/2;
@@ -12248,6 +12248,8 @@ void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fi
 
 	if (!targetdist)
 		targetdist = 16*FRACUNIT; //Default!
+
+	targetdist = FixedMul(targetdist, actor->scale);
 
 	if (actor->target && abs(chasez - actor->z) > targetdist)
 		targetdist = P_GetMobjDistance2D(actor->target, actor);

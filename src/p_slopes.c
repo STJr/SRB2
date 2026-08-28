@@ -1128,6 +1128,8 @@ void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 void P_ButteredSlope(mobj_t *mo)
 {
 	fixed_t thrust;
+	const fixed_t momx = FixedDiv(mo->momx, mo->scale);
+	const fixed_t momy = FixedDiv(mo->momy, mo->scale);
 
 	if (!mo->standingslope)
 		return;
@@ -1151,7 +1153,7 @@ void P_ButteredSlope(mobj_t *mo)
 	if (mo->player && (mo->player->pflags & PF_SPINNING)) {
 		fixed_t mult = 0;
 		if (mo->momx || mo->momy) {
-			angle_t angle = R_PointToAngle2(0, 0, mo->momx, mo->momy) - mo->standingslope->xydirection;
+			angle_t angle = R_PointToAngle2(0, 0, momx, momy) - mo->standingslope->xydirection;
 
 			if (P_MobjFlip(mo) * mo->standingslope->zdelta < 0)
 				angle ^= ANGLE_180;
@@ -1163,14 +1165,14 @@ void P_ButteredSlope(mobj_t *mo)
 	}
 
 	if (mo->momx || mo->momy) // Slightly increase thrust based on the object's speed
-		thrust = FixedMul(thrust, FRACUNIT+P_AproxDistance(mo->momx, mo->momy)/16);
+		thrust = FixedMul(thrust, FRACUNIT+P_AproxDistance(momx, momy)/16);
 	// This makes it harder to zigzag up steep slopes, as well as allows greater top speed when rolling down
 
 	// Let's get the gravity strength for the object...
-	thrust = FixedMul(thrust, abs(P_GetMobjGravity(mo)));
+	thrust = FixedMul(thrust, abs(FixedDiv(P_GetMobjGravity(mo), mo->scale)));
 
 	// ... and its friction against the ground for good measure (divided by original friction to keep behaviour for normal slopes the same).
-	thrust = FixedMul(thrust, FixedDiv(mo->friction, ORIG_FRICTION));
+	thrust = FixedMul(FixedMul(thrust, mo->scale), FixedDiv(mo->friction, ORIG_FRICTION));
 
 	P_Thrust(mo, mo->standingslope->xydirection, thrust);
 }
