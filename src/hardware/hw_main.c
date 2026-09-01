@@ -472,8 +472,8 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 
 #define SETUP3DVERT(vert, vx, vy) {\
 		/* Hurdler: add scrolling texture on floor/ceiling */\
-		vert->s = ((vx) / fflatwidth) + (scrollx / xscale);\
-		vert->t = -((vy) / fflatheight) + (scrolly / yscale);\
+		vert->s = (vx) + ((scrollx * fflatwidth) / xscale);\
+		vert->t = -(vy) + ((scrolly * fflatheight) / yscale);\
 \
 		/* Need to rotate before translate */\
 		if (angle) /* Only needs to be done if there's an altered angle */\
@@ -484,8 +484,8 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 			vert->t = (tempxsow * sin(anglef)) + (tempytow * cos(anglef));\
 		}\
 \
-		vert->s *= xscale;\
-		vert->t *= yscale;\
+		vert->s = (vert->s / fflatwidth) * xscale;\
+		vert->t = (vert->t / fflatheight) * yscale;\
 \
 		if (slope)\
 		{\
