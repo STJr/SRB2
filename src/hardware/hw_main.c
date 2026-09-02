@@ -2227,8 +2227,8 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	{
 		// Go from the polysector's original vertex locations
 		// Means the flat is offset based on the original vertex locations
-		v3d->s = (FixedToFloat(polysector->origVerts[i].x) / fflatwidth) + (scrollx / xscale);
-		v3d->t = -(FixedToFloat(polysector->origVerts[i].y) / fflatheight) + (scrolly / yscale);
+		v3d->s = FixedToFloat(polysector->origVerts[i].x) + ((scrollx * fflatwidth) / xscale);
+		v3d->t = -FixedToFloat(polysector->origVerts[i].y) + ((scrolly * fflatheight) / yscale);
 
 		// Need to rotate before translate
 		if (angle) // Only needs to be done if there's an altered angle
@@ -2242,8 +2242,8 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 			v3d->t = (tempxsow * sin(anglef)) + (tempytow * cos(anglef));
 		}
 
-		v3d->s *= xscale;
-		v3d->t *= yscale;
+		v3d->s = (v3d->s / fflatwidth) * xscale;
+		v3d->t = (v3d->t / fflatheight) * yscale;
 
 		v3d->x = FIXED_TO_FLOAT(polysector->vertices[i]->x);
 		v3d->y = height;
