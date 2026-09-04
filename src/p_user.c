@@ -9972,7 +9972,7 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcalled)
 {
 	angle_t angle = 0, focusangle = 0, focusaiming = 0;
-	fixed_t x, y, z, dist, distxy, distz, checkdist, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight, slopez = 0;
+	fixed_t x, y, z, dist, distxy, distz, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight, slopez = 0;
 	INT32 camrotate;
 	boolean camstill, cameranoclip, camorbit;
 	mobj_t *mo, *sign = NULL;
@@ -10252,10 +10252,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (!sign && !(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
 		dist = FixedMul(dist, player->camerascale);
 
-	checkdist = dist;
-
-	if (checkdist < 128*FRACUNIT)
-		checkdist = 128*FRACUNIT;
 
 	if (!(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE)) // This block here is like 90% Lach's work, thanks bud
 	{
@@ -10491,12 +10487,22 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			}
 	}
 
-		// crushed camera
-		if (myceilingz <= myfloorz + thiscam->height && !resetcalled && !cameranoclip)
+		if (!resetcalled && !cameranoclip)
 		{
-			P_ResetCamera(player, thiscam);
-			return true;
+			// turn transparent if too close (only in single player)
+			if (!multiplayer && !splitscreen && !netgame && ArePointsClose2D(thiscam->x, thiscam->y, mo->x, mo->y, 48*mo->scale))
+				player->mo->flags2 |= MF2_SHADOW;
+			else if (player->mo->flags2 & MF2_SHADOW)
+				player->mo->flags2 &= ~MF2_SHADOW;
+
+			// crushed camera
+			if (myceilingz <= myfloorz + thiscam->height)
+			{
+				P_ResetCamera(player, thiscam);
+				return true;
+			}
 		}
+
 
 		// camera fit?
 		if (myceilingz != myfloorz
@@ -10574,17 +10580,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 		thiscam->angle = angle;
 */
-	// follow the player
-	/*if (player->playerstate != PST_DEAD && (camspeed) != 0)
-	{
-		if (P_AproxDistance(mo->x - thiscam->x, mo->y - thiscam->y) > (checkdist + P_AproxDistance(mo->momx, mo->momy)) * 4
-			|| abs(mo->z - thiscam->z) > checkdist * 3)
-		{
-			if (!resetcalled)
-				P_ResetCamera(player, thiscam);
-			return true;
-		}
-	}*/
 
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 	{
@@ -10626,27 +10621,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		dist = thiscam->aiming - angle;
 		thiscam->aiming -= (dist>>3);
 	}
-
-	// Make player translucent if camera is too close (only in single player).
-	if (!(multiplayer || netgame) && !splitscreen)
-	{
-		fixed_t vx = thiscam->x, vy = thiscam->y;
-		fixed_t vz = thiscam->z + thiscam->height / 2;
-		if (player->awayviewtics && player->awayviewmobj != NULL && !P_MobjWasRemoved(player->awayviewmobj))		// Camera must obviously exist
-		{
-			vx = player->awayviewmobj->x;
-			vy = player->awayviewmobj->y;
-			vz = player->awayviewmobj->z + player->awayviewmobj->height / 2;
-		}
-
-		/* check z distance too for orbital camera */
-		if (ArePointsClose3D(vx, vy, vz, mo->x, mo->y, mo->z + mo->height / 2, FixedMul(48*FRACUNIT, mo->scale)))
-			mo->flags2 |= MF2_SHADOW;
-		else
-			mo->flags2 &= ~MF2_SHADOW;
-	}
-	else
-		mo->flags2 &= ~MF2_SHADOW;
 
 /*	if (!resetcalled && (player->powers[pw_carry] == CR_NIGHTSMODE && player->exiting))
 	{
