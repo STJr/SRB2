@@ -93,6 +93,11 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	if (LUA_HookBotAI(sonic, tails, cmd))
 		return;
 
+	// Bot AI isn't programmed in analog.
+	// fox 5/14/2026 - just set pflags to avoid mudding settings.
+	// Also set PF_AUTOBRAKE to decouple from P2 settings; bot seems to prefer it.
+	bot->pflags = (bot->pflags & ~PF_ANALOGMODE) | PF_DIRECTIONCHAR | PF_AUTOBRAKE;
+
 	// We can't follow Sonic if he's not around!
 	if (!sonic || sonic->health <= 0)
 	{
@@ -385,10 +390,6 @@ void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 			cmd->buttons |= BT_JUMP;
 		return;
 	}
-
-	// Bot AI isn't programmed in analog.
-	if (!dedicated)
-		CV_SetValue(&cv_analog[1], false);
 
 	// Let Lua scripts build ticcmds
 	if (LUA_HookTiccmd(player, cmd, HOOK(BotTiccmd)))
