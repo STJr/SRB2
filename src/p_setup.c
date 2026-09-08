@@ -8359,9 +8359,12 @@ void P_LoadMapsFromFile(UINT16 wadnum, boolean added_ingame)
 			name = W_GetFilenameFromFullname(lumpinfo->fullname); // Full lump name, with its extension
 
 			// Extension must be .wad or be prefixed with MAP
+			// TODO: 2.3: Remove the ability to load MAPXX markers outside of a WAD within a PK3
 			if (!M_CheckFilenameExtension(name, "wad") && (strlen(name) != 5 || strnicmp(name, "MAP", 3) != 0))
 				continue;
 
+			if (!M_CheckFilenameExtension(name, "wad") && strlen(name) == 5 && strnicmp(name, "MAP", 3) == 0)
+				CONS_Alert(CONS_WARNING, "MAPXX marker \"%s\" detected inside a \"Maps\" folder. This feature is deprecated and will be removed. Please use the WAD format for containing map data instead.\n", lumpinfo->longname);
 			// Get the name without the extension
 			name = lumpinfo->longname;
 
