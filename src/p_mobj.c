@@ -2305,8 +2305,8 @@ boolean P_ZMovement(mobj_t *mo)
 				if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS || mo->type == MT_MINECART)
 				{
 					// Kill enemies, bosses and minecarts that fall into death pits.
-					P_KillMobj(mo, NULL, NULL, 0);
-					return !P_MobjWasRemoved(mo); // allows explosion states to run
+					if (P_DamageMobj(mo, NULL, NULL, 1, DMG_DEATHPIT))
+						return !P_MobjWasRemoved(mo); // allows explosion states to run
 				}
 				else
 				{
@@ -10372,11 +10372,9 @@ void P_MobjThinker(mobj_t *mobj)
 	}
 
 	if (mobj->flags & (MF_ENEMY|MF_BOSS) && mobj->health
-		&& P_CheckDeathPitCollide(mobj)) // extra pit check in case these didn't have momz
-	{
-		P_KillMobj(mobj, NULL, NULL, DMG_DEATHPIT);
-		return;
-	}
+		&& P_CheckDeathPitCollide(mobj) // extra pit check in case these didn't have momz
+		&& P_DamageMobj(mobj, NULL, NULL, 1, DMG_DEATHPIT))
+			return;
 
 	// Crush enemies!
 	if (mobj->ceilingz - mobj->floorz < mobj->height)
@@ -10386,11 +10384,10 @@ void P_MobjThinker(mobj_t *mobj)
 			&& mobj->flags & MF_SHOOTABLE)
 		|| mobj->type == MT_EGGSHIELD)
 		&& !(mobj->flags & MF_NOCLIPHEIGHT)
-		&& mobj->health > 0)
-		{
-			P_KillMobj(mobj, NULL, NULL, DMG_CRUSHED);
+		&& mobj->health > 0
+		&& P_DamageMobj(mobj, NULL, NULL, 1, DMG_CRUSHED))
 			return;
-		}
+
 	}
 
 	// Can end up here if a player dies.
