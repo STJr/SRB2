@@ -7513,14 +7513,14 @@ static void P_NiGHTSMovement(player_t *player)
 	{
 		player->pflags &= ~PF_STARTJUMP;
 
-		if (cmd->sidemove != 0)
-			moved = true;
+		if (cmd->sidemove != 0) // TODO: 2.3: Delete this line and...
+			moved = true; // ...this line, as this is just for older demo support
 
 		if (player->drillmeter & 1)
 			player->drillmeter++; // I'll be nice and give them one.
 	}
 
-	if (cmd->forwardmove != 0)
+	if (cmd->forwardmove != 0 || (cmd->sidemove != 0 && !(demoplayback && demoversion < 0x0012)))
 		moved = true;
 
 	if (!player->bumpertime)
