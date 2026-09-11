@@ -2745,7 +2745,9 @@ increment_move
 			//All things are affected by their scale.
 			fixed_t maxstep = FixedMul(MAXSTEPMOVE, thing->scale);
 
-			if (thing->player)
+			if (thing->flags & MF_NOSTEPMOVE)
+				maxstep = 0;
+			else if (thing->player)
 			{
 				// If using SSF_DOUBLESTEPUP, double the maxstep.
 				if (P_PlayerTouchingSectorSpecialFlag(thing->player, SSF_DOUBLESTEPUP)
@@ -2773,9 +2775,6 @@ increment_move
 				if (R_PointInSubsector(x, y)->sector->specialflags & SSF_NOSTEPDOWN)
 					maxstep = 0;
 			}
-
-			if (thing->type == MT_SKIM)
-				maxstep = 0;
 
 			if (tmceilingz - tmfloorz < thing->height
 				|| (thing->player
@@ -2992,7 +2991,7 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 			if (tmceilingz - thing->z < thing->height)
 				return false; // mobj must lower itself to fit
 
-			if (tmfloorz - thing->z > maxstep)
+			if ((thing->flags & MF_NOSTEPMOVE) || tmfloorz - thing->z > maxstep)
 				return false; // too big a step up
 		}
 	} while(tryx != x || tryy != y);
@@ -3429,7 +3428,7 @@ boolean P_LineIsBlocking(mobj_t *mo, line_t *li)
 	if (opentop - mo->z < mo->height)
 		return true; // mobj is too high
 
-	if (openbottom - mo->z > FixedMul(MAXSTEPMOVE, mo->scale))
+	if ((mo->flags & MF_NOSTEPMOVE) || openbottom - mo->z > FixedMul(MAXSTEPMOVE, mo->scale))
 		return true; // too big a step up
 
 	if (mo->player
