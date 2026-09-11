@@ -6070,8 +6070,8 @@ void P_InitSpecials(void)
 		case PRECIP_STORM: // storm
 		case PRECIP_STORM_NORAIN: // storm w/o rain
 		case PRECIP_STORM_NOSTRIKES: // storm w/o lightning
-		case PRECIP_THUNDERSNOW: // storm w/o lightning
-		case PRECIP_THUNDERSNOW_NOSTRIKES: // storm w/o lightning
+		case PRECIP_THUNDERSNOW: // storm, snowy
+		case PRECIP_THUNDERSNOW_NOSTRIKES: // storm w/o lightning, snowy
 			curWeather = mapheaderinfo[gamemap-1]->weather;
 			break;
 		default: // blank/none
