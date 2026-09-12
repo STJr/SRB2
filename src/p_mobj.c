@@ -13272,7 +13272,10 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	case MT_LAVAFALL:
 		mobj->fuse = 30 + mthing->args[0];
 		if (mthing->args[1])
+		{
+			mobj->flags2 |= MF2_STRONGBOX;
 			P_SetScale(mobj, 2*mobj->scale, true);
+		}
 		break;
 	case MT_PYREFLY:
 		//start on fire if args[0], otherwise behave normally

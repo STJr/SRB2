@@ -14576,11 +14576,12 @@ void A_LavafallLava(void *data)
 	mobj_t *actor = data;
 	mobj_t *lavafall;
 	UINT8 i;
+	const bool isDoubleSize = !!(actor->flags2 & MF2_STRONGBOX);
 
 	if (LUA_CallAction(A_LAVAFALLLAVA, actor))
 		return;
 
-	if ((40 - actor->fuse) % max(2*(actor->scale >> FRACBITS), 1)) // avoid crashes if actor->scale < FRACUNIT
+	if ((40 - actor->fuse) % (isDoubleSize ? 4 : 2))
 		return;
 
 	// Don't spawn lava unless a player is nearby.
@@ -14594,7 +14595,7 @@ void A_LavafallLava(void *data)
 
 	lavafall = P_SpawnMobjFromMobj(actor, 0, 0, -8*FRACUNIT, MT_LAVAFALL_LAVA);
 	if (!P_MobjWasRemoved(lavafall))
-		lavafall->momz = -P_MobjFlip(actor)*FixedMul(25*FRACUNIT, lavafall->scale);
+		lavafall->momz = -P_MobjFlip(actor) * FixedMul(25*FRACUNIT, isDoubleSize ? lavafall->scale/2 : lavafall->scale);
 }
 
 // Function: A_FallingLavaCheck
