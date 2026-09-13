@@ -165,8 +165,8 @@ FUNCPRINTF void GL_DBG_Printf(const char *format, ...)
 	char str[4096] = "";
 	va_list arglist;
 
-	if (gllogstream) 
-	{	
+	if (gllogstream)
+	{
 		va_start(arglist, format);
 		vsnprintf(str, 4096, format, arglist);
 		va_end(arglist);
@@ -1486,6 +1486,139 @@ static void AllocTextureBuffer(GLMipmap_t *pTexInfo)
 	}
 }
 
+static void PadRGBABitmap(RGBA_t *tex, UINT16 w, UINT16 h, UINT32 flags)
+{
+	INT32 i, c1, c2, idxAdd;
+	UINT16 c1size, c2size;
+	RGBA_t *current, *prev, *next, *first;
+	boolean ignorePrev, wrap;
+
+	for (i = 0; i < 2; i++)
+	{
+		c1size = i ? h : w;
+		c2size = i ? w : h;
+		idxAdd = i ? 1 : w;
+		wrap = i ? flags & TF_WRAPX : flags & TF_WRAPY;
+
+		for (c1 = 0; c1 < c1size; c1++)
+		{
+			if (i)
+			{
+				first = current = tex + (c1 * w);
+				prev = wrap ? tex + (w - 1 + c1 * w) : current;
+				next = tex + (1 + c1 * w);
+			}
+			else
+			{
+				first = current = tex + c1;
+				prev = wrap ? tex + (c1 + (h - 1) * w) : current;
+				next = tex + (c1 + w);
+			}
+
+			ignorePrev = false;
+
+			for (c2 = 0; c2 < c2size; c2++)
+			{
+				if (c2 == c2size - 1)
+					next = wrap ? first : current;
+
+				if (current->rgba)
+				{
+					ignorePrev = false;
+				}
+				else if (prev->rgba && !ignorePrev)
+				{
+					*current = *prev;
+					current->s.alpha = 0;
+					ignorePrev = true;
+				}
+				else if (next->rgba)
+				{
+					*current = *next;
+					current->s.alpha = 0;
+					ignorePrev = false;
+				}
+				else
+				{
+					ignorePrev = false;
+				}
+
+				prev = current;
+				current = next;
+				next += idxAdd;
+			}
+		}
+	}
+}
+
+static void GenerateMipmaps(INT32 w, INT32 h, RGBA_t *tex, INT32 maxLOD, UINT32 flags)
+{
+	if (tex == NULL)
+	{
+		GL_MSG_Warning("GenerateMipmaps: attempted to generate mipmaps without texture data");
+		return;
+	}
+
+	RGBA_t samplePoint[4];
+	boolean padTexture;
+	INT32 pointsSampled = 0;
+	INT32 m, j, i, p;
+	UINT16 sumR, sumG, sumB, sumA;
+
+	for (m = 0; m < maxLOD; m++)
+	{
+		if (w <= 1 || h <= 1)
+			return;
+
+		padTexture = false;
+
+		for (j = 0; j < h / 2; j++)
+		{
+			for (i = 0; i < w / 2; i++)
+			{
+				samplePoint[0] = tex[w*j*2 + i*2];
+				samplePoint[1] = tex[w*j*2 + i*2+1];
+				samplePoint[2] = tex[w*(j*2+1) + i*2];
+				samplePoint[3] = tex[w*(j*2+1) + i*2+1];
+
+				pointsSampled = sumR = sumG = sumB = sumA = 0;
+
+				for (p = 0; p < 4; p++)
+				{
+					if (samplePoint[p].s.alpha == 0)
+						continue;
+					sumR += samplePoint[p].s.red;
+					sumG += samplePoint[p].s.green;
+					sumB += samplePoint[p].s.blue;
+					sumA += samplePoint[p].s.alpha;
+					pointsSampled++;
+				}
+
+				if (pointsSampled > 0)
+				{
+					tex[(w/2)*j+i].s.red   = sumR / pointsSampled;
+					tex[(w/2)*j+i].s.green = sumG / pointsSampled;
+					tex[(w/2)*j+i].s.blue  = sumB / pointsSampled;
+					tex[(w/2)*j+i].s.alpha = sumA / pointsSampled;
+				}
+				else
+				{
+					tex[(w/2)*j+i].rgba = 0;
+					padTexture = true;
+				}
+			}
+		}
+
+		w /= 2;
+		h /= 2;
+
+		if (padTexture)
+			PadRGBABitmap(tex, w, h, flags);
+
+		pglTexSubImage2D(GL_TEXTURE_2D, m + 1, 0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, tex);
+	}
+}
+
 // -----------------+
 // UpdateTexture    : Updates texture data.
 // -----------------+
@@ -1494,6 +1627,7 @@ EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
 	// Upload a texture
 	GLuint num = pTexInfo->downloaded;
 	boolean update = true;
+	const boolean applyPadding = mag_filter == GL_LINEAR || min_filter == GL_LINEAR;
 
 	INT32 w = pTexInfo->width, h = pTexInfo->height;
 	INT32 i, j;
@@ -1548,11 +1682,26 @@ EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
 				}
 			}
 		}
+
+		if (applyPadding)
+			PadRGBABitmap(tex, w, h, pTexInfo->flags);
 	}
 	else if (pTexInfo->format == GL_TEXFMT_RGBA)
 	{
 		// Directly upload the texture data without any kind of conversion.
 		ptex = pImgData;
+
+		// However, it does need to be copied to a buffer for generating mipmaps and padding
+		if (MipMap || applyPadding)
+		{
+			AllocTextureBuffer(pTexInfo);
+			tex = textureBuffer;
+			memcpy(tex, ptex, w * h * 4);
+			ptex = tex;
+
+			if (applyPadding)
+				PadRGBABitmap(tex, w, h, pTexInfo->flags);
+		}
 	}
 	else if (pTexInfo->format == GL_TEXFMT_ALPHA_INTENSITY_88)
 	{
@@ -1595,17 +1744,8 @@ EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
 	pglBindTexture(GL_TEXTURE_2D, num);
 	tex_downloaded = num;
 
-	// disable texture filtering on any texture that has holes so there's no dumb borders or blending issues
-	if (pTexInfo->flags & TF_TRANSPARENT)
-	{
-		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	}
-	else
-	{
-		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter);
-		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter);
-	}
+	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter);
+	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter);
 
 	if (pTexInfo->format == GL_TEXFMT_ALPHA_INTENSITY_88)
 	{
@@ -1616,9 +1756,14 @@ EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
 			pglTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 			pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, 0);
 			if (pTexInfo->flags & TF_TRANSPARENT)
+			{
 				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 0); // No mippmaps on transparent stuff
+			}
 			else
+			{
 				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 4);
+				GenerateMipmaps(w, h, tex, 4, pTexInfo->flags);
+			}
 			//pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_LINEAR_MIPMAP_LINEAR);
 		}
 		else
@@ -1638,9 +1783,14 @@ EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
 			pglTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 			pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, 0);
 			if (pTexInfo->flags & TF_TRANSPARENT)
+			{
 				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 0); // No mippmaps on transparent stuff
+			}
 			else
+			{
 				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 4);
+				GenerateMipmaps(w, h, tex, 4, pTexInfo->flags);
+			}
 			//pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_LINEAR_MIPMAP_LINEAR);
 		}
 		else
@@ -1660,9 +1810,14 @@ EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
 			// Control the mipmap level of detail
 			pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_LOD, 0); // the lower the number, the higer the detail
 			if (pTexInfo->flags & TF_TRANSPARENT)
+			{
 				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 0); // No mippmaps on transparent stuff
+			}
 			else
+			{
 				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LOD, 5);
+				GenerateMipmaps(w, h, tex, 5, pTexInfo->flags);
+			}
 		}
 		else
 		{
