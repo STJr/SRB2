@@ -1115,7 +1115,7 @@ fixed_t S_CalculateSoundDistance(fixed_t sx1, fixed_t sy1, fixed_t sz1, fixed_t 
 	if (approx_dist >= FRACUNIT/2)
 		approx_dist = FRACUNIT/2-1;
 
-	approx_dist <<= FRACBITS;
+	approx_dist = FixedDiv(approx_dist<<FRACBITS, mapobjectscale); // TODO: 2.3: Use mobj->scale instead?
 
 	return approx_dist;
 }
