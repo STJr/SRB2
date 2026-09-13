@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -35,6 +35,7 @@ typedef enum
 } demo_file_override_e;
 
 extern demo_file_override_e demofileoverride;
+extern consvar_t cv_resyncdemo;
 
 // Quit after playing a demo from cmdline.
 extern boolean singledemo;

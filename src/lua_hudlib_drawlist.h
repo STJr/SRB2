@@ -98,6 +98,14 @@ void LUA_HUD_AddDrawFill(
 	INT32 h,
 	INT32 c
 );
+void LUA_HUD_AddDrawFixedFill(
+	huddrawlist_h list,
+	fixed_t x,
+	fixed_t y,
+	fixed_t w,
+	fixed_t h,
+	INT32 c
+);
 void LUA_HUD_AddDrawString(
 	huddrawlist_h list,
 	fixed_t x,

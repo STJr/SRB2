@@ -3,7 +3,7 @@
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2014-2023 by Sonic Team Junior.
+// Copyright (C) 2014-2025 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -39,12 +39,6 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <ntsecapi.h>
 #undef SystemFunction036
 
-// A little more than the minimum sleep duration on Windows.
-// May be incorrect for other platforms, but we don't currently have a way to
-// query the scheduler granularity. SDL will do what's needed to make this as
-// low as possible though.
-#define MIN_SLEEP_DURATION_MS 2.1
-
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,10 +65,11 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #pragma warning(default : 4214 4244)
 #endif
 
-#if defined (__unix__) || defined(__APPLE__) || (defined (UNIXCOMMON) && !defined (__HAIKU__))
-#if defined (__linux__)
-#include <sys/vfs.h>
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__linux__) || defined (__HAIKU__)
+#include <sys/statvfs.h>
 #else
+#include <sys/statvfs.h>
 #include <sys/param.h>
 #include <sys/mount.h>
 /*For meminfo*/
@@ -87,7 +82,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 #endif
 
-#if defined (__linux__) || (defined (UNIXCOMMON) && !defined (__HAIKU__))
+#if defined (__linux__) || defined (UNIXCOMMON)
 #ifndef NOTERMIOS
 #include <termios.h>
 #include <sys/ioctl.h> // ioctl
@@ -95,10 +90,16 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 #endif
 
+#if defined(UNIXCOMMON)
+#include <poll.h>
+#endif
+
 #if defined (__unix__) || (defined (UNIXCOMMON) && !defined (__APPLE__))
 #include <errno.h>
 #include <sys/wait.h>
+#ifndef __HAIKU__ // haiku's crash dialog is just objectively better
 #define NEWSIGNALHANDLER
+#endif
 #endif
 
 #ifndef NOMUMBLE
@@ -207,6 +208,12 @@ static char returnWadPath[256];
 #endif
 
 #define MAX_EXIT_FUNCS 32
+
+// A little more than the minimum sleep duration on Windows.
+// May be incorrect for other platforms, but we don't currently have a way to
+// query the scheduler granularity. SDL will do what's needed to make this as
+// low as possible though.
+#define MIN_SLEEP_DURATION_MS 2.1
 
 UINT8 graphics_started = 0;
 
@@ -370,15 +377,24 @@ void I_Sleep(UINT32 ms)
 
 void I_SleepDuration(precise_t duration)
 {
-#if defined(__linux__) || defined(__FreeBSD__)
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__HAIKU__)
 	UINT64 precision = I_GetPrecisePrecision();
-	struct timespec ts = {
-		.tv_sec = duration / precision,
-		.tv_nsec = duration * 1000000000 / precision % 1000000000,
-	};
-	int status;
-	do status = clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, &ts);
-	while (status == EINTR);
+	precise_t dest = I_GetPreciseTime() + duration;
+	precise_t slack = (precision / 5000); // 0.2 ms slack
+	if (duration > slack)
+	{
+		duration -= slack;
+		struct timespec ts = {
+			.tv_sec = duration / precision,
+			.tv_nsec = duration * 1000000000 / precision % 1000000000,
+		};
+		int status;
+		do status = clock_nanosleep(CLOCK_MONOTONIC, 0, &ts, &ts);
+		while (status == EINTR);
+	}
+
+	// busy-wait the rest
+	while (((INT64)dest - (INT64)I_GetPreciseTime()) > 0);
 #else
 	UINT64 precision = I_GetPrecisePrecision();
 	INT32 sleepvalue = cv_sleep.value;
@@ -701,10 +717,9 @@ typedef struct
 
 static feild_t tty_con;
 
-// when printing general stuff to stdout stderr (Sys_Printf)
-//   we need to disable the tty console stuff
-// this increments so we can recursively disable
-static INT32 ttycon_hide = 0;
+// lock to prevent clearing partial lines, since not everything
+// printed ends on a newline.
+static boolean ttycon_ateol = true;
 // some key codes that the terminal may be using
 // TTimo NOTE: I'm not sure how relevant this is
 static INT32 tty_erase;
@@ -732,63 +747,31 @@ static inline void tty_FlushIn(void)
 // TTimo NOTE: it seems on some terminals just sending '\b' is not enough
 //   so for now, in any case we send "\b \b" .. yeah well ..
 //   (there may be a way to find out if '\b' alone would work though)
+// Hanicef NOTE: using \b this way is unreliable because of terminal state,
+//   it's better to use \r to reset the cursor to the beginning of the
+//   line and clear from there.
 static void tty_Back(void)
 {
-	char key;
-	ssize_t d;
-	key = '\b';
-	d = write(STDOUT_FILENO, &key, 1);
-	key = ' ';
-	d = write(STDOUT_FILENO, &key, 1);
-	key = '\b';
-	d = write(STDOUT_FILENO, &key, 1);
-	(void)d;
+	write(STDOUT_FILENO, "\r", 1);
+	if (tty_con.cursor>0)
+	{
+		write(STDOUT_FILENO, tty_con.buffer, tty_con.cursor);
+	}
+	write(STDOUT_FILENO, " \b", 2);
 }
 
 static void tty_Clear(void)
 {
 	size_t i;
+	write(STDOUT_FILENO, "\r", 1);
 	if (tty_con.cursor>0)
 	{
 		for (i=0; i<tty_con.cursor; i++)
 		{
-			tty_Back();
+			write(STDOUT_FILENO, " ", 1);
 		}
+		write(STDOUT_FILENO, "\r", 1);
 	}
-
-}
-
-// clear the display of the line currently edited
-// bring cursor back to beginning of line
-static inline void tty_Hide(void)
-{
-	//I_Assert(consolevent);
-	if (ttycon_hide)
-	{
-		ttycon_hide++;
-		return;
-	}
-	tty_Clear();
-	ttycon_hide++;
-}
-
-// show the current line
-// FIXME TTimo need to position the cursor if needed??
-static inline void tty_Show(void)
-{
-	size_t i;
-	ssize_t d;
-	//I_Assert(consolevent);
-	I_Assert(ttycon_hide>0);
-	ttycon_hide--;
-	if (ttycon_hide == 0 && tty_con.cursor)
-	{
-		for (i=0; i<tty_con.cursor; i++)
-		{
-			d = write(STDOUT_FILENO, tty_con.buffer+i, 1);
-		}
-	}
-	(void)d;
 }
 
 // never exit without calling this, or your terminal will be left in a pretty bad state
@@ -855,50 +838,65 @@ static void I_GetConsoleEvents(void)
 	// we use this when sending back commands
 	event_t ev = {0};
 	char key = 0;
-	ssize_t d;
+	struct pollfd pfd =
+	{
+		.fd = STDIN_FILENO,
+		.events = POLLIN,
+		.revents = 0,
+	};
 
 	if (!consolevent)
 		return;
 
-	ev.type = ev_console;
-	ev.key = 0;
-	if (read(STDIN_FILENO, &key, 1) == -1 || !key)
-		return;
+	for (;;)
+	{
+		if (poll(&pfd, 1, 0) < 1 || !(pfd.revents & POLLIN))
+			return;
 
-	// we have something
-	// backspace?
-	// NOTE TTimo testing a lot of values .. seems it's the only way to get it to work everywhere
-	if ((key == tty_erase) || (key == 127) || (key == 8))
-	{
-		if (tty_con.cursor > 0)
+		ev.type = ev_console;
+		ev.key = 0;
+		if (read(STDIN_FILENO, &key, 1) == -1 || !key)
+			return;
+
+		// we have something
+		// backspace?
+		// NOTE TTimo testing a lot of values .. seems it's the only way to get it to work everywhere
+		if ((key == tty_erase) || (key == 127) || (key == 8))
 		{
-			tty_con.cursor--;
-			tty_con.buffer[tty_con.cursor] = '\0';
-			tty_Back();
+			if (tty_con.cursor > 0)
+			{
+				tty_con.cursor--;
+				tty_con.buffer[tty_con.cursor] = '\0';
+				tty_Back();
+			}
+			ev.key = KEY_BACKSPACE;
 		}
-		ev.key = KEY_BACKSPACE;
-	}
-	else if (key < ' ') // check if this is a control char
-	{
-		if (key == '\n')
+		else if (key < ' ') // check if this is a control char
 		{
-			tty_Clear();
-			tty_con.cursor = 0;
-			ev.key = KEY_ENTER;
+			if (key == '\n')
+			{
+				tty_Clear();
+				tty_con.cursor = 0;
+				ev.key = KEY_ENTER;
+			}
+			else if (key == 0x4) // ^D, aka EOF
+			{
+				// shut down, most unix programs behave this way
+				I_Quit();
+			}
+			else continue;
 		}
-		else return;
+		else if (tty_con.cursor < sizeof(tty_con.buffer))
+		{
+			// push regular character
+			ev.key = tty_con.buffer[tty_con.cursor] = key;
+			tty_con.cursor++;
+			// print the current line (this is differential)
+			write(STDOUT_FILENO, &key, 1);
+		}
+		if (ev.key) D_PostEvent(&ev);
+		//tty_FlushIn();
 	}
-	else if (tty_con.cursor < sizeof(tty_con.buffer))
-	{
-		// push regular character
-		ev.key = tty_con.buffer[tty_con.cursor] = key;
-		tty_con.cursor++;
-		// print the current line (this is differential)
-		d = write(STDOUT_FILENO, &key, 1);
-	}
-	if (ev.key) D_PostEvent(&ev);
-	//tty_FlushIn();
-	(void)d;
 }
 
 #elif defined (_WIN32)
@@ -985,20 +983,8 @@ static void I_GetConsoleEvents(void)
 static void I_StartupConsole(void)
 {
 	HANDLE ci, co;
-	const INT32 ded = M_CheckParm("-dedicated");
-	BOOL gotConsole = FALSE;
-	if (M_CheckParm("-console") || ded)
-		gotConsole = AllocConsole();
-#ifdef _DEBUG
-	else if (M_CheckParm("-noconsole") && !ded)
-#else
-	else if (!M_CheckParm("-console") && !ded)
-#endif
-	{
-		FreeConsole();
-		gotConsole = FALSE;
-	}
-
+	BOOL gotConsole = AllocConsole();
+	consolevent = !M_CheckParm("-noconsole");
 	if (gotConsole)
 	{
 		SetConsoleTitleA("SRB2 Console");
@@ -1026,12 +1012,7 @@ static inline void I_ShutdownConsole(void){}
 static void I_GetConsoleEvents(void){}
 static inline void I_StartupConsole(void)
 {
-#ifdef _DEBUG
 	consolevent = !M_CheckParm("-noconsole");
-#else
-	consolevent = M_CheckParm("-console");
-#endif
-
 	framebuffer = M_CheckParm("-framebuffer");
 
 	if (framebuffer)
@@ -1049,6 +1030,9 @@ void I_OutputMsg(const char *fmt, ...)
 	va_start(argptr,fmt);
 	len = vsnprintf(NULL, 0, fmt, argptr);
 	va_end(argptr);
+	if (len == 0)
+		return;
+
 	txt = malloc(len+1);
 	va_start(argptr,fmt);
 	vsprintf(txt, fmt, argptr);
@@ -1138,18 +1122,20 @@ void I_OutputMsg(const char *fmt, ...)
 	}
 #else
 #ifdef HAVE_TERMIOS
-	if (consolevent)
+	if (consolevent && ttycon_ateol)
 	{
-		tty_Hide();
+		tty_Clear();
+		ttycon_ateol = false;
 	}
 #endif
 
 	if (!framebuffer)
 		fprintf(stderr, "%s", txt);
 #ifdef HAVE_TERMIOS
-	if (consolevent)
+	if (consolevent && txt[len-1] == '\n')
 	{
-		tty_Show();
+		write(STDOUT_FILENO, tty_con.buffer, tty_con.cursor);
+		ttycon_ateol = true;
 	}
 #endif
 
@@ -1195,10 +1181,8 @@ static void I_RegisterSignals (void)
 
 INT32 I_StartupSystem(void)
 {
-#ifdef HAVE_THREADS
 	I_start_threads();
 	I_AddExitFunc(I_stop_threads);
-#endif
 	I_StartupConsole();
 	I_RegisterSignals();
 #ifndef NOMUMBLE
@@ -1229,18 +1213,13 @@ void I_ShutdownSystem(void)
 void I_GetDiskFreeSpace(INT64* freespace)
 {
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
-#if defined (SOLARIS) || defined (__HAIKU__)
-	*freespace = INT32_MAX;
-	return;
-#else // Both Linux and BSD have this, apparently.
-	struct statfs stfs;
-	if (statfs(srb2home, &stfs) == -1)
+	struct statvfs stfs;
+	if (statvfs(srb2home, &stfs) == -1)
 	{
 		*freespace = INT32_MAX;
 		return;
 	}
 	*freespace = stfs.f_bavail * stfs.f_bsize;
-#endif
 #elif defined (_WIN32)
 	static p_GetDiskFreeSpaceExA pfnGetDiskFreeSpaceEx = NULL;
 	static boolean testwin95 = false;
@@ -1376,8 +1355,8 @@ static const char *searchWad(const char *searchDir)
 
 #define CHECKWADPATH(ret) \
 do { \
-	I_OutputMsg(",%s", returnWadPath); \
-	if (isWadPathOk(returnWadPath)) \
+	I_OutputMsg(",%s", ret); \
+	if (isWadPathOk(ret)) \
 		return ret; \
 } while (0)
 
@@ -1402,7 +1381,9 @@ static const char *locateWad(void)
 #ifndef NOCWD
 	// examine current dir
 	strcpy(returnWadPath, ".");
-	CHECKWADPATH(NULL);
+	I_OutputMsg(",%s", returnWadPath);
+	if (isWadPathOk(returnWadPath))
+		return NULL;
 #endif
 
 #ifdef __APPLE__
@@ -1419,9 +1400,15 @@ static const char *locateWad(void)
 
 #ifndef NOHOME
 	// find in $HOME
-	I_OutputMsg(",HOME");
 	if ((envstr = I_GetEnv("HOME")) != NULL)
-		SEARCHWAD(envstr);
+	{
+		char *tmp = malloc(strlen(envstr) + 1 + sizeof(DEFAULTDIR));
+		strcpy(tmp, envstr);
+		strcat(tmp, "/");
+		strcat(tmp, DEFAULTDIR);
+		CHECKWADPATH(tmp);
+		free(tmp);
+	}
 #endif
 
 	// search paths
@@ -1448,8 +1435,10 @@ const char *I_LocateWad(void)
 	{
 		// change to the directory where we found srb2.pk3
 #if defined (_WIN32)
+		waddir = _fullpath(NULL, waddir, MAX_PATH);
 		SetCurrentDirectoryA(waddir);
 #else
+		waddir = realpath(waddir, NULL);
 		if (chdir(waddir) == -1)
 			I_OutputMsg("Couldn't change working directory\n");
 #endif
@@ -1571,5 +1560,14 @@ void I_GetCursorPosition(INT32 *x, INT32 *y)
 	(void)y;
 }
 
-#include "../sdl/dosstr.c"
+void I_SetTextInputMode(boolean active)
+{
+	(void)active;
+}
 
+boolean I_GetTextInputMode(void)
+{
+	return false;
+}
+
+#include "../sdl/dosstr.c"

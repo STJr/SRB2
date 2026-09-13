@@ -45,6 +45,7 @@
 #include "../lua_hook.h"
 #include "../lua_libs.h"
 #include "../md5.h"
+#include "../lonesha256.h"
 #include "../m_perfstats.h"
 #include "server_connection.h"
 #include "client_connection.h"
@@ -72,6 +73,8 @@ boolean serverrunning = false;
 INT32 serverplayer = 0;
 char motd[254], server_context[8]; // Message of the Day, Unique Context (even without Mumble support)
 
+plrinfo_pak playerinfo[MAXPLAYERS];
+
 netnode_t netnodes[MAXNETNODES];
 
 // Server specific vars
@@ -80,6 +83,7 @@ UINT8 playernode[MAXPLAYERS];
 UINT16 pingmeasurecount = 1;
 UINT32 realpingtable[MAXPLAYERS]; //the base table of ping where an average will be sent to everyone.
 UINT32 playerpingtable[MAXPLAYERS]; //table of player latency values.
+UINT32 playerpacketlosstable[MAXPLAYERS];
 static INT32 pingtimeout[MAXPLAYERS];
 tic_t servermaxping = 800; // server's max ping. Defaults to 800
 
@@ -90,11 +94,14 @@ INT16 consistancy[BACKUPTICS];
 // true when a player is connecting or disconnecting so that the gameplay has stopped in its tracks
 boolean hu_stopped = false;
 
-UINT8 (*adminpassmd5)[16];
+char *reqpass;
+char **adminpass;
 UINT32 adminpasscount = 0;
+static char adminsalt[MAXNETNODES][9];
 
 tic_t neededtic;
 SINT8 servernode = 0; // the number of the server node
+SINT8 joinnode = 0; // used for CL_VIEWSERVER
 
 boolean acceptnewnode = true;
 
@@ -113,8 +120,11 @@ consvar_t cv_blamecfail = CVAR_INIT ("blamecfail", "Off", CV_SAVE|CV_NETVAR, CV_
 static CV_PossibleValue_t playbackspeed_cons_t[] = {{1, "MIN"}, {10, "MAX"}, {0, NULL}};
 consvar_t cv_playbackspeed = CVAR_INIT ("playbackspeed", "1", 0, playbackspeed_cons_t, NULL);
 
-consvar_t cv_idletime = CVAR_INIT ("idletime", "0", CV_SAVE, CV_Unsigned, NULL);
-consvar_t cv_dedicatedidletime = CVAR_INIT ("dedicatedidletime", "10", CV_SAVE, CV_Unsigned, NULL);
+consvar_t cv_dedicatedidletime = CVAR_INIT ("dedicatedidletime", "10", CV_SAVE|CV_NETVAR, CV_Unsigned, NULL);
+
+static CV_PossibleValue_t idleaction_cons_t[] = {{1, "Kick"}, {2, "Spectate"}, {0, NULL}};
+consvar_t cv_idleaction = CVAR_INIT ("idleaction", "Spectate", CV_SAVE|CV_NETVAR, idleaction_cons_t, NULL);
+consvar_t cv_idletime = CVAR_INIT ("idletime", "3", CV_SAVE|CV_NETVAR, CV_Unsigned, NULL);
 
 consvar_t cv_httpsource = CVAR_INIT ("http_source", "", CV_SAVE, NULL, NULL);
 
@@ -145,9 +155,10 @@ void CL_Reset(void)
 	D_CloseConnection(); // netgame = false
 	multiplayer = false;
 	servernode = 0;
+	joinnode = 0;
 	server = true;
-	doomcom->numnodes = 1;
-	doomcom->numslots = 1;
+	numnetnodes = 1;
+	numslots = 1;
 	SV_StopServer();
 	SV_ResetServer();
 
@@ -202,7 +213,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	splitscreenplayer = newplayernum & 0x80;
 	newplayernum &= ~0x80;
 
-	rejoined = playeringame[newplayernum];
+	rejoined = players[newplayernum].ingame;
 
 	if (!rejoined)
 	{
@@ -210,10 +221,10 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		// HACK: don't do this for splitscreen, it relies on preset values
 		if (!splitscreen && !botingame)
 			CL_ClearPlayer(newplayernum);
-		playeringame[newplayernum] = true;
+		players[newplayernum].ingame = true;
 		G_AddPlayer(newplayernum);
-		if (newplayernum+1 > doomcom->numslots)
-			doomcom->numslots = (INT16)(newplayernum+1);
+		if (newplayernum+1 > numslots)
+			numslots = (INT16)(newplayernum+1);
 
 		if (server && I_GetNodeAddress)
 		{
@@ -330,12 +341,13 @@ static void UnlinkPlayerFromNode(INT32 playernum)
 	}
 }
 
-static void PT_ClientQuit(SINT8 node, INT32 netconsole)
+static void PT_ClientQuit(doomcom_t *doomcom, INT32 netconsole)
 {
+	UINT8 node = doomcom->remotenode;
 	if (client)
 		return;
 
-	if (netnodes[node].ingame && netconsole != -1 && playeringame[netconsole])
+	if (netnodes[node].ingame && netconsole != -1 && players[netconsole].ingame)
 		SendKicksForNode(node, KICK_MSG_PLAYER_QUIT | KICK_MSG_KEEP_BODY);
 
 	Net_CloseConnection(node);
@@ -441,7 +453,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 				for (INT32 i = 0; i < MAXPLAYERS; i++)
 				{
-					if (!playeringame[i])
+					if (!players[i].ingame)
 						continue;
 					CONS_Printf("-------------------------------------\n");
 					CONS_Printf("Player %d: %s\n", i, player_names[i]);
@@ -491,7 +503,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			break;
 		case KICK_MSG_IDLE:
 			HU_AddChatText(va("\x82*%s has left the game (Inactive for too long)", player_names[pnum]), false);
-			kickreason = KR_TIMEOUT;
+			kickreason = KR_IDLE;
 			break;
 	}
 
@@ -559,7 +571,7 @@ static void RedistributeSpecialStageSpheres(INT32 playernum)
 		INT32 n;
 		for (INT32 i = 0; i < MAXPLAYERS; i++)
 		{
-			if (!playeringame[i] || i == playernum)
+			if (!players[i].ingame || i == playernum)
 				continue;
 
 			n = min(spheres, sincrement);
@@ -582,7 +594,7 @@ void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 {
 	// Sanity check: exceptional cases (i.e. c-fails) can cause multiple
 	// kick commands to be issued for the same player.
-	if (!playeringame[playernum])
+	if (!players[playernum].ingame)
 		return;
 
 	if (server)
@@ -608,9 +620,9 @@ void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 	CL_ClearPlayer(playernum);
 
 	// remove avatar of player
-	playeringame[playernum] = false;
-	while (!playeringame[doomcom->numslots-1] && doomcom->numslots > 1)
-		doomcom->numslots--;
+	players[playernum].ingame = false;
+	while (!players[numslots-1].ingame && numslots > 1)
+		numslots--;
 
 	// Reset the name
 	sprintf(player_names[playernum], "Player %d", playernum+1);
@@ -638,9 +650,10 @@ void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 void D_QuitNetGame(void)
 {
 	mousegrabbedbylua = true;
+	textinputmodeenabledbylua = false;
 	I_UpdateMouseGrab();
 
-	if (!netgame || !netbuffer)
+	if (!netgame)
 		return;
 
 	DEBFILE("===========================================================================\n"
@@ -655,21 +668,20 @@ void D_QuitNetGame(void)
 
 	if (server)
 	{
-		netbuffer->packettype = PT_SERVERSHUTDOWN;
 		for (INT32 i = 0; i < MAXNETNODES; i++)
 			if (netnodes[i].ingame)
-				HSendPacket(i, true, 0, 0);
+				HSendPacket(D_NewPacket(PT_SERVERSHUTDOWN, i, 0), true, 0);
 #ifdef MASTERSERVER
-		if (serverrunning && ms_RoomId > 0)
+		if (serverrunning && cv_masterserver_room_id.value > 0)
 			UnregisterServer();
 #endif
 	}
 	else if (servernode > 0 && servernode < MAXNETNODES && netnodes[(UINT8)servernode].ingame)
 	{
-		netbuffer->packettype = PT_CLIENTQUIT;
-		HSendPacket(servernode, true, 0, 0);
+		HSendPacket(D_NewPacket(PT_CLIENTQUIT, servernode, 0), true, 0);
 	}
 
+	seenplayer = NULL;
 	D_CloseConnection();
 	ClearAdminPlayers();
 
@@ -726,7 +738,7 @@ void SV_ResetServer(void)
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
 		LUA_InvalidatePlayer(&players[i]);
-		playeringame[i] = false;
+		players[i].ingame = false;
 		playernode[i] = UINT8_MAX;
 		memset(playeraddress[i], 0, sizeof(*playeraddress));
 		sprintf(player_names[i], "Player %d", i + 1);
@@ -750,7 +762,7 @@ void SV_ResetServer(void)
 	if (server)
 		servernode = 0;
 
-	doomcom->numslots = 0;
+	numslots = 0;
 
 	// clear server_context
 	memset(server_context, '-', 8);
@@ -794,7 +806,7 @@ void SV_SpawnServer(void)
 		{
 			I_NetOpenSocket();
 #ifdef MASTERSERVER
-			if (ms_RoomId > 0)
+			if (cv_masterserver_room_id.value > 0)
 				RegisterServer();
 #endif
 		}
@@ -802,7 +814,9 @@ void SV_SpawnServer(void)
 		// non dedicated server just connect to itself
 		if (!dedicated)
 			CL_ConnectToServer();
-		else doomcom->numslots = 1;
+		else numslots = 1;
+
+		LUA_HookVoid(HOOK(GameStart));
 	}
 }
 
@@ -845,12 +859,11 @@ void SV_StopServer(void)
   * \param node The packet sender (should be the server)
   *
   */
-static void PT_ServerShutdown(SINT8 node)
+static void PT_ServerShutdown(doomcom_t *doomcom)
 {
-	if (node != servernode || server || cl_mode == CL_SEARCHING)
+	if (doomcom->remotenode != servernode || server || cl_mode == CL_SEARCHING)
 		return;
 
-	(void)node;
 	LUA_HookBool(false, HOOK(GameQuit));
 	D_QuitNetGame();
 	CL_Reset();
@@ -858,22 +871,65 @@ static void PT_ServerShutdown(SINT8 node)
 	M_StartMessage(M_GetText("Server has shutdown\n\nPress Esc\n"), NULL, MM_NOTHING);
 }
 
-static void PT_Login(SINT8 node, INT32 netconsole)
+static void PT_Login(doomcom_t *doomcom)
 {
-	(void)node;
-
 	if (client)
 		return;
 
-#ifndef NOMD5
-	UINT8 finalmd5[16];/* Well, it's the cool thing to do? */
-	UINT32 i;
+	UINT8 node = doomcom->remotenode;
+	I_Assert((UINT8)node < sizeof(adminsalt) / sizeof(adminsalt[0]));
 
-	if (doomcom->datalength < 16)/* ignore partial sends */
+	// I_GetRandomBytes should get it's data from a CSPRNG, so it's safe to use it here.
+	I_GetRandomBytes(adminsalt[node], sizeof(adminsalt[node]));
+	adminsalt[node][8] = '\0'; // convenience
+	doomcom = D_NewPacket(PT_LOGINCHALLENGE, node, sizeof(adminsalt[node]));
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+	memcpy(netbuffer->u.salt, adminsalt[node], sizeof(adminsalt[node]));
+	HSendPacket(doomcom, true, 0);
+}
+
+static void PT_LoginChallenge(doomcom_t *doomcom)
+{
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+	UINT8 node = doomcom->remotenode;
+	if (node != servernode)
 		return;
 
+	if ((size_t)doomcom->datalength < sizeof(netbuffer->u.salt))/* ignore partial sends */
+		return;
+
+	if (reqpass == NULL)
+		return; // got PT_LOGINCHALLENGE but we didn't request a login
+
+	doomcom_t *respcom = D_NewPacket(PT_LOGINAUTH, servernode, sizeof(netbuffer->u.sha256sum));
+	doomdata_t *respbuffer = DOOMCOM_DATA(respcom);
+	D_SHA256PasswordPass((const UINT8 *)reqpass, strlen(reqpass), netbuffer->u.salt, respbuffer->u.sha256sum);
+	Z_Free(reqpass);
+	reqpass = NULL;
+
+	HSendPacket(respcom, true, 0);
+}
+
+static void PT_LoginAuth(doomcom_t *doomcom, INT32 netconsole)
+{
+	UINT8 node = doomcom->remotenode;
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+	UINT8 finalsha256[32];/* Well, it's the cool thing to do? */
+	UINT32 i;
+	if (client)
+		return;
+
+	if ((size_t)doomcom->datalength < sizeof(netbuffer->u.sha256sum))/* ignore partial sends */
+		return;
+
+	if (adminsalt[node][0] == 0)
+	{
+		CONS_Printf(M_GetText("Password from %s failed (no login request).\n"), player_names[netconsole]);
+		return;
+	}
 	if (adminpasscount == 0)
 	{
+		adminsalt[node][0] = 0;
 		CONS_Printf(M_GetText("Password from %s failed (no password set).\n"), player_names[netconsole]);
 		return;
 	}
@@ -881,20 +937,19 @@ static void PT_Login(SINT8 node, INT32 netconsole)
 	for (i = 0; i < adminpasscount; i++)
 	{
 		// Do the final pass to compare with the sent md5
-		D_MD5PasswordPass(adminpassmd5[i], 16, va("PNUM%02d", netconsole), &finalmd5);
+		D_SHA256PasswordPass((const UINT8 *)adminpass[i], strlen(adminpass[i]), adminsalt[node], finalsha256);
 
-		if (!memcmp(netbuffer->u.md5sum, finalmd5, 16))
+		if (!memcmp(netbuffer->u.sha256sum, finalsha256, 32))
 		{
+			adminsalt[node][0] = 0;
 			CONS_Printf(M_GetText("%s passed authentication.\n"), player_names[netconsole]);
 			COM_BufInsertText(va("promote %d\n", netconsole)); // do this immediately
 			return;
 		}
 	}
 
+	adminsalt[node][0] = 0;
 	CONS_Printf(M_GetText("Password from %s failed.\n"), player_names[netconsole]);
-#else
-	(void)netconsole;
-#endif
 }
 
 /** Add a login for HTTP downloads. If the
@@ -965,22 +1020,23 @@ static void Command_list_http_logins (void)
 	}
 }
 
-static void PT_AskLuaFile(SINT8 node)
+static void PT_AskLuaFile(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
 	if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_ASKED)
 		AddLuaFileToSendQueue(node, luafiletransfers->realfilename);
 }
 
-static void PT_HasLuaFile(SINT8 node)
+static void PT_HasLuaFile(doomcom_t *doomcom)
 {
+	UINT8 node = doomcom->remotenode;
 	if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_SENDING)
 		SV_HandleLuaFileSent(node);
 }
 
-static void PT_SendingLuaFile(SINT8 node)
+static void PT_SendingLuaFile(doomcom_t *doomcom)
 {
-	(void)node;
-
+	(void)doomcom;
 	if (client)
 		CL_PrepareDownloadLuaFile();
 }
@@ -997,14 +1053,12 @@ static inline void PingUpdate(void)
 	UINT8 numlaggers = 0;
 	memset(laggers, 0, sizeof(boolean) * MAXPLAYERS);
 
-	netbuffer->packettype = PT_PING;
-
 	//check for ping limit breakage.
 	if (cv_maxping.value)
 	{
 		for (INT32 i = 1; i < MAXPLAYERS; i++)
 		{
-			if (playeringame[i] && !players[i].quittime
+			if (players[i].ingame && !players[i].quittime
 			&& (realpingtable[i] / pingmeasurecount > (unsigned)cv_maxping.value))
 			{
 				if (players[i].jointime > 30 * TICRATE)
@@ -1021,7 +1075,7 @@ static inline void PingUpdate(void)
 		{
 			for (INT32 i = 1; i < MAXPLAYERS; i++)
 			{
-				if (playeringame[i] && laggers[i])
+				if (players[i].ingame && laggers[i])
 				{
 					pingtimeout[i]++;
 					// ok your net has been bad for too long, you deserve to die.
@@ -1046,30 +1100,60 @@ static inline void PingUpdate(void)
 	//make the ping packet and clear server data for next one
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
-		netbuffer->u.pingtable[i] = realpingtable[i] / pingmeasurecount;
 		//server takes a snapshot of the real ping for display.
 		//otherwise, pings fluctuate a lot and would be odd to look at.
 		playerpingtable[i] = realpingtable[i] / pingmeasurecount;
 		realpingtable[i] = 0; //Reset each as we go.
+
+		UINT32 node = playernode[i];
+		if (node < MAXNETNODES)
+		{
+			playerpacketlosstable[i] = 0;
+			UINT32 totalpackets = 0;
+			for (INT32 j = 0; j < PACKETLOSSCYCLES; j++)
+			{
+				playerpacketlosstable[i] += lostpackets[j][node];
+				totalpackets += sentpackets[j][node];
+			}
+			if (totalpackets == 0)
+				playerpacketlosstable[i] = 0;
+			else
+				playerpacketlosstable[i] = playerpacketlosstable[i] * 100 / totalpackets; // measure in percentage
+		}
 	}
 
-	// send the server's maxping as last element of our ping table. This is useful to let us know when we're about to get kicked.
-	netbuffer->u.pingtable[MAXPLAYERS] = cv_maxping.value;
+	if (++plcycle >= PACKETLOSSCYCLES)
+		plcycle = 0;
+	for (INT32 node = 0; node < MAXNETNODES; node++)
+	{
+		lostpackets[plcycle][node] = 0;
+		sentpackets[plcycle][node] = 0;
+	}
 
 	//send out our ping packets
 	for (INT32 i = 0; i < MAXNETNODES; i++)
 		if (netnodes[i].ingame)
-			HSendPacket(i, true, 0, sizeof(INT32) * (MAXPLAYERS+1));
+		{
+			doomcom_t *doomcom = D_NewPacket(PT_PING, i, sizeof(pingtable_pak));
+			doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+			memcpy(netbuffer->u.pingtable.ping, playerpingtable, sizeof(INT32) * MAXPLAYERS);
+			memcpy(netbuffer->u.pingtable.pl, playerpacketlosstable, sizeof(INT32) * MAXPLAYERS);
+
+			// send the server's maxping as last element of our ping table. This is useful to let us know when we're about to get kicked.
+			netbuffer->u.pingtable.ping[MAXPLAYERS] = cv_maxping.value;
+			HSendPacket(doomcom, true, 0);
+		}
 
 	pingmeasurecount = 1; //Reset count
 }
 
-static void PT_Ping(SINT8 node, INT32 netconsole)
+static void PT_Ping(doomcom_t *doomcom, INT32 netconsole)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	// Only accept PT_PING from the server.
-	if (node != servernode)
+	if (doomcom->remotenode != servernode)
 	{
-		CONS_Alert(CONS_WARNING, M_GetText("%s received from non-host %d\n"), "PT_PING", node);
+		CONS_Alert(CONS_WARNING, M_GetText("%s received from non-host %d\n"), "PT_PING", doomcom->remotenode);
 		if (server)
 			SendKick(netconsole, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
 		return;
@@ -1079,14 +1163,17 @@ static void PT_Ping(SINT8 node, INT32 netconsole)
 	if (client)
 	{
 		for (INT32 i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i])
-				playerpingtable[i] = (tic_t)netbuffer->u.pingtable[i];
+			if (players[i].ingame)
+			{
+				playerpingtable[i] = (tic_t)netbuffer->u.pingtable.ping[i];
+				playerpacketlosstable[i] = netbuffer->u.pingtable.pl[i];
+			}
 
-		servermaxping = (tic_t)netbuffer->u.pingtable[MAXPLAYERS];
+		servermaxping = (tic_t)netbuffer->u.pingtable.ping[MAXPLAYERS];
 	}
 }
 
-static void PT_BasicKeepAlive(SINT8 node, INT32 netconsole)
+static void PT_BasicKeepAlive(doomcom_t *doomcom, INT32 netconsole)
 {
 	if (client)
 		return;
@@ -1096,11 +1183,11 @@ static void PT_BasicKeepAlive(SINT8 node, INT32 netconsole)
 		return;
 
 	// If a client sends this it should mean they are done receiving the savegame
-	netnodes[node].sendingsavegame = false;
+	netnodes[doomcom->remotenode].sendingsavegame = false;
 
 	// As long as clients send keep alives, the server can keep running, so reset the timeout
 	/// \todo Use a separate cvar for that kind of timeout?
-	netnodes[node].freezetimeout = I_GetTime() + connectiontimeout;
+	netnodes[doomcom->remotenode].freezetimeout = I_GetTime() + connectiontimeout;
 	return;
 }
 
@@ -1108,9 +1195,7 @@ static void PT_BasicKeepAlive(SINT8 node, INT32 netconsole)
 // Used during wipes to tell the server that a node is still connected
 static void CL_SendClientKeepAlive(void)
 {
-	netbuffer->packettype = PT_BASICKEEPALIVE;
-
-	HSendPacket(servernode, false, 0, 0);
+	HSendPacket(D_NewPacket(PT_BASICKEEPALIVE, servernode, 0), false, 0);
 }
 
 static void SV_SendServerKeepAlive(void)
@@ -1119,8 +1204,7 @@ static void SV_SendServerKeepAlive(void)
 	{
 		if (netnodes[n].ingame)
 		{
-			netbuffer->packettype = PT_BASICKEEPALIVE;
-			HSendPacket(n, false, 0, 0);
+			HSendPacket(D_NewPacket(PT_BASICKEEPALIVE, n, 0), false, 0);
 		}
 	}
 }
@@ -1133,30 +1217,32 @@ static void SV_SendServerKeepAlive(void)
   * \sa GetPackets
   *
   */
-static void HandlePacketFromAwayNode(SINT8 node)
+static void HandlePacketFromAwayNode(doomcom_t *doomcom)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
+	UINT8 node = doomcom->remotenode;
 	if (node != servernode)
 		DEBFILE(va("Received packet from unknown host %d\n", node));
 
 	switch (netbuffer->packettype)
 	{
-		case PT_ASKINFOVIAMS   : PT_AskInfoViaMS   (node    ); break;
-		case PT_SERVERINFO     : PT_ServerInfo     (node    ); break;
-		case PT_TELLFILESNEEDED: PT_TellFilesNeeded(node    ); break;
-		case PT_MOREFILESNEEDED: PT_MoreFilesNeeded(node    ); break;
-		case PT_ASKINFO        : PT_AskInfo        (node    ); break;
-		case PT_SERVERREFUSE   : PT_ServerRefuse   (node    ); break;
-		case PT_SERVERCFG      : PT_ServerCFG      (node    ); break;
-		case PT_FILEFRAGMENT   : PT_FileFragment   (node, -1); break;
-		case PT_FILEACK        : PT_FileAck        (node    ); break;
-		case PT_FILERECEIVED   : PT_FileReceived   (node    ); break;
-		case PT_REQUESTFILE    : PT_RequestFile    (node    ); break;
-		case PT_CLIENTQUIT     : PT_ClientQuit     (node, -1); break;
-		case PT_SERVERTICS     : PT_ServerTics     (node, -1); break;
-		case PT_CLIENTJOIN     : PT_ClientJoin     (node    ); break;
-		case PT_SERVERSHUTDOWN : PT_ServerShutdown (node    ); break;
-		case PT_CLIENTCMD      :                               break; // This is not an "unknown packet"
-		case PT_PLAYERINFO     :                               break; // This is not an "unknown packet"
+		case PT_ASKINFOVIAMS   : PT_AskInfoViaMS   (doomcom    ); break;
+		case PT_SERVERINFO     : PT_ServerInfo     (doomcom    ); break;
+		case PT_TELLFILESNEEDED: PT_TellFilesNeeded(doomcom    ); break;
+		case PT_MOREFILESNEEDED: PT_MoreFilesNeeded(doomcom    ); break;
+		case PT_ASKINFO        : PT_AskInfo        (doomcom    ); break;
+		case PT_SERVERREFUSE   : PT_ServerRefuse   (doomcom    ); break;
+		case PT_SERVERCFG      : PT_ServerCFG      (doomcom    ); break;
+		case PT_FILEFRAGMENT   : PT_FileFragment   (doomcom, -1); break;
+		case PT_FILEACK        : PT_FileAck        (doomcom    ); break;
+		case PT_FILERECEIVED   : PT_FileReceived   (doomcom    ); break;
+		case PT_REQUESTFILE    : PT_RequestFile    (doomcom    ); break;
+		case PT_CLIENTQUIT     : PT_ClientQuit     (doomcom, -1); break;
+		case PT_SERVERTICS     : PT_ServerTics     (doomcom, -1); break;
+		case PT_CLIENTJOIN     : PT_ClientJoin     (doomcom    ); break;
+		case PT_SERVERSHUTDOWN : PT_ServerShutdown (doomcom    ); break;
+		case PT_CLIENTCMD      :                                        break; // This is not an "unknown packet"
+		case PT_PLAYERINFO     : PT_PlayerInfo     (doomcom    ); break;
 
 		default:
 			DEBFILE(va("unknown packet received (%d) from unknown host\n",netbuffer->packettype));
@@ -1172,9 +1258,11 @@ static void HandlePacketFromAwayNode(SINT8 node)
   * \sa GetPackets
   *
   */
-static void HandlePacketFromPlayer(SINT8 node)
+static void HandlePacketFromPlayer(doomcom_t *doomcom)
 {
+	doomdata_t *netbuffer = DOOMCOM_DATA(doomcom);
 	INT32 netconsole;
+	UINT8 node = doomcom->remotenode;
 
 	if (dedicated && node == 0)
 		netconsole = 0;
@@ -1195,30 +1283,32 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_CLIENT2MIS:
 		case PT_NODEKEEPALIVE:
 		case PT_NODEKEEPALIVEMIS:
-			PT_ClientCmd(node, netconsole);
+			PT_ClientCmd(doomcom, netconsole);
 			break;
-		case PT_BASICKEEPALIVE     : PT_BasicKeepAlive     (node, netconsole); break;
-		case PT_TEXTCMD            : PT_TextCmd            (node, netconsole); break;
-		case PT_TEXTCMD2           : PT_TextCmd            (node, netconsole); break;
-		case PT_LOGIN              : PT_Login              (node, netconsole); break;
-		case PT_CLIENTQUIT         : PT_ClientQuit         (node, netconsole); break;
-		case PT_CANRECEIVEGAMESTATE: PT_CanReceiveGamestate(node            ); break;
-		case PT_ASKLUAFILE         : PT_AskLuaFile         (node            ); break;
-		case PT_HASLUAFILE         : PT_HasLuaFile         (node            ); break;
-		case PT_RECEIVEDGAMESTATE  : PT_ReceivedGamestate  (node            ); break;
-		case PT_SERVERINFO         : PT_ServerInfo         (node            ); break;
+		case PT_BASICKEEPALIVE     : PT_BasicKeepAlive     (doomcom, netconsole); break;
+		case PT_TEXTCMD            : PT_TextCmd            (doomcom, netconsole); break;
+		case PT_TEXTCMD2           : PT_TextCmd            (doomcom, netconsole); break;
+		case PT_LOGIN              : PT_Login              (doomcom            ); break;
+		case PT_LOGINAUTH          : PT_LoginAuth          (doomcom, netconsole); break;
+		case PT_CLIENTQUIT         : PT_ClientQuit         (doomcom, netconsole); break;
+		case PT_CANRECEIVEGAMESTATE: PT_CanReceiveGamestate(doomcom            ); break;
+		case PT_ASKLUAFILE         : PT_AskLuaFile         (doomcom            ); break;
+		case PT_HASLUAFILE         : PT_HasLuaFile         (doomcom            ); break;
+		case PT_RECEIVEDGAMESTATE  : PT_ReceivedGamestate  (doomcom            ); break;
+		case PT_SERVERINFO         : PT_ServerInfo         (doomcom            ); break;
 
 		// CLIENT RECEIVE
-		case PT_SERVERTICS         : PT_ServerTics         (node, netconsole); break;
-		case PT_PING               : PT_Ping               (node, netconsole); break;
-		case PT_FILEFRAGMENT       : PT_FileFragment       (node, netconsole); break;
-		case PT_FILEACK            : PT_FileAck            (node            ); break;
-		case PT_FILERECEIVED       : PT_FileReceived       (node            ); break;
-		case PT_WILLRESENDGAMESTATE: PT_WillResendGamestate(node            ); break;
-		case PT_SENDINGLUAFILE     : PT_SendingLuaFile     (node            ); break;
-		case PT_SERVERSHUTDOWN     : PT_ServerShutdown     (node            ); break;
-		case PT_SERVERCFG          :                                           break;
-		case PT_CLIENTJOIN         :                                           break;
+		case PT_SERVERTICS         : PT_ServerTics         (doomcom, netconsole); break;
+		case PT_PING               : PT_Ping               (doomcom, netconsole); break;
+		case PT_FILEFRAGMENT       : PT_FileFragment       (doomcom, netconsole); break;
+		case PT_FILEACK            : PT_FileAck            (doomcom            ); break;
+		case PT_FILERECEIVED       : PT_FileReceived       (doomcom            ); break;
+		case PT_LOGINCHALLENGE     : PT_LoginChallenge     (doomcom            ); break;
+		case PT_WILLRESENDGAMESTATE: PT_WillResendGamestate(doomcom            ); break;
+		case PT_SENDINGLUAFILE     : PT_SendingLuaFile     (doomcom            ); break;
+		case PT_SERVERSHUTDOWN     : PT_ServerShutdown     (doomcom            ); break;
+		case PT_SERVERCFG          :                                              break;
+		case PT_CLIENTJOIN         :                                              break;
 
 		default:
 			DEBFILE(va("UNKNOWN PACKET TYPE RECEIVED %d from host %d\n",
@@ -1226,24 +1316,17 @@ static void HandlePacketFromPlayer(SINT8 node)
 	}
 }
 
-/**	Handles all received packets, if any
-  *
-  * \todo Add details to this description (lol)
-  *
-  */
+static void GetPacket(doomcom_t *doomcom)
+{
+	if (netnodes[doomcom->remotenode].ingame)
+		HandlePacketFromPlayer(doomcom);
+	else
+		HandlePacketFromAwayNode(doomcom);
+}
+
 void GetPackets(void)
 {
-	while (HGetPacket())
-	{
-		SINT8 node = doomcom->remotenode;
-
-		// Packet received from someone already playing
-		if (netnodes[node].ingame)
-			HandlePacketFromPlayer(node);
-		// Packet received from someone not playing
-		else
-			HandlePacketFromAwayNode(node);
-	}
+	HGetPacket(GetPacket);
 }
 
 boolean TryRunTics(tic_t realtics)
@@ -1347,7 +1430,7 @@ static void UpdatePingTable(void)
 			PingUpdate();
 		// update node latency values so we can take an average later.
 		for (INT32 i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && playernode[i] != UINT8_MAX)
+			if (players[i].ingame && playernode[i] != UINT8_MAX)
 				realpingtable[i] += G_TicsToMilliseconds(GetLag(playernode[i]));
 		pingmeasurecount++;
 	}
@@ -1360,26 +1443,49 @@ static void IdleUpdate(void)
 	if (!server || !netgame)
 		return;
 
-	for (i = 1; i < MAXPLAYERS; i++)
+	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (cv_idletime.value && playeringame[i] && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && !players[i].bot && !IsPlayerAdmin(i) && i != serverplayer)
+		if (players[i].ingame && playernode[i] != UINT8_MAX && !players[i].quittime && !players[i].spectator && !players[i].bot && gamestate == GS_LEVEL)
 		{
-			if (players[i].cmd.forwardmove || players[i].cmd.sidemove || players[i].cmd.buttons)
+			if (players[i].cmd.forwardmove
+				|| players[i].cmd.sidemove
+				|| players[i].cmd.buttons
+				|| D_GetExistingTextcmd(gametic, playernode[i])
+				|| D_GetExistingTextcmd(gametic + 1, playernode[i])) // might give false positives, but it's good enough
 				players[i].lastinputtime = 0;
 			else
 				players[i].lastinputtime++;
 
-			if (players[i].lastinputtime > (tic_t)cv_idletime.value * TICRATE * 60)
+			if (cv_idletime.value &&
+				!IsPlayerAdmin(i) &&
+				i != serverplayer &&
+				!(players[i].pflags & PF_FINISHED) &&
+				(!G_TagGametype() || players[i].pflags & PF_TAGIT) &&
+				players[i].lastinputtime > (tic_t)cv_idletime.value * TICRATE * 60)
 			{
 				players[i].lastinputtime = 0;
-				SendKick(i, KICK_MSG_IDLE | KICK_MSG_KEEP_BODY);
+				if (cv_idleaction.value == 2 && G_GametypeHasSpectators())
+				{
+					changeteam_union NetPacket;
+					UINT16 usvalue;
+					NetPacket.value.l = NetPacket.value.b = 0;
+					NetPacket.packet.newteam = 0;
+					NetPacket.packet.playernum = i;
+					NetPacket.packet.verification = true; // This signals that it's a server change
+					usvalue = SHORT(NetPacket.value.l|NetPacket.value.b);
+					SendNetXCmd(XD_TEAMCHANGE, &usvalue, sizeof(usvalue));
+				}
+				else if (cv_idleaction.value == 1)
+				{
+					SendKick(i, KICK_MSG_IDLE | KICK_MSG_KEEP_BODY);
+				}
 			}
 		}
 		else
 		{
 			players[i].lastinputtime = 0;
 
-			if (players[i].quittime && playeringame[i])
+			if (players[i].quittime && players[i].ingame)
 			{
 				players[i].quittime++;
 
@@ -1397,6 +1503,83 @@ static void IdleUpdate(void)
 			}
 		}
 	}
+}
+
+static void DedicatedIdleUpdate(INT32 *realtics)
+{
+	const tic_t dedicatedidletime = cv_dedicatedidletime.value * TICRATE;
+	static tic_t dedicatedidletimeprev = 0;
+	static tic_t dedicatedidle = 0;
+
+	if (!server || !dedicated || gamestate != GS_LEVEL)
+		return;
+
+	if (dedicatedidletime > 0)
+	{
+		INT32 i;
+
+		boolean empty = true;
+		for (i = 0; i < MAXPLAYERS; i++)
+			if (players[i].ingame)
+			{
+				empty = false;
+				break;
+			}
+
+		if (empty)
+		{
+			if (leveltime == 2)
+			{
+				// On next tick...
+				dedicatedidle = dedicatedidletime - 1;
+			}
+			else if (dedicatedidle >= dedicatedidletime)
+			{
+				if (D_GetExistingTextcmd(gametic, 0) || D_GetExistingTextcmd(gametic + 1, 0))
+				{
+					CONS_Printf("DEDICATED: Awakening from idle (Netxcmd detected...)\n");
+					dedicatedidle = 0;
+				}
+				else
+				{
+					(*realtics) = 0;
+				}
+			}
+			else
+			{
+				dedicatedidle += (*realtics);
+
+				if (dedicatedidle >= dedicatedidletime)
+				{
+					const char *idlereason = "at round start";
+					if (leveltime > 3)
+						idlereason = va("for %d seconds", dedicatedidle / TICRATE);
+
+					CONS_Printf("DEDICATED: No players %s, idling...\n", idlereason);
+					(*realtics) = 0;
+					dedicatedidle = dedicatedidletime;
+				}
+			}
+		}
+		else
+		{
+			if (dedicatedidle >= dedicatedidletime)
+			{
+				CONS_Printf("DEDICATED: Awakening from idle (Player detected...)\n");
+			}
+			dedicatedidle = 0;
+		}
+	}
+	else
+	{
+		if (dedicatedidletimeprev > 0 && dedicatedidle >= dedicatedidletimeprev)
+		{
+			CONS_Printf("DEDICATED: Awakening from idle (Idle disabled...)\n");
+		}
+		dedicatedidle = 0;
+	}
+
+	dedicatedidletimeprev = dedicatedidletime;
 }
 
 // Handle timeouts to prevent definitive freezes from happenning
@@ -1475,75 +1658,13 @@ void NetUpdate(void)
 			realtics = 5;
 	}
 
-	if (server && dedicated && gamestate == GS_LEVEL)
- 	{
-		const tic_t dedicatedidletime = cv_dedicatedidletime.value * TICRATE;
-		static tic_t dedicatedidletimeprev = 0;
-		static tic_t dedicatedidle = 0;
-
-		if (dedicatedidletime > 0)
-		{
-			INT32 i;
-
-			for (i = 1; i < MAXNETNODES; ++i)
-				if (netnodes[i].ingame)
-				{
-					if (dedicatedidle >= dedicatedidletime)
-					{
-						CONS_Printf("DEDICATED: Awakening from idle (Node %d detected...)\n", i);
-						dedicatedidle = 0;
-					}
-					break;
-				}
-
-			if (i == MAXNETNODES)
-			{
-				if (leveltime == 2)
-				{
-					// On next tick...
-					dedicatedidle = dedicatedidletime-1;
-				}
-				else if (dedicatedidle >= dedicatedidletime)
-				{
-					if (D_GetExistingTextcmd(gametic, 0) || D_GetExistingTextcmd(gametic+1, 0))
-					{
-						CONS_Printf("DEDICATED: Awakening from idle (Netxcmd detected...)\n");
-						dedicatedidle = 0;
-					}
-					else
-					{
-						realtics = 0;
-					}
-				}
-				else if ((dedicatedidle += realtics) >= dedicatedidletime)
-				{
-					const char *idlereason = "at round start";
-					if (leveltime > 3)
-						idlereason = va("for %d seconds", dedicatedidle/TICRATE);
-
-					CONS_Printf("DEDICATED: No nodes %s, idling...\n", idlereason);
-					realtics = 0;
-					dedicatedidle = dedicatedidletime;
-				}
-			}
-		}
-		else
-		{
-			if (dedicatedidletimeprev > 0 && dedicatedidle >= dedicatedidletimeprev)
-			{
-				CONS_Printf("DEDICATED: Awakening from idle (Idle disabled...)\n");
-			}
-			dedicatedidle = 0;
-		}
-
-		dedicatedidletimeprev = dedicatedidletime;
- 	}
+	DedicatedIdleUpdate(&realtics);
 
 	gametime = nowtime;
 
 	UpdatePingTable();
 
-	if (client)
+	if (client) // wait with updating maketic until we're in-game
 		maketic = neededtic;
 
 	Local_Maketic(realtics);
@@ -1613,13 +1734,9 @@ void NetUpdate(void)
 	if (nowtime != resptime)
 	{
 		resptime = nowtime;
-#ifdef HAVE_THREADS
 		I_lock_mutex(&m_menu_mutex);
-#endif
 		M_Ticker();
-#ifdef HAVE_THREADS
 		I_unlock_mutex(m_menu_mutex);
-#endif
 		CON_Ticker();
 	}
 
@@ -1644,10 +1761,6 @@ void D_ClientServerInit(void)
 	COM_AddCommand("set_http_login", Command_set_http_login, 0);
 	COM_AddCommand("list_http_logins", Command_list_http_logins, 0);
 	COM_AddCommand("resendgamestate", Command_ResendGamestate, COM_LUA);
-#ifdef PACKETDROP
-	COM_AddCommand("drop", Command_Drop, COM_LUA);
-	COM_AddCommand("droprate", Command_Droprate, COM_LUA);
-#endif
 #ifdef _DEBUG
 	COM_AddCommand("numnodes", Command_Numnodes, COM_LUA);
 #endif
@@ -1683,14 +1796,14 @@ SINT8 nametonum(const char *name)
 
 	if (playernum)
 	{
-		if (playeringame[playernum])
+		if (players[playernum].ingame)
 			return (SINT8)playernum;
 		else
 			return -1;
 	}
 
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] && !stricmp(player_names[i], name))
+		if (players[i].ingame && !stricmp(player_names[i], name))
 			return (SINT8)i;
 
 	CONS_Printf(M_GetText("There is no player named \"%s\"\n"), name);
@@ -1713,7 +1826,7 @@ INT32 D_NumPlayers(void)
 {
 	INT32 num = 0;
 	for (INT32 ix = 0; ix < MAXPLAYERS; ix++)
-		if (playeringame[ix])
+		if (players[ix].ingame)
 			num++;
 	return num;
 }
@@ -1740,7 +1853,7 @@ INT32 D_NumBots(void)
 {
 	INT32 num = 0, ix;
 	for (ix = 0; ix < MAXPLAYERS; ix++)
-		if (playeringame[ix] && players[ix].bot)
+		if (players[ix].ingame && players[ix].bot)
 			num++;
 	return num;
 }
@@ -1763,7 +1876,7 @@ INT16 Consistancy(void)
 
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			ret ^= 0xCCCC;
 		else if (!players[i].mo);
 		else
@@ -1784,7 +1897,7 @@ INT16 Consistancy(void)
 	{
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo = (mobj_t *)th;
@@ -1861,28 +1974,18 @@ tic_t GetLag(INT32 node)
 	return gametic - netnodes[node].tic;
 }
 
-void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest)
+void D_SHA256PasswordPass(const UINT8 *buffer, size_t len, const char *salt, UINT8 dest[static 32])
 {
-#ifdef NOMD5
-	(void)buffer;
-	(void)len;
-	(void)salt;
-	memset(dest, 0, 16);
-#else
-	char tmpbuf[256];
+	UINT8 *tmpbuf;
 	const size_t sl = strlen(salt);
 
 	if (len > 256-sl)
 		len = 256-sl;
 
+	tmpbuf = Z_Malloc(sizeof(char) * (sl + len), PU_STATIC, NULL);
 	memcpy(tmpbuf, buffer, len);
 	memmove(&tmpbuf[len], salt, sl);
-	//strcpy(&tmpbuf[len], salt);
-	len += strlen(salt);
-	if (len < 256)
-		memset(&tmpbuf[len],0,256-len);
 
-	// Yes, we intentionally md5 the ENTIRE buffer regardless of size...
-	md5_buffer(tmpbuf, 256, dest);
-#endif
+	lonesha256(dest, tmpbuf, len+sl);
+	Z_Free(tmpbuf);
 }

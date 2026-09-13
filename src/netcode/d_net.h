@@ -18,6 +18,7 @@
 #ifndef __D_NET__
 #define __D_NET__
 
+#include "i_net.h"
 #include "../doomtype.h"
 
 // Max computers in a game
@@ -27,6 +28,9 @@
 #define BROADCASTADDR MAXNETNODES
 #define MAXSPLITSCREENPLAYERS 2 // Max number of players on a single computer
 //#define NETSPLITSCREEN // Kart's splitscreen netgame feature
+#define PACKETLOSSCYCLES 4 // amount of cycles to do when measuring packet loss
+
+#define FORCECLOSE 0x8000
 
 #define STATLENGTH (TICRATE*2)
 
@@ -38,6 +42,9 @@ extern INT32 packetheaderlength;
 boolean Net_GetNetStat(void);
 extern INT32 getbytes;
 extern INT64 sendbytes; // Realtime updated
+extern UINT8 plcycle;
+extern UINT32 sentpackets[PACKETLOSSCYCLES][MAXNETNODES];
+extern UINT32 lostpackets[PACKETLOSSCYCLES][MAXNETNODES];
 
 typedef struct netnode_s
 {
@@ -60,21 +67,18 @@ extern netnode_t netnodes[MAXNETNODES];
 
 extern boolean serverrunning;
 
-INT32 Net_GetFreeAcks(boolean urgent);
 void Net_AckTicker(void);
 
 // If reliable return true if packet sent, 0 else
-boolean HSendPacket(INT32 node, boolean reliable, UINT8 acknum,
-	size_t packetlength);
-boolean HGetPacket(void);
-void D_SetDoomcom(void);
+boolean HSendPacket(doomcom_t *doomcom, boolean reliable, UINT8 acknum);
+void HGetPacket(void (*handler)(doomcom_t *doomcom));
+doomcom_t *D_NewPacket(UINT8 type, INT16 node, INT16 length);
 boolean D_CheckNetGame(void);
 void D_CloseConnection(void);
 boolean Net_IsNodeIPv6(INT32 node);
 void Net_UnAcknowledgePacket(INT32 node);
 void Net_CloseConnection(INT32 node);
 void Net_ConnectionTimeout(INT32 node);
-void Net_AbortPacketType(UINT8 packettype);
 void Net_SendAcks(INT32 node);
 void Net_WaitAllAckReceived(UINT32 timeout);
 

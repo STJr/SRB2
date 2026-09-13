@@ -19,8 +19,6 @@
 
 #include "../v_video.h"
 
-extern void *GLUhandle;
-
 boolean OglSdlSurface(INT32 w, INT32 h);
 
 void OglSdlFinishUpdate(boolean vidwait);

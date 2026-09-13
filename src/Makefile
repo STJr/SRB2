@@ -47,8 +47,6 @@
 # HAVE_MINIUPNPC=1 - Enable automated port forwarding.
 #                    Already enabled by default for 32-bit
 #                    Windows.
-# NOPNG=1 - Disable PNG graphics support. (TODO: double
-#           check netplay compatible.)
 # NOCURL=1 - Disable libcurl--HTTP capability.
 # NOGME=1 - Disable game music emu, retro VGM support.
 # NOOPENMPT=1 - Disable module (tracker) music support.
@@ -62,15 +60,12 @@
 #
 # Netplay incompatible
 # --------------------
-# NOMD5=1 - Disable MD5 checksum (validation tool).
 # NOPOSTPROCESSING=1 - ?
 # MOBJCONSISTANCY=1 - ??
 # PACKETDROP=1 - ??
 # NOEXECINFO=1 - Disable stack trace dump support
 # DEBUGMODE=1 - Enable various debugging capabilities.
 #               Also disables optimizations.
-# NOZLIB=1 - Disable some compression capability. Implies
-#            NOPNG=1.
 #
 # Development flags:
 #

@@ -22,6 +22,11 @@
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
 
+// Included for the custom options menu
+#include "netcode/d_netfil.h"
+#include "m_menu.h"
+#include "w_wad.h"
+
 // for functions not allowed in hud.add hooks
 #define NOHUD if (hud_running)\
 return luaL_error(L, "HUD rendering code should not call this function!");
@@ -31,10 +36,26 @@ return luaL_error(L, "HUD rendering code should not call this function!");
 
 static consvar_t *this_cvar;
 
+static void clear_lua_stack(void)
+{
+	if (gL) // check if Lua is actually turned on first, you dummmy -- Monster Iestyn 04/07/18
+		lua_settop(gL, 0); // clear stack
+}
+
 void Got_Luacmd(UINT8 **cp, INT32 playernum)
 {
 	UINT8 i, argc, flags;
+	const char *argv[256];
 	char buf[256];
+
+	argc = READUINT8(*cp);
+	argv[0] = (const char*)*cp;
+	SKIPSTRINGN(*cp, 255);
+	for (i = 1; i < argc; i++)
+	{
+		argv[i] = (const char*)*cp;
+		SKIPSTRINGN(*cp, 255);
+	}
 
 	// don't use I_Assert here, goto the deny code below
 	// to clean up and kick people who try nefarious exploits
@@ -48,8 +69,7 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 	lua_getfield(gL, LUA_REGISTRYINDEX, "COM_Command"); // push COM_Command
 	if (!lua_istable(gL, -1)) goto deny;
 
-	argc = READUINT8(*cp);
-	READSTRINGN(*cp, buf, 255);
+	strlcpy(buf, argv[0], 255);
 	strlwr(buf); // must lowercase buffer
 	lua_getfield(gL, -1, buf); // push command info table
 	if (!lua_istable(gL, -1)) goto deny;
@@ -75,10 +95,17 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 
 	lua_remove(gL, -2); // pop command info table
 
+	if (!lua_checkstack(gL, argc)) // player + command arguments
+	{
+		clear_lua_stack();
+		CONS_Alert(CONS_WARNING, "lua command stack overflow from %s (%d, need %d more)\n", player_names[playernum], lua_gettop(gL), argc);
+		return;
+	}
+
 	LUA_PushUserdata(gL, &players[playernum], META_PLAYER);
 	for (i = 1; i < argc; i++)
 	{
-		READSTRINGN(*cp, buf, 255);
+		strlcpy(buf, argv[i], 255);
 		lua_pushstring(gL, buf);
 	}
 	LUA_Call(gL, (int)argc, 0, 1); // argc is 1-based, so this will cover the player we passed too.
@@ -86,8 +113,7 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 
 deny:
 	//must be hacked/buggy client
-	if (gL) // check if Lua is actually turned on first, you dummmy -- Monster Iestyn 04/07/18
-		lua_settop(gL, 0); // clear stack
+	clear_lua_stack();
 
 	CONS_Alert(CONS_WARNING, M_GetText("Illegal lua command received from %s\n"), player_names[playernum]);
 	if (server)
@@ -173,6 +199,11 @@ void COM_Lua_f(void)
 	I_Assert(lua_isfunction(gL, -1));
 	lua_remove(gL, -2); // pop command info table
 
+	if (!lua_checkstack(gL, COM_Argc() + 1))
+	{
+		CONS_Alert(CONS_WARNING, "lua command stack overflow (%d, need %s more)\n", lua_gettop(gL), sizeu1(COM_Argc() + 1));
+		return;
+	}
 	LUA_PushUserdata(gL, &players[playernum], META_PLAYER);
 	for (i = 1; i < COM_Argc(); i++)
 		lua_pushstring(gL, COM_Argv(i));
@@ -318,7 +349,7 @@ static boolean Lua_CanChange(const char *valstr)
 
 	LUA_Call(gL, 2, 1, 1); // call function(cvar, valstr)
 	result = lua_toboolean(gL, -1);
-	lua_pop(gL, 1); // pop CV_CanChange table
+	lua_pop(gL, 2); // pop CV_CanChange table and result
 	lua_remove(gL, 1); // remove LUA_GetErrorMessage
 
 	return result;
@@ -382,7 +413,7 @@ static int lib_cvRegisterVar(lua_State *L)
 		{
 			if (lua_islightuserdata(L, 4))
 			{
-				CV_PossibleValue_t *pv = lua_touserdata(L, 4);
+				CV_PossibleValue_t* pv = lua_touserdata(L, 4);
 				if (pv == CV_OnOff || pv == CV_YesNo || pv == CV_Unsigned || pv == CV_Natural || pv == CV_TrueFalse)
 					cvar->PossibleValue = pv;
 				else
@@ -397,9 +428,9 @@ static int lib_cvRegisterVar(lua_State *L)
 				// being used for multiple cvars will be converted and stored multiple times.
 				// So maybe instead it should be a seperate function which must be run beforehand or something.
 				size_t count = 0;
-				CV_PossibleValue_t *cvpv;
+				CV_PossibleValue_t* cvpv;
 
-				const char * const MINMAX[2] = {"MIN", "MAX"};
+				const char* const MINMAX[2] = { "MIN", "MAX" };
 				int minmax_unset = 3;
 
 				lua_pushnil(L);
@@ -412,7 +443,7 @@ static int lib_cvRegisterVar(lua_State *L)
 				lua_getfield(L, LUA_REGISTRYINDEX, "CV_PossibleValue");
 				I_Assert(lua_istable(L, 5));
 				lua_pushlightuserdata(L, cvar);
-				cvpv = lua_newuserdata(L, sizeof(CV_PossibleValue_t) * (count+1));
+				cvpv = lua_newuserdata(L, sizeof(CV_PossibleValue_t) * (count + 1));
 				lua_rawset(L, 5);
 				lua_pop(L, 1); // pop CV_PossibleValue registry table
 
@@ -421,25 +452,25 @@ static int lib_cvRegisterVar(lua_State *L)
 				while (lua_next(L, 4))
 				{
 					INT32 n;
-					const char * strval;
+					const char* strval;
 
 					// stack: [...] PossibleValue table, index, value
 					//                       4             5      6
 					if (lua_type(L, 5) != LUA_TSTRING
-					|| lua_type(L, 6) != LUA_TNUMBER)
+						|| lua_type(L, 6) != LUA_TNUMBER)
 						FIELDERROR("PossibleValue", "custom PossibleValue table requires a format of string=integer, i.e. {MIN=0, MAX=9999}");
 
 					strval = lua_tostring(L, 5);
 
 					if (
-							stricmp(strval, MINMAX[n=0]) == 0 ||
-							stricmp(strval, MINMAX[n=1]) == 0
-					){
+						stricmp(strval, MINMAX[n = 0]) == 0 ||
+						stricmp(strval, MINMAX[n = 1]) == 0
+						) {
 						/* need to shift forward */
 						if (minmax_unset == 3)
 						{
 							memmove(&cvpv[2], &cvpv[0],
-									i * sizeof *cvpv);
+								i * sizeof * cvpv);
 							i += 2;
 						}
 						cvpv[n].strvalue = MINMAX[n];
@@ -474,6 +505,8 @@ static int lib_cvRegisterVar(lua_State *L)
 			{
 				TYPEERROR("func", LUA_TFUNCTION)
 			}
+			// stack: [...] CV_OnChange table, cvar (light), value (4)
+			//                      5               6           7
 			lua_getfield(L, LUA_REGISTRYINDEX, "CV_OnChange");
 			I_Assert(lua_istable(L, 5));
 			lua_pushlightuserdata(L, cvar);
@@ -482,12 +515,14 @@ static int lib_cvRegisterVar(lua_State *L)
 			lua_pop(L, 1);
 			cvar->func = Lua_OnChange;
 		}
-		else if (cvar->flags & CV_CALL && (k && fasticmp(k, "can_change")))
+		else if (cvar->flags & CV_CALL && (i == 6 || (k && fasticmp(k, "can_change"))))
 		{
 			if (!lua_isfunction(L, 4))
 			{
-				TYPEERROR("func", LUA_TFUNCTION)
+				TYPEERROR("can_change", LUA_TFUNCTION)
 			}
+			// stack: [...] CV_CanChange table, cvar (light), value (4)
+			//                      5               6            7
 			lua_getfield(L, LUA_REGISTRYINDEX, "CV_CanChange");
 			I_Assert(lua_istable(L, 5));
 			lua_pushlightuserdata(L, cvar);
@@ -496,6 +531,29 @@ static int lib_cvRegisterVar(lua_State *L)
 			lua_pop(L, 1);
 			cvar->can_change = Lua_CanChange;
 		}
+		else if (((i == 5 && !(cvar->flags & CV_CALL))
+			|| (cvar->flags & CV_CALL && i == 7))
+			|| (k && fasticmp(k, "category")))
+		{
+			if (!lua_isstring(L, 4))
+			{
+				TYPEERROR("category", LUA_TSTRING)
+			}
+
+			cvar->category = Z_StrDup(lua_tostring(L, 4));
+		}
+		else if (((i == 6 && !(cvar->flags & CV_CALL))
+			|| (cvar->flags & CV_CALL && i == 8))
+			|| (k && fasticmp(k, "displayname")))
+		{
+			if (!lua_isstring(L, 4))
+			{
+				TYPEERROR("displayname", LUA_TSTRING)
+			}
+
+			cvar->displayname = Z_StrDup(lua_tostring(L, 4));
+		}
+
 		lua_pop(L, 1);
 	}
 
@@ -522,6 +580,19 @@ static int lib_cvRegisterVar(lua_State *L)
 		return luaL_error(L, M_GetText("Variable %s has CV_CALL without any callbacks"), cvar->name);
 	}
 
+	if (!cvar->displayname || cvar->displayname[0] == '\0')
+	{
+		cvar->displayname = cvar->name;
+	}
+
+	if (!cvar->category || cvar->category[0] == '\0')
+	{
+		char* temp = wadfiles[numwadfiles - 1]->filename;
+		temp += strlen(temp) - nameonlylength(temp);
+
+		cvar->category = temp;
+	}
+
 	cvar->flags |= CV_ALLOWLUA;
 	// actually time to register it to the console now! Finally!
 	cvar->flags |= CV_MODIFIED;
@@ -531,6 +602,9 @@ static int lib_cvRegisterVar(lua_State *L)
 	{
 		return luaL_error(L, "failed to register cvar (probable conflict with internal variable/command names)");
 	}
+
+	if (cvar->flags & CV_MENU)
+		M_RegisterCustomCVOption(cvar);
 
 	// return cvar userdata
 	return 1;
@@ -646,6 +720,8 @@ enum cvar_e
 	cvar_value,
 	cvar_string,
 	cvar_changed,
+	cvar_displayname,
+	cvar_category,
 };
 
 static const char *const cvar_opt[] = {
@@ -655,6 +731,8 @@ static const char *const cvar_opt[] = {
 	"value",
 	"string",
 	"changed",
+	"displayname",
+	"category",
 	NULL,
 };
 
@@ -684,6 +762,12 @@ static int cvar_get(lua_State *L)
 		break;
 	case cvar_changed:
 		lua_pushboolean(L, cvar->changed);
+		break;
+	case cvar_displayname:
+		lua_pushstring(L, cvar->displayname);
+		break;
+	case cvar_category:
+		lua_pushstring(L, cvar->category);
 		break;
 	default:
 		if (devparm)

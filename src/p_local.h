@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -39,11 +39,6 @@
 // Convenience macro to fix issue with collision along bottom/left edges of blockmap -Red
 #define BMBOUNDFIX(xl, xh, yl, yh) {if (xl > xh) xl = 0; if (yl > yh) yl = 0;}
 
-// MAXRADIUS is for precalculated sector block boxes
-// the spider demon is larger,
-// but we do not have any moving sectors nearby
-#define MAXRADIUS (32*FRACUNIT)
-
 // max Z move up or down without jumping
 // above this, a height difference is considered as a 'dropoff'
 #define MAXSTEPMOVE (24*FRACUNIT)
@@ -63,10 +58,10 @@
 
 typedef enum
 {
+	THINK_DYNSLOPE,
 	THINK_POLYOBJ,
 	THINK_MAIN,
 	THINK_MOBJ,
-	THINK_DYNSLOPE,
 	THINK_PRECIP,
 	NUM_THINKERLISTS
 } thinklistnum_t; /**< Thinker lists. */
@@ -135,6 +130,10 @@ boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam);
 void P_SlideCameraMove(camera_t *thiscam);
 boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcalled);
 pflags_t P_GetJumpFlags(player_t *player);
+statenum_t P_GetCanonicalPlayerState(player_t *player, statenum_t state);
+boolean P_IsPlayerInState(player_t *player, statenum_t state);
+boolean P_IsPlayerInSuperTransformationState(player_t *player);
+boolean P_IsPlayerInNightsTransformationState(player_t *player);
 boolean P_PlayerInPain(player_t *player);
 void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor);
 void P_ResetPlayer(player_t *player);
@@ -203,7 +202,7 @@ mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet);
 void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 void P_Earthquake(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 boolean P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
-boolean P_SuperReady(player_t *player, boolean transform);
+boolean P_SuperReady(player_t *player);
 void P_DoJump(player_t *player, boolean soundandstate, boolean allowflip);
 void P_DoSpinDashDust(player_t *player);
 #define P_AnalogMove(player) (P_ControlStyle(player) == CS_LMAOGALOG)
@@ -221,9 +220,9 @@ void P_DoMetalJetFume(player_t *player, mobj_t *fume);
 void P_DoFollowMobj(player_t *player, mobj_t *followmobj);
 
 void P_PlayLivesJingle(player_t *player);
-#define P_PlayRinglossSound(s)	S_StartSound(s, (mariomode) ? sfx_mario8 : sfx_altow1 + P_RandomKey(4));
-#define P_PlayDeathSound(s)		S_StartSound(s, sfx_altdi1 + P_RandomKey(4));
-#define P_PlayVictorySound(s)	S_StartSound(s, sfx_victr1 + P_RandomKey(4));
+void P_PlayRinglossSound(mobj_t *source, player_t *player);
+void P_PlayDeathSound(mobj_t *source, player_t *player);
+void P_PlayVictorySound(mobj_t *source, player_t *player);
 
 boolean P_GetLives(player_t *player);
 boolean P_SpectatorJoinGame(player_t *player);
@@ -258,7 +257,7 @@ typedef enum
 
 typedef struct
 {
-	char musname[7];
+	char musname[MAX_MUSIC_NAME+1];
 	boolean looping;
 } jingle_t;
 
@@ -283,7 +282,6 @@ void P_PlayJingleMusic(player_t *player, const char *musname, UINT16 musflags, b
 extern mapthing_t *itemrespawnque[ITEMQUESIZE];
 extern tic_t itemrespawntime[ITEMQUESIZE];
 extern size_t iquehead, iquetail;
-extern consvar_t cv_gravity, cv_movebob;
 
 mobjtype_t P_GetMobjtype(UINT16 mthingtype);
 
@@ -295,7 +293,6 @@ void P_RecalcPrecipInSector(sector_t *sector);
 void P_PrecipitationEffects(void);
 
 void P_RemoveMobj(mobj_t *th);
-boolean P_MobjWasRemoved(mobj_t *th);
 void P_RemoveSavegameMobj(mobj_t *th);
 boolean P_SetMobjState(mobj_t *mobj, statenum_t state);
 void P_RunShields(void);
@@ -307,22 +304,26 @@ boolean P_CheckSkyHit(mobj_t *mo, line_t *line);
 void P_PushableThinker(mobj_t *mobj);
 void P_SceneryThinker(mobj_t *mobj);
 
+// This does not need to be added to Lua.
+// To test it in Lua, check mobj.valid
+FUNCINLINE static ATTRINLINE boolean P_MobjWasRemoved(mobj_t *mobj)
+{
+	return mobj == NULL || mobj->thinker.function != (actionf_p1)P_MobjThinker;
+}
 
-fixed_t P_MobjFloorZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect);
-fixed_t P_MobjCeilingZ(mobj_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect);
-#define P_GetFloorZ(mobj, sector, x, y, line) P_MobjFloorZ(mobj, sector, NULL, x, y, line, false, false)
-#define P_GetCeilingZ(mobj, sector, x, y, line) P_MobjCeilingZ(mobj, sector, NULL, x, y, line, true, false)
-#define P_GetFOFTopZ(mobj, sector, fof, x, y, line) P_MobjCeilingZ(mobj, sectors + fof->secnum, sector, x, y, line, false, false)
-#define P_GetFOFBottomZ(mobj, sector, fof, x, y, line) P_MobjFloorZ(mobj, sectors + fof->secnum, sector, x, y, line, true, false)
-#define P_GetSpecialBottomZ(mobj, src, bound) P_MobjFloorZ(mobj, src, bound, mobj->x, mobj->y, NULL, src != bound, true)
-#define P_GetSpecialTopZ(mobj, src, bound) P_MobjCeilingZ(mobj, src, bound, mobj->x, mobj->y, NULL, src == bound, true)
+fixed_t P_MobjFloorZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, fixed_t radius, line_t *line, boolean lowest, boolean perfect);
+fixed_t P_MobjCeilingZ(sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, fixed_t radius, line_t *line, boolean lowest, boolean perfect);
+#define P_GetFloorZ(mobj, sector, x, y, line) P_MobjFloorZ(sector, NULL, x, y, mobj->radius, line, false, false)
+#define P_GetCeilingZ(mobj, sector, x, y, line) P_MobjCeilingZ(sector, NULL, x, y, mobj->radius, line, true, false)
+#define P_GetFOFTopZ(mobj, sector, fof, x, y, line) P_MobjCeilingZ(sectors + fof->secnum, sector, x, y, mobj->radius, line, false, false)
+#define P_GetFOFBottomZ(mobj, sector, fof, x, y, line) P_MobjFloorZ(sectors + fof->secnum, sector, x, y, mobj->radius, line, true, false)
+#define P_GetSpecialBottomZ(mobj, src, bound) P_MobjFloorZ(src, bound, mobj->x, mobj->y, mobj->radius, NULL, src != bound, true)
+#define P_GetSpecialTopZ(mobj, src, bound) P_MobjCeilingZ(src, bound, mobj->x, mobj->y, mobj->radius, NULL, src == bound, true)
 
-fixed_t P_CameraFloorZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect);
-fixed_t P_CameraCeilingZ(camera_t *mobj, sector_t *sector, sector_t *boundsec, fixed_t x, fixed_t y, line_t *line, boolean lowest, boolean perfect);
-#define P_CameraGetFloorZ(mobj, sector, x, y, line) P_CameraFloorZ(mobj, sector, NULL, x, y, line, false, false)
-#define P_CameraGetCeilingZ(mobj, sector, x, y, line) P_CameraCeilingZ(mobj, sector, NULL, x, y, line, true, false)
-#define P_CameraGetFOFTopZ(mobj, sector, fof, x, y, line) P_CameraCeilingZ(mobj, sectors + fof->secnum, sector, x, y, line, false, false)
-#define P_CameraGetFOFBottomZ(mobj, sector, fof, x, y, line) P_CameraFloorZ(mobj, sectors + fof->secnum, sector, x, y, line, true, false)
+#define P_CameraGetFloorZ(mobj, sector, x, y, line) P_MobjFloorZ(sector, NULL, x, y, mobj->radius, line, false, false)
+#define P_CameraGetCeilingZ(mobj, sector, x, y, line) P_MobjCeilingZ(sector, NULL, x, y, mobj->radius, line, true, false)
+#define P_CameraGetFOFTopZ(mobj, sector, fof, x, y, line) P_MobjCeilingZ(sectors + fof->secnum, sector, x, y, mobj->radius, line, false, false)
+#define P_CameraGetFOFBottomZ(mobj, sector, fof, x, y, line) P_MobjFloorZ(sectors + fof->secnum, sector, x, y, mobj->radius, line, true, false)
 
 boolean P_InsideANonSolidFFloor(mobj_t *mobj, ffloor_t *rover);
 boolean P_CheckDeathPitCollide(mobj_t *mo);
@@ -413,6 +414,8 @@ extern msecnode_t *sector_list;
 
 extern mprecipsecnode_t *precipsector_list;
 
+void P_UnsetBlockmapEntry(mobj_t *thing);
+void P_SetBlockmapEntry(mobj_t *thing);
 void P_UnsetThingPosition(mobj_t *thing);
 void P_SetThingPosition(mobj_t *thing);
 void P_SetUnderlayPosition(mobj_t *thing);
@@ -552,8 +555,21 @@ void P_ThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move);
 void P_VectorInstaThrust(fixed_t xa, fixed_t xb, fixed_t xc, fixed_t ya, fixed_t yb, fixed_t yc,
             fixed_t za, fixed_t zb, fixed_t zc, fixed_t momentum, mobj_t *mo);
 void P_DoSuperTransformation(player_t *player, boolean giverings);
+void P_DoSuperDetransformation(player_t *player);
 void P_ExplodeMissile(mobj_t *mo);
 void P_CheckGravity(mobj_t *mo, boolean affect);
 void P_SetPitchRollFromSlope(mobj_t *mo, pslope_t *slope);
+boolean P_IsMobjInPainState(mobj_t *mobj);
+
+fixed_t P_GetMobjDistance2D(mobj_t *mobj1, mobj_t *mobj2);
+fixed_t P_GetMobjDistance3D(mobj_t *mobj1, mobj_t *mobj2);
+INT32 P_GetMobjLargeDistance2D(mobj_t *mobj1, mobj_t *mobj2);
+INT32 P_GetMobjLargeDistance3D(mobj_t *mobj1, mobj_t *mobj2);
+boolean P_AreMobjsClose2D(mobj_t *mobj1, mobj_t *mobj2, fixed_t maxdist);
+boolean P_AreMobjsClose3D(mobj_t *mobj1, mobj_t *mobj2, fixed_t maxdist);
+boolean P_AreMobjsFar2D(mobj_t *mobj1, mobj_t *mobj2, fixed_t mindist);
+boolean P_AreMobjsFar3D(mobj_t *mobj1, mobj_t *mobj2, fixed_t mindist);
+fixed_t P_GetMobjMomentum2D(mobj_t *mobj);
+fixed_t P_GetMobjMomentum3D(mobj_t *mobj);
 
 #endif // __P_LOCAL__

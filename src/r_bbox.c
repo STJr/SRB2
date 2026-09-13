@@ -275,7 +275,7 @@ boolean R_ThingBoundingBoxVisible(mobj_t *thing)
 	switch (thing->type)
 	{
 		default:
-			// First person / awayviewmobj -- rendering a bbox 
+			// First person / awayviewmobj -- rendering a bbox
 			// too close to the viewpoint causes anomalies
 			// and these are exactly on the viewpoint!
 			if (thing != r_viewmobj)

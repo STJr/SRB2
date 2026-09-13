@@ -20,6 +20,10 @@
 /// \file
 /// \brief SRB2 graphics stuff for SDL
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #include <stdlib.h>
 
 #include <signal.h>
@@ -87,7 +91,7 @@
 #endif
 
 // maximum number of windowed modes (see windowedModes[][])
-#define MAXWINMODES (18)
+#define MAXWINMODES (21)
 
 /**	\brief
 */
@@ -99,8 +103,6 @@ static char vidModeName[33][32]; // allow 33 different modes
 
 rendermode_t rendermode = render_soft;
 rendermode_t chosenrendermode = render_none; // set by command line arguments
-
-boolean highcolor = false;
 
 static void VidWaitChanged(void);
 
@@ -159,7 +161,9 @@ static INT32 windowedModes[MAXWINMODES][2] =
 	{1920,1080}, // 1.66
 	{1680,1050}, // 1.60,5.25
 	{1600,1200}, // 1.33
+	{1600,1000}, // 1.60,5.00
 	{1600, 900}, // 1.66
+	{1536, 864}, // 1.66,4.80
 	{1366, 768}, // 1.66
 	{1440, 900}, // 1.60,4.50
 	{1280,1024}, // 1.33?
@@ -168,6 +172,7 @@ static INT32 windowedModes[MAXWINMODES][2] =
 	{1280, 720}, // 1.66
 	{1152, 864}, // 1.33,3.60
 	{1024, 768}, // 1.33,3.20
+	{ 960, 600}, // 1.60,3.00
 	{ 800, 600}, // 1.33,2.50
 	{ 640, 480}, // 1.33,2.00
 	{ 640, 400}, // 1.60,2.00
@@ -384,6 +389,8 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 
 static boolean ShouldIgnoreMouse(void)
 {
+	if (cv_alwaysgrabmouse.value)
+		return false;
 	if (menuactive)
 		return !M_MouseNeeded();
 	if (paused || con_destlines || chat_on)
@@ -472,6 +479,35 @@ static void SurfaceInfo(const SDL_Surface *infoSurface, const char *SurfaceText)
 		CONS_Printf("%s", M_GetText(" Colorkey RLE acceleration blit\n"));
 }
 
+static void TimingInfo(void)
+{
+#ifdef __EMSCRIPTEN__
+	int mode = -1, value = -1;
+	emscripten_get_main_loop_timing(&mode, &value);
+	CONS_Printf("\x82" "Currect Timing Mode\n");
+	if (mode == -1)
+	{
+		CONS_Printf(" Unknown\n");
+	}
+	else if (mode == EM_TIMING_SETTIMEOUT)
+	{
+		CONS_Printf(" everty %d ms\n", value);
+	}
+	else if (mode == EM_TIMING_RAF)
+	{
+		CONS_Printf(" every %d vsync\n", value);
+	}
+	else if (mode == EM_TIMING_SETIMMEDIATE)
+	{
+		CONS_Printf(" Unknown value %d\n", value);
+	}
+	else
+	{
+		CONS_Printf(" Unknown mode %d\n", mode);
+	}
+#endif
+}
+
 static void VID_Command_Info_f (void)
 {
 #if 0
@@ -519,6 +555,7 @@ static void VID_Command_Info_f (void)
 	SurfaceInfo(bufSurface, M_GetText("Current Engine Mode"));
 	SurfaceInfo(vidSurface, M_GetText("Current Video Mode"));
 #endif
+	TimingInfo();
 }
 
 static void VID_Command_ModeList_f(void)
@@ -1297,6 +1334,14 @@ void I_FinishUpdate(void)
 #ifdef HWRENDER
 	else if (rendermode == render_opengl)
 	{
+		// Final postprocess step of palette rendering, after everything else has been drawn.
+		if (HWR_ShouldUsePaletteRendering())
+		{
+			HWD.pfnMakeScreenTexture(HWD_SCREENTEXTURE_GENERIC2);
+			HWD.pfnSetShader(HWR_GetShaderFromTarget(SHADER_PALETTE_POSTPROCESS));
+			HWD.pfnDrawScreenTexture(HWD_SCREENTEXTURE_GENERIC2, NULL, 0);
+			HWD.pfnUnSetShader();
+		}
 		OglSdlFinishUpdate(cv_vidwait.value);
 	}
 #endif
@@ -1395,103 +1440,12 @@ INT32 VID_GetModeForSize(INT32 w, INT32 h)
 		}
 	}
 	return -1;
-#if 0
-	INT32 matchMode = -1, i;
-	VID_PrepareModeList();
-	if (USE_FULLSCREEN && numVidModes != -1)
-	{
-		for (i=firstEntry; i<numVidModes; i++)
-		{
-			if (modeList[i]->w == w &&
-			    modeList[i]->h == h)
-			{
-				matchMode = i;
-				break;
-			}
-		}
-		if (-1 == matchMode) // use smaller mode
-		{
-			w -= w%BASEVIDWIDTH;
-			h -= h%BASEVIDHEIGHT;
-			for (i=firstEntry; i<numVidModes; i++)
-			{
-				if (modeList[i]->w == w &&
-				    modeList[i]->h == h)
-				{
-					matchMode = i;
-					break;
-				}
-			}
-			if (-1 == matchMode) // use smallest mode
-				matchMode = numVidModes-1;
-		}
-		matchMode -= firstEntry;
-	}
-	else
-	{
-		for (i=0; i<MAXWINMODES; i++)
-		{
-			if (windowedModes[i][0] == w &&
-			    windowedModes[i][1] == h)
-			{
-				matchMode = i;
-				break;
-			}
-		}
-		if (-1 == matchMode) // use smaller mode
-		{
-			w -= w%BASEVIDWIDTH;
-			h -= h%BASEVIDHEIGHT;
-			for (i=0; i<MAXWINMODES; i++)
-			{
-				if (windowedModes[i][0] == w &&
-				    windowedModes[i][1] == h)
-				{
-					matchMode = i;
-					break;
-				}
-			}
-			if (-1 == matchMode) // use smallest mode
-				matchMode = MAXWINMODES-1;
-		}
-	}
-	return matchMode;
-#endif
 }
 
 void VID_PrepareModeList(void)
 {
 	// Under SDL2, we just use the windowed modes list, and scale in windowed fullscreen.
 	allow_fullscreen = true;
-#if 0
-	INT32 i;
-
-	firstEntry = 0;
-
-#ifdef HWRENDER
-	if (rendermode == render_opengl)
-		modeList = SDL_ListModes(NULL, SDL_OPENGL|SDL_FULLSCREEN);
-	else
-#endif
-	modeList = SDL_ListModes(NULL, surfaceFlagsF|SDL_HWSURFACE); //Alam: At least hardware surface
-
-	if (disable_fullscreen?0:cv_fullscreen.value) // only fullscreen needs preparation
-	{
-		if (-1 != numVidModes)
-		{
-			for (i=0; i<numVidModes; i++)
-			{
-				if (modeList[i]->w <= MAXVIDWIDTH &&
-					modeList[i]->h <= MAXVIDHEIGHT)
-				{
-					firstEntry = i;
-					break;
-				}
-			}
-		}
-	}
-	allow_fullscreen = true;
-#endif
 }
 
 static SDL_bool Impl_CreateContext(void)
@@ -1789,7 +1743,7 @@ static void Impl_VideoSetupBuffer(void)
 	vid.direct = NULL;
 	if (vid.buffer)
 		free(vid.buffer);
-	vid.buffer = calloc(vid.rowbytes*vid.height, NUMSCREENS);
+	vid.buffer = calloc(NUMSCREENS, vid.rowbytes*vid.height);
 	if (!vid.buffer)
 	{
 		I_Error("%s", M_GetText("Not enough memory for video buffer\n"));
@@ -1912,7 +1866,11 @@ void I_StartupGraphics(void)
 	I_ShutdownTTF();
 #endif
 
+#ifdef __EMSCRIPTEN__
+	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH*2, BASEVIDHEIGHT*2));
+#else
 	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
+#endif
 
 	if (M_CheckParm("-nomousegrab"))
 		mousegrabok = SDL_FALSE;
@@ -1937,6 +1895,9 @@ void I_StartupGraphics(void)
 	if (mousegrabok && !disable_mouse)
 		SDLdoGrabMouse();
 
+	// disable text input right off the bat, since we don't need it at the start.
+	I_SetTextInputMode(textinputmodeenabledbylua);
+
 	graphics_started = true;
 }
 
@@ -1958,32 +1919,35 @@ void VID_StartupOpenGL(void)
 		HWD.pfnSetTexture       = hwSym("SetTexture",NULL);
 		HWD.pfnUpdateTexture    = hwSym("UpdateTexture",NULL);
 		HWD.pfnDeleteTexture    = hwSym("DeleteTexture",NULL);
-		HWD.pfnReadRect         = hwSym("ReadRect",NULL);
+		HWD.pfnReadScreenTexture= hwSym("ReadScreenTexture",NULL);
 		HWD.pfnGClipRect        = hwSym("GClipRect",NULL);
 		HWD.pfnClearMipMapCache = hwSym("ClearMipMapCache",NULL);
 		HWD.pfnSetSpecialState  = hwSym("SetSpecialState",NULL);
-		HWD.pfnSetPalette       = hwSym("SetPalette",NULL);
+		HWD.pfnSetTexturePalette= hwSym("SetTexturePalette",NULL);
 		HWD.pfnGetTextureUsed   = hwSym("GetTextureUsed",NULL);
 		HWD.pfnDrawModel        = hwSym("DrawModel",NULL);
 		HWD.pfnCreateModelVBOs  = hwSym("CreateModelVBOs",NULL);
 		HWD.pfnSetTransform     = hwSym("SetTransform",NULL);
 		HWD.pfnPostImgRedraw    = hwSym("PostImgRedraw",NULL);
 		HWD.pfnFlushScreenTextures=hwSym("FlushScreenTextures",NULL);
-		HWD.pfnStartScreenWipe  = hwSym("StartScreenWipe",NULL);
-		HWD.pfnEndScreenWipe    = hwSym("EndScreenWipe",NULL);
 		HWD.pfnDoScreenWipe     = hwSym("DoScreenWipe",NULL);
-		HWD.pfnDrawIntermissionBG=hwSym("DrawIntermissionBG",NULL);
+		HWD.pfnDrawScreenTexture= hwSym("DrawScreenTexture",NULL);
 		HWD.pfnMakeScreenTexture= hwSym("MakeScreenTexture",NULL);
-		HWD.pfnMakeScreenFinalTexture=hwSym("MakeScreenFinalTexture",NULL);
 		HWD.pfnDrawScreenFinalTexture=hwSym("DrawScreenFinalTexture",NULL);
 
-		HWD.pfnCompileShaders   = hwSym("CompileShaders",NULL);
-		HWD.pfnCleanShaders     = hwSym("CleanShaders",NULL);
+		HWD.pfnInitShaders      = hwSym("InitShaders",NULL);
+		HWD.pfnLoadShader       = hwSym("LoadShader",NULL);
+		HWD.pfnCompileShader    = hwSym("CompileShader",NULL);
 		HWD.pfnSetShader        = hwSym("SetShader",NULL);
 		HWD.pfnUnSetShader      = hwSym("UnSetShader",NULL);
 
 		HWD.pfnSetShaderInfo    = hwSym("SetShaderInfo",NULL);
-		HWD.pfnLoadCustomShader = hwSym("LoadCustomShader",NULL);
+
+		HWD.pfnSetPaletteLookup = hwSym("SetPaletteLookup",NULL);
+		HWD.pfnCreateLightTable = hwSym("CreateLightTable",NULL);
+		HWD.pfnUpdateLightTable = hwSym("UpdateLightTable",NULL);
+		HWD.pfnClearLightTables = hwSym("ClearLightTables",NULL);
+		HWD.pfnSetScreenPalette = hwSym("SetScreenPalette",NULL);
 
 		vid.glstate = HWD.pfnInit() ? VID_GL_LIBRARY_LOADED : VID_GL_LIBRARY_ERROR; // let load the OpenGL library
 
@@ -2026,8 +1990,6 @@ void I_ShutdownGraphics(void)
 	I_OutputMsg("shut down\n");
 
 #ifdef HWRENDER
-	if (GLUhandle)
-		hwClose(GLUhandle);
 	if (sdlglcontext)
 	{
 		SDL_GL_DeleteContext(sdlglcontext);
@@ -2052,3 +2014,79 @@ UINT32 I_GetRefreshRate(void)
 	// trouble querying mode over and over again.
 	return refresh_rate;
 }
+
+#ifdef __EMSCRIPTEN__
+int EMSCRIPTEN_KEEPALIVE change_resolution(int x, int y)
+{
+	int newmode = -1;
+
+	if ( x < BASEVIDWIDTH*1 && y < BASEVIDHEIGHT*1)
+		newmode = VID_GetModeForSize(BASEVIDWIDTH*1, BASEVIDHEIGHT*1);
+	else if (x < BASEVIDWIDTH*2 && y < BASEVIDHEIGHT*2)
+		newmode = VID_GetModeForSize(BASEVIDWIDTH*1, BASEVIDHEIGHT*1);
+	else if (x < BASEVIDWIDTH*3 && y < BASEVIDHEIGHT*3)
+		newmode = VID_GetModeForSize(BASEVIDWIDTH*2, BASEVIDHEIGHT*2);
+#if 0
+	else if (x < BASEVIDWIDTH*4 && y < BASEVIDHEIGHT*4)
+		newmode = VID_GetModeForSize(BASEVIDWIDTH*3, BASEVIDHEIGHT*3);
+	else if (x < BASEVIDWIDTH*5 && y < BASEVIDHEIGHT*5)
+		newmode = VID_GetModeForSize(BASEVIDWIDTH*4, BASEVIDHEIGHT*4);
+	else if (x < BASEVIDWIDTH*6 && y < BASEVIDHEIGHT*6)
+		newmode = VID_GetModeForSize(BASEVIDWIDTH*5, BASEVIDHEIGHT*5);
+	else
+		newmode = VID_GetModeForSize(BASEVIDWIDTH*6, BASEVIDHEIGHT*6);
+#else
+	else
+		newmode = VID_GetModeForSize(BASEVIDWIDTH*2, BASEVIDHEIGHT*2);
+#endif
+
+	if (newmode != -1)
+		setmodeneeded = newmode;
+
+	if (setmodeneeded)
+		return 1;
+
+	return 0;
+}
+
+void EMSCRIPTEN_KEEPALIVE inject_text(const char *text)
+{
+	event_t event;
+	size_t len = 0;
+	event.type = ev_text;
+	{
+		event.key = text[len];
+		D_PostEvent(&event);
+		len++;
+	} while (text[len] != 0x00);
+}
+
+void EMSCRIPTEN_KEEPALIVE inject_keycode(int key, int type)
+{
+	event_t event;
+	if (type == true)
+	{
+		event.type = ev_keyup;
+	}
+	else if (type == false)
+	{
+		event.type = ev_keydown;
+	}
+	else
+	{
+		return;
+	}
+	event.key = key;
+	if (event.key) D_PostEvent(&event);
+}
+
+void EMSCRIPTEN_KEEPALIVE unlock_mouse(void)
+{
+	SDLforceUngrabMouse();
+}
+
+void EMSCRIPTEN_KEEPALIVE lock_mouse(void)
+{
+	SDLdoGrabMouse();
+}
+#endif

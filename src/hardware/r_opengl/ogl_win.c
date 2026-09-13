@@ -117,7 +117,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, // handle to DLL module
 #define pwglDeleteContext wglDeleteContext;
 #define pwglMakeCurrent wglMakeCurrent;
 #else
-static HMODULE OGL32, GLU32;
+static HMODULE OGL32;
 typedef void *(WINAPI *PFNwglGetProcAddress) (const char *);
 static PFNwglGetProcAddress pwglGetProcAddress;
 typedef HGLRC (WINAPI *PFNwglCreateContext) (HDC hdc);
@@ -132,13 +132,6 @@ static PFNwglMakeCurrent pwglMakeCurrent;
 void *GetGLFunc(const char *proc)
 {
 	void *func = NULL;
-	if (strncmp(proc, "glu", 3) == 0)
-	{
-		if (GLU32)
-			func = GetProcAddress(GLU32, proc);
-		else
-			return NULL;
-	}
 	if (pwglGetProcAddress)
 		func = pwglGetProcAddress(proc);
 	if (!func)
@@ -154,8 +147,6 @@ boolean LoadGL(void)
 
 	if (!OGL32)
 		return 0;
-
-	GLU32 = LoadLibrary("GLU32.DLL");
 
 	pwglGetProcAddress = GetGLFunc("wglGetProcAddress");
 	pwglCreateContext = GetGLFunc("wglCreateContext");
@@ -528,7 +519,6 @@ EXPORT void HWRAPI(Shutdown) (void)
 		ReleaseDC(hWnd, hDC);
 		hDC = NULL;
 	}
-	FreeLibrary(GLU32);
 	FreeLibrary(OGL32);
 	GL_DBG_Printf ("HWRAPI Shutdown(DONE)\n");
 }

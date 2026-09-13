@@ -75,7 +75,7 @@ typedef struct mesh_s
 typedef struct tag_s
 {
 	char name[64];
-//	matrix_t transform;
+//	oldmatrix_t transform;
 } tag_t;
 
 #define MODEL_INTERPOLATION_FLAG "+i"
@@ -101,6 +101,7 @@ typedef struct model_s
 	char *frameNames;
 	boolean interpolate[256];
 	modelspr2frames_t *spr2frames;
+	modelspr2frames_t *superspr2frames;
 
 	// the max_s and max_t values that the uvs are currently adjusted to
 	// (if a sprite is used as a texture)

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -37,7 +37,7 @@ static int lib_iteratePlayers(lua_State *L)
 		i = (INT32)(*((player_t **)luaL_checkudata(L, 1, META_PLAYER)) - players);
 	for (i++; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			continue;
 		if (!players[i].mo)
 			continue;
@@ -56,7 +56,7 @@ static int lib_getPlayer(lua_State *L)
 		lua_Integer i = luaL_checkinteger(L, 2);
 		if (i < 0 || i >= MAXPLAYERS)
 			return luaL_error(L, "players[] index %d out of range (0 - %d)", i, MAXPLAYERS-1);
-		if (!playeringame[i])
+		if (!players[i].ingame)
 			return 0;
 		if (!players[i].mo)
 			return 0;
@@ -190,6 +190,7 @@ enum player_e
 	player_marelap,
 	player_marebonuslap,
 	player_marebegunat,
+	player_lastmaretime,
 	player_startedtime,
 	player_finishedtime,
 	player_lapbegunat,
@@ -225,6 +226,7 @@ enum player_e
 	player_quittime,
 	player_lastinputtime,
 	player_ping,
+	player_muted,
 	player_fovadd
 };
 
@@ -337,6 +339,7 @@ static const char *const player_opt[] = {
 	"marelap",
 	"marebonuslap",
 	"marebegunat",
+	"lastmaretime",
 	"startedtime",
 	"finishedtime",
 	"lapbegunat",
@@ -372,6 +375,7 @@ static const char *const player_opt[] = {
 	"quittime",
 	"lastinputtime",
 	"ping",
+	"muted",
 	"fovadd",
 	NULL,
 };
@@ -725,6 +729,9 @@ static int player_get(lua_State *L)
 	case player_marebegunat:
 		lua_pushinteger(L, plr->marebegunat);
 		break;
+	case player_lastmaretime:
+		lua_pushinteger(L, plr->lastmaretime);
+		break;
 	case player_startedtime:
 		lua_pushinteger(L, plr->startedtime);
 		break;
@@ -829,6 +836,9 @@ static int player_get(lua_State *L)
 		break;
 	case player_ping:
 		lua_pushinteger(L, playerpingtable[plr - players]);
+		break;
+	case player_muted:
+		lua_pushboolean(L, plr->muted);
 		break;
 	case player_fovadd:
 		lua_pushfixed(L, plr->fovadd);
@@ -1219,6 +1229,9 @@ static int player_set(lua_State *L)
 	case player_marebegunat:
 		plr->marebegunat = (tic_t)luaL_checkinteger(L, 3);
 		break;
+	case player_lastmaretime:
+		plr->lastmaretime = (tic_t)luaL_checkinteger(L, 3);
+		break;
 	case player_startedtime:
 		plr->startedtime = (tic_t)luaL_checkinteger(L, 3);
 		break;
@@ -1350,6 +1363,11 @@ static int player_set(lua_State *L)
 		break;
 	case player_lastinputtime:
 		plr->lastinputtime = (tic_t)luaL_checkinteger(L, 3);
+		break;
+	case player_ping:
+		return NOSET;
+	case player_muted:
+		plr->muted = lua_toboolean(L, 3);
 		break;
 	case player_fovadd:
 		plr->fovadd = luaL_checkfixed(L, 3);

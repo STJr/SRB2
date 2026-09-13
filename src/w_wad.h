@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,6 +17,8 @@
 #ifdef HWRENDER
 #include "hardware/hw_data.h"
 #endif
+
+#include "m_aatree.h"
 
 #ifdef __GNUG__
 #pragma interface
@@ -128,6 +130,8 @@ typedef struct wadfile_s
 	lumpinfo_t *lumpinfo;
 	lumpcache_t *lumpcache;
 	lumpcache_t *patchcache;
+	aatree_t *startfolders;
+	aatree_t *endfolders;
 	UINT16 numlumps; // this wad's number of resources
 	UINT16 foldercount; // folder count
 	FILE *handle;
@@ -180,17 +184,30 @@ UINT16 W_CheckNumForMarkerStartPwad(const char *name, UINT16 wad, UINT16 startlu
 UINT16 W_CheckNumForFullNamePK3(const char *name, UINT16 wad, UINT16 startlump);
 UINT16 W_CheckNumForFolderStartPK3(const char *name, UINT16 wad, UINT16 startlump);
 UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump);
+char *W_GetLumpFolderPathPK3(UINT16 wad, UINT16 lump);
+char *W_GetLumpFolderNamePK3(UINT16 wad, UINT16 lump);
 
 void W_GetFolderLumpsPwad(const char *name, UINT16 wad, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps);
 void W_GetFolderLumps(const char *name, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps);
 UINT32 W_CountFolderLumpsPwad(const char *name, UINT16 wad);
 UINT32 W_CountFolderLumps(const char *name);
 
+const char *W_GetFilenameFromFullname(const char *path);
+
+void W_GetFolderLumpsPwad(const char *name, UINT16 wad, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps);
+void W_GetFolderLumps(const char *name, UINT32 **list, UINT16 *list_capacity, UINT16 *numlumps);
+
 lumpnum_t W_CheckNumForMap(const char *name);
 lumpnum_t W_CheckNumForName(const char *name);
 lumpnum_t W_CheckNumForLongName(const char *name);
 lumpnum_t W_GetNumForName(const char *name); // like W_CheckNumForName but I_Error on LUMPERROR
 lumpnum_t W_GetNumForLongName(const char *name);
+
+lumpnum_t W_CheckNumForPatchName(const char *name);
+lumpnum_t W_CheckNumForLongPatchName(const char *name);
+lumpnum_t W_GetNumForPatchName(const char *name); // like W_CheckNumForPatchName but I_Error on LUMPERROR
+lumpnum_t W_GetNumForLongPatchName(const char *name);
+
 lumpnum_t W_CheckNumForNameInBlock(const char *name, const char *blockstart, const char *blockend);
 UINT8 W_LumpExists(const char *name); // Lua uses this.
 

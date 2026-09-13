@@ -3,7 +3,7 @@
 #
 
 passthru_opts+=\
-	NO_IPV6 NOHW NOMD5 NOPOSTPROCESSING\
+	NO_IPV6 NOHW NOPOSTPROCESSING\
 	MOBJCONSISTANCY PACKETDROP ZDEBUG\
 	NOUPNP NOEXECINFO\
 
@@ -18,12 +18,6 @@ opts+=-DHWRENDER
 sources+=$(call List,hardware/Sourcefile)
 endif
 
-ifndef NOMD5
-sources+=md5.c
-endif
-
-ifndef NOZLIB
-ifndef NOPNG
 ifdef PNG_PKGCONFIG
 $(eval $(call Use_pkg_config,PNG_PKGCONFIG))
 else
@@ -36,8 +30,6 @@ opts+=-D_LARGEFILE64_SOURCE
 endif
 opts+=-DHAVE_PNG
 sources+=apng.c
-endif
-endif
 
 ifndef NOCURL
 CURLCONFIG?=curl-config

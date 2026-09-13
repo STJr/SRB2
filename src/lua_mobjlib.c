@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -23,6 +23,9 @@
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
 #include "lua_hook.h" // hook_cmd_running errors
+
+// MOBJ //
+// ---- //
 
 enum mobj_e {
 	mobj_valid = 0,
@@ -47,7 +50,7 @@ enum mobj_e {
 	mobj_floorspriteslope,
 	mobj_drawonlyforplayer,
 	mobj_dontdrawforviewmobj,
-	mobj_touching_sectorlist,
+	mobj_sectors,
 	mobj_subsector,
 	mobj_floorz,
 	mobj_ceilingz,
@@ -69,6 +72,7 @@ enum mobj_e {
 	mobj_color,
 	mobj_translation,
 	mobj_blendmode,
+	mobj_alpha,
 	mobj_bnext,
 	mobj_bprev,
 	mobj_hnext,
@@ -87,6 +91,7 @@ enum mobj_e {
 	mobj_tracer,
 	mobj_friction,
 	mobj_movefactor,
+	mobj_gravity,
 	mobj_fuse,
 	mobj_watertop,
 	mobj_waterbottom,
@@ -128,7 +133,7 @@ static const char *const mobj_opt[] = {
 	"floorspriteslope",
 	"drawonlyforplayer",
 	"dontdrawforviewmobj",
-	"touching_sectorlist",
+	"sectors",
 	"subsector",
 	"floorz",
 	"ceilingz",
@@ -150,6 +155,7 @@ static const char *const mobj_opt[] = {
 	"color",
 	"translation",
 	"blendmode",
+	"alpha",
 	"bnext",
 	"bprev",
 	"hnext",
@@ -168,6 +174,7 @@ static const char *const mobj_opt[] = {
 	"tracer",
 	"friction",
 	"movefactor",
+	"gravity",
 	"fuse",
 	"watertop",
 	"waterbottom",
@@ -188,6 +195,53 @@ static const char *const mobj_opt[] = {
 
 #define UNIMPLEMENTED luaL_error(L, LUA_QL("mobj_t") " field " LUA_QS " is not implemented for Lua and cannot be accessed.", mobj_opt[field])
 
+// iterates through a mobj's 'touching' sectorlist!
+static int lib_iterateMobjSectors(lua_State *L)
+{
+	sector_t *state = NULL;
+	sector_t *sec = NULL;
+	INLEVEL
+
+	if (lua_gettop(L) < 2)
+		return luaL_error(L, "Don't call mobj.sectors() directly, use it as 'for rover in mobj.sectors do <block> end'.");
+
+	msecnode_t *node = (msecnode_t *)lua_touserdata(L, lua_upvalueindex(1));
+	if (node == NULL)
+		return 0; // no sectorlist to iterate through sorry!
+
+	state = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+
+	lua_settop(L, 2);
+	lua_remove(L, 1); // remove state now.
+
+	if (!lua_isnil(L, 1))
+	{
+		sec = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+		sec = node->m_sector;
+	}
+	else
+		sec = state; // state is used as the "start" of the sectorlist
+
+	if (sec)
+	{
+		node = node->m_sectorlist_next;
+		lua_pushlightuserdata(L, node);
+		lua_replace(L, lua_upvalueindex(1));			
+		LUA_PushUserdata(L, sec, META_SECTOR);
+		return 1;
+	}
+	return 0;
+}
+
+static int mobj_iterate(lua_State *L)
+{
+	lua_pushvalue(L, lua_upvalueindex(1)); // iterator function, or the "generator"
+	lua_pushvalue(L, lua_upvalueindex(2)); // state (used as the "start" of the list for our purposes
+	lua_pushnil(L); // initial value (unused)
+	return 3;
+}
+
+
 static int mobj_fields_ref = LUA_NOREF;
 
 static int mobj_get(lua_State *L)
@@ -196,12 +250,12 @@ static int mobj_get(lua_State *L)
 	enum mobj_e field = Lua_optoption(L, 2, -1, mobj_fields_ref);
 	lua_settop(L, 2);
 
-	if (!mo || !ISINLEVEL) {
+	if (P_MobjWasRemoved(mo) || !ISINLEVEL) {
 		if (field == mobj_valid) {
 			lua_pushboolean(L, 0);
 			return 1;
 		}
-		if (!mo) {
+		if (P_MobjWasRemoved(mo)) {
 			return LUA_ErrInvalid(L, "mobj_t");
 		} else
 			return luaL_error(L, "Do not access an mobj_t field outside a level!");
@@ -280,8 +334,12 @@ static int mobj_get(lua_State *L)
 		}
 		LUA_PushUserdata(L, mo->dontdrawforviewmobj, META_MOBJ);
 		break;
-	case mobj_touching_sectorlist:
-		return UNIMPLEMENTED;
+	case mobj_sectors:
+		lua_pushlightuserdata(gL, mo->touching_sectorlist);
+		lua_pushcclosure(L, lib_iterateMobjSectors, 1);
+		LUA_PushUserdata(L, mo->touching_sectorlist ? mo->touching_sectorlist->m_sector : NULL, META_SECTOR);
+		lua_pushcclosure(L, mobj_iterate, 2);
+		return 1;
 	case mobj_subsector:
 		LUA_PushUserdata(L, mo->subsector, META_SUBSECTOR);
 		break;
@@ -353,6 +411,9 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_blendmode:
 		lua_pushinteger(L, mo->blendmode);
+		break;
+	case mobj_alpha:
+		lua_pushfixed(L, mo->alpha);
 		break;
 	case mobj_bnext:
 		if (mo->blocknode && mo->blocknode->bnext) {
@@ -431,6 +492,9 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_movefactor:
 		lua_pushfixed(L, mo->movefactor);
+		break;
+	case mobj_gravity:
+		lua_pushfixed(L, mo->gravity);
 		break;
 	case mobj_fuse:
 		lua_pushinteger(L, mo->fuse);
@@ -564,7 +628,7 @@ static int mobj_set(lua_State *L)
 		mo->frame = (UINT32)luaL_checkinteger(L, 3);
 		break;
 	case mobj_sprite2:
-		mo->sprite2 = P_GetSkinSprite2(((skin_t *)mo->skin), (UINT8)luaL_checkinteger(L, 3), mo->player);
+		mo->sprite2 = P_GetSkinSprite2(((skin_t *)mo->skin), (UINT16)luaL_checkinteger(L, 3), mo->player);
 		break;
 	case mobj_anim_duration:
 		mo->anim_duration = (UINT16)luaL_checkinteger(L, 3);
@@ -601,8 +665,8 @@ static int mobj_set(lua_State *L)
 			P_SetTarget(&mo->dontdrawforviewmobj, dontdrawforviewmobj);
 		}
 		break;
-	case mobj_touching_sectorlist:
-		return UNIMPLEMENTED;
+	case mobj_sectors:
+		return NOSETPOS;
 	case mobj_subsector:
 		return NOSETPOS;
 	case mobj_floorz:
@@ -616,9 +680,11 @@ static int mobj_set(lua_State *L)
 	case mobj_radius:
 	{
 		mobj_t *ptmthing = tmthing;
+		P_UnsetBlockmapEntry(mo);
 		mo->radius = luaL_checkfixed(L, 3);
 		if (mo->radius < 0)
 			mo->radius = 0;
+		P_SetBlockmapEntry(mo);
 		P_CheckPosition(mo, mo->x, mo->y);
 		mo->floorz = tmfloorz;
 		mo->ceilingz = tmceilingz;
@@ -733,6 +799,16 @@ static int mobj_set(lua_State *L)
 		mo->blendmode = blendmode;
 		break;
 	}
+	case mobj_alpha:
+	{
+		fixed_t alpha = luaL_checkfixed(L, 3);
+		if (alpha < 0)
+			alpha = 0;
+		else if (alpha > FRACUNIT)
+			alpha = FRACUNIT;
+		mo->alpha = alpha;
+		break;
+	}
 	case mobj_bnext:
 		return NOSETPOS;
 	case mobj_bprev:
@@ -762,7 +838,7 @@ static int mobj_set(lua_State *L)
 			return luaL_error(L, "mobj.type %d out of range (0 - %d).", newtype, NUMMOBJTYPES-1);
 		mo->type = newtype;
 		mo->info = &mobjinfo[newtype];
-		P_SetScale(mo, mo->scale);
+		P_SetScale(mo, mo->scale, false);
 		break;
 	}
 	case mobj_info:
@@ -820,6 +896,9 @@ static int mobj_set(lua_State *L)
 	case mobj_movefactor:
 		mo->movefactor = luaL_checkfixed(L, 3);
 		break;
+	case mobj_gravity:
+		mo->gravity = luaL_checkfixed(L, 3);
+		break;
 	case mobj_fuse:
 		mo->fuse = luaL_checkinteger(L, 3);
 		break;
@@ -836,9 +915,7 @@ static int mobj_set(lua_State *L)
 		fixed_t scale = luaL_checkfixed(L, 3);
 		if (scale < FRACUNIT/100)
 			scale = FRACUNIT/100;
-		mo->destscale = scale;
-		P_SetScale(mo, scale);
-		mo->old_scale = scale;
+		P_SetScale(mo, scale, true);
 		break;
 	}
 	case mobj_destscale:
@@ -906,6 +983,53 @@ static int mobj_set(lua_State *L)
 #undef NOSETPOS
 #undef NOFIELD
 
+
+// MOBJ MOVEMENT //
+// ------------- //
+
+enum mobjmovement_e {
+	mobjmovement_x = 0,
+	mobjmovement_y
+};
+
+const char *const mobjmovement_opt[] = {
+	"x",
+	"y",
+	NULL,
+};
+
+static int mobjmovement_fields_ref = LUA_NOREF;
+
+int mobjmovement_ref = LUA_NOREF;
+
+static int mobjmovement_get(lua_State *L)
+{
+	luaL_checkudata(L, 1, META_MOBJMOVEMENT);
+	enum mobjmovement_e field = Lua_optoption(L, 2, -1, mobjmovement_fields_ref);
+	lua_settop(L, 2);
+
+	if (field == (enum mobjmovement_e)-1)
+		return LUA_ErrInvalid(L, "fields");
+
+	switch (field)
+	{
+		case mobjmovement_x:
+			lua_pushinteger(L, tmx);
+			break;
+		case mobjmovement_y:
+			lua_pushinteger(L, tmy);
+			break;
+		default:
+			return luaL_error(L, "%s %s", LUA_QL("mobjmovement_t"), va("has no field named: %ui", field));
+	}
+
+	return 1;
+}
+
+
+// MAP THING //
+// --------- //
+
 // args, i -> args[i]
 static int thingargs_get(lua_State *L)
 {
@@ -960,6 +1084,7 @@ enum mapthing_e {
 	mapthing_taglist,
 	mapthing_args,
 	mapthing_stringargs,
+	mapthing_customargs,
 	mapthing_mobj,
 };
 
@@ -981,6 +1106,7 @@ const char *const mapthing_opt[] = {
 	"taglist",
 	"args",
 	"stringargs",
+	"customargs",
 	"mobj",
 	NULL,
 };
@@ -1058,6 +1184,9 @@ static int mapthing_get(lua_State *L)
 			break;
 		case mapthing_stringargs:
 			LUA_PushUserdata(L, mt->stringargs, META_THINGSTRINGARGS);
+			break;
+		case mapthing_customargs:
+			LUA_PushUserdata(L, mt->customargs, META_THINGCUSTOMARGS);
 			break;
 		case mapthing_mobj:
 			LUA_PushUserdata(L, mt->mobj, META_MOBJ);
@@ -1197,11 +1326,13 @@ static int lib_nummapthings(lua_State *L)
 int LUA_MobjLib(lua_State *L)
 {
 	LUA_RegisterUserdataMetatable(L, META_MOBJ, mobj_get, mobj_set, NULL);
+	LUA_RegisterUserdataMetatable(L, META_MOBJMOVEMENT, mobjmovement_get, NULL, NULL);
 	LUA_RegisterUserdataMetatable(L, META_THINGARGS, thingargs_get, NULL, thingargs_len);
 	LUA_RegisterUserdataMetatable(L, META_THINGSTRINGARGS, thingstringargs_get, NULL, thingstringargs_len);
 	LUA_RegisterUserdataMetatable(L, META_MAPTHING, mapthing_get, mapthing_set, mapthing_num);
 
 	mobj_fields_ref = Lua_CreateFieldTable(L, mobj_opt);
+	mobjmovement_fields_ref = Lua_CreateFieldTable(L, mobjmovement_opt);
 	mapthing_fields_ref = Lua_CreateFieldTable(L, mapthing_opt);
 
 	LUA_PushTaggableObjectArray(L, "mapthings",
@@ -1211,6 +1342,13 @@ int LUA_MobjLib(lua_State *L)
 			tags_mapthings,
 			&nummapthings, &mapthings,
 			sizeof (mapthing_t), META_MAPTHING);
+
+	// Allocate and cache the mobj movement userdata in advance to avoid the overhead
+	// of reallocating it every time a mobj collision hook gets called
+	lua_newuserdata(L, 0);
+	luaL_getmetatable(L, META_MOBJMOVEMENT);
+	lua_setmetatable(L, -2);
+	mobjmovement_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
 	return 0;
 }

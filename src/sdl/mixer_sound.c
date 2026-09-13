@@ -135,20 +135,23 @@ static void Midiplayer_Onchange(void)
 	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
 	{
 		if (Mix_SetMidiPlayer(cv_midiplayer.value)) // <> 0 means error
-			CONS_Alert(CONS_ERROR, "Midi player error: %s", Mix_GetError());
+			CONS_Alert(CONS_ERROR, "Midi player error: %s\n", Mix_GetError());
 		else
 			restart = true;
 	}
 
-	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	if (!Mix_GetSoundFonts() || stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
 	{
 		if (!Mix_SetSoundFonts(cv_midisoundfontpath.string)) // == 0 means error
-			CONS_Alert(CONS_ERROR, "Sound font error: %s", Mix_GetError());
+			CONS_Alert(CONS_ERROR, "Sound font error: %s\n", Mix_GetError());
 		else
 			restart = true;
 	}
-
+#if SDL_MIXER_VERSION_ATLEAST(2,5,0)
+	Mix_SetTimidityCfg(cv_miditimiditypath.string);
+#else
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
+#endif
 
 	if (restart)
 		S_StartEx(true);
@@ -159,7 +162,7 @@ static void MidiSoundfontPath_Onchange(void)
 	if (Mix_GetMidiPlayer() != MIDI_Fluidsynth || (I_SongType() != MU_NONE && I_SongType() != MU_MID_EX))
 		return;
 
-	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	if (!Mix_GetSoundFonts() || stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
 	{
 		char *miditoken;
 		char *source = strdup(cv_midisoundfontpath.string);
@@ -187,7 +190,7 @@ static void MidiSoundfontPath_Onchange(void)
 		if (proceed)
 		{
 			if (!Mix_SetSoundFonts(cv_midisoundfontpath.string))
-				CONS_Alert(CONS_ERROR, "Sound font error: %s", Mix_GetError());
+				CONS_Alert(CONS_ERROR, "Sound font error: %s\n", Mix_GetError());
 			else
 				S_StartEx(true);
 		}
@@ -196,7 +199,18 @@ static void MidiSoundfontPath_Onchange(void)
 
 // make sure that s_sound.c does not already verify these
 // which happens when: defined(HAVE_MIXERX) && !defined(HAVE_MIXER)
-static CV_PossibleValue_t midiplayer_cons_t[] = {{MIDI_OPNMIDI, "OPNMIDI"}, {MIDI_Fluidsynth, "Fluidsynth"}, {MIDI_Timidity, "Timidity"}, {MIDI_Native, "Native"}, {0, NULL}};
+static CV_PossibleValue_t midiplayer_cons_t[] = {
+	{MIDI_ADLMIDI,    "ADLMIDI"},
+	{MIDI_OPNMIDI,    "OPNMIDI"},
+	{MIDI_Timidity,   "Timidity"},
+	{MIDI_Fluidsynth, "Fluidsynth"},
+#if SDL_MIXER_VERSION_ATLEAST(2,6,0)
+	{MIDI_EDMIDI,     "EDMIDI"},
+#endif
+	{MIDI_Native,     "Native"},
+	{MIDI_ANY,        "Any"},
+	{0,               NULL}
+};
 consvar_t cv_midiplayer = CVAR_INIT ("midiplayer", "OPNMIDI" /*MIDI_OPNMIDI*/, CV_CALL|CV_NOINIT|CV_SAVE, midiplayer_cons_t, Midiplayer_Onchange);
 consvar_t cv_midisoundfontpath = CVAR_INIT ("midisoundfont", "sf2/8bitsf.SF2", CV_CALL|CV_NOINIT|CV_SAVE, NULL, MidiSoundfontPath_Onchange);
 consvar_t cv_miditimiditypath = CVAR_INIT ("midisoundbank", "./timidity", CV_SAVE, NULL, NULL);
@@ -286,7 +300,11 @@ void I_StartupSound(void)
 #ifdef HAVE_MIXERX
 	Mix_SetMidiPlayer(cv_midiplayer.value);
 	Mix_SetSoundFonts(cv_midisoundfontpath.string);
+#if SDL_MIXER_VERSION_ATLEAST(2,5,0)
+	Mix_SetTimidityCfg(cv_miditimiditypath.string);
+#else
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string);
+#endif
 #endif
 #if SDL_MIXER_VERSION_ATLEAST(1,2,11)
 	Mix_Init(MIX_INIT_FLAC|MIX_INIT_MP3|MIX_INIT_OGG|MIX_INIT_MOD);
@@ -942,7 +960,12 @@ UINT32 I_GetSongLength(void)
 	else
 	{
 #ifdef HAVE_MIXERX
+#if SDL_MIXER_VERSION_ATLEAST(2,5,0)
+		double xlength = Mix_MusicDuration(music);
+#else
 		double xlength = Mix_GetMusicTotalTime(music);
+#endif
+
 		if (xlength >= 0)
 			return (UINT32)(xlength*1000);
 #endif
@@ -1198,9 +1221,13 @@ boolean I_LoadSong(char *data, size_t len)
 #ifdef HAVE_MIXERX
 	if (Mix_GetMidiPlayer() != cv_midiplayer.value)
 		Mix_SetMidiPlayer(cv_midiplayer.value);
-	if (stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
+	if (!Mix_GetSoundFonts() || stricmp(Mix_GetSoundFonts(), cv_midisoundfontpath.string))
 		Mix_SetSoundFonts(cv_midisoundfontpath.string);
+#if SDL_MIXER_VERSION_ATLEAST(2,5,0)
+	Mix_SetTimidityCfg(cv_miditimiditypath.string);
+#else
 	Mix_Timidity_addToPathList(cv_miditimiditypath.string); // this overwrites previous custom path
+#endif
 #endif
 
 #ifdef HAVE_OPENMPT

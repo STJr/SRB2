@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2021-2022 by "Lactozilla".
-// Copyright (C) 2014-2023 by Sonic Team Junior.
+// Copyright (C) 2021-2024 by Lactozilla.
+// Copyright (C) 2014-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -593,7 +593,7 @@ static int extracolormap_set(lua_State *L)
 		|| exc->fadergba != old_fade_rgba
 		|| exc->fadestart != old_fade_start
 		|| exc->fadeend != old_fade_end)
-	R_GenerateLightTable(exc, true);
+	R_UpdateLightTable(exc, true);
 
 	return 0;
 }

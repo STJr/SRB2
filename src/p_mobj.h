@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -119,6 +119,7 @@ typedef enum
 	//  or changing it actively.
 	MF_NOGRAVITY        = 1<<9,
 	// This object is an ambient sound.
+	// TODO: 2.3: Remove this flag and just check for MT_AMBIENT instead
 	MF_AMBIENT          = 1<<10,
 	// Slide this object when it hits a wall.
 	MF_SLIDEME          = 1<<11,
@@ -159,7 +160,11 @@ typedef enum
 	MF_GRENADEBOUNCE    = 1<<28,
 	// Run the action thinker on spawn.
 	MF_RUNSPAWNFUNC     = 1<<29,
-	// free: 1<<30 and 1<<31
+	// Apply slope physics to mobj if on slope
+	MF_APPLYSLOPE       = 1<<30,
+	// Prevent mobj from stepping up or down stairs
+	MF_NOSTEPMOVE       = 1<<31
+	// free: none
 } mobjflag_t;
 
 typedef enum
@@ -269,8 +274,6 @@ typedef enum {
 	PCF_MOVINGFOF = 8,
 	// Is rain.
 	PCF_RAIN = 16,
-	// Ran the thinker this tic.
-	PCF_THUNK = 32,
 } precipflag_t;
 
 // [RH] Like msecnode_t, but for the blockmap
@@ -308,15 +311,16 @@ typedef struct mobj_s
 	angle_t spriteroll, old_spriteroll, old_spriteroll2;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
-	UINT8 sprite2; // player sprites
+	UINT16 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
 
 	UINT32 renderflags; // render flags
 	INT32 blendmode; // blend mode
+	fixed_t alpha; // alpha
 	fixed_t spritexscale, spriteyscale;
 	fixed_t spritexoffset, spriteyoffset;
-	fixed_t old_spritexscale, old_spriteyscale;
-	fixed_t old_spritexoffset, old_spriteyoffset;
+	fixed_t old_spritexscale, old_spriteyscale, old_spritexscale2, old_spriteyscale2;
+	fixed_t old_spritexoffset, old_spriteyoffset, old_spritexoffset2, old_spriteyoffset2;
 	struct pslope_s *floorspriteslope; // The slope that the floorsprite is rotated by
 
 	struct msecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
@@ -390,6 +394,7 @@ typedef struct mobj_s
 
 	fixed_t friction;
 	fixed_t movefactor;
+	fixed_t gravity;
 
 	INT32 fuse; // Does something in P_MobjThinker on reaching 0.
 	fixed_t watertop; // top of the water FOF the mobj is in
@@ -451,15 +456,16 @@ typedef struct precipmobj_s
 	angle_t spriteroll, old_spriteroll, old_spriteroll2;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
-	UINT8 sprite2; // player sprites
+	UINT16 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
 
 	UINT32 renderflags; // render flags
 	INT32 blendmode; // blend mode
+	fixed_t alpha; // alpha
 	fixed_t spritexscale, spriteyscale;
 	fixed_t spritexoffset, spriteyoffset;
-	fixed_t old_spritexscale, old_spriteyscale;
-	fixed_t old_spritexoffset, old_spriteyoffset;
+	fixed_t old_spritexscale, old_spriteyscale, old_spritexscale2, old_spriteyscale2;
+	fixed_t old_spritexoffset, old_spriteyoffset, old_spritexoffset2, old_spriteyoffset2;
 	struct pslope_s *floorspriteslope; // The slope that the floorsprite is rotated by
 
 	struct mprecipsecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
@@ -483,6 +489,8 @@ typedef struct precipmobj_s
 	INT32 tics; // state tic counter
 	state_t *state;
 	INT32 flags; // flags from mobjinfo tables
+
+	tic_t lastupdatetime;
 } precipmobj_t;
 
 typedef struct actioncache_s
@@ -527,15 +535,17 @@ void P_SnowThinker(precipmobj_t *mobj);
 void P_RainThinker(precipmobj_t *mobj);
 void P_NullPrecipThinker(precipmobj_t *mobj);
 void P_RemovePrecipMobj(precipmobj_t *mobj);
-void P_SetScale(mobj_t *mobj, fixed_t newscale);
+void P_SetScale(mobj_t *mobj, fixed_t newscale, boolean instant);
 void P_XYMovement(mobj_t *mo);
 void P_RingXYMovement(mobj_t *mo);
 void P_SceneryXYMovement(mobj_t *mo);
 boolean P_ZMovement(mobj_t *mo);
-void P_RingZMovement(mobj_t *mo);
+boolean P_RingZMovement(mobj_t *mo);
 boolean P_SceneryZMovement(mobj_t *mo);
 void P_PlayerZMovement(mobj_t *mo);
 void P_EmeraldManager(void);
+
+mobj_t *P_FindNewPosition(UINT32 oldposition);
 
 extern INT32 modulothing;
 

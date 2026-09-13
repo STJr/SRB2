@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -82,6 +82,7 @@
 #include "version.h"
 #include "doomtype.h"
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -104,8 +105,6 @@
 #endif
 
 FILE *fopenfile(const char*, const char*);
-
-//#define NOMD5
 
 // If you don't disable ALL debug first, you get ALL debug enabled
 #if !defined (NDEBUG)
@@ -167,7 +166,7 @@ extern char logfilename[1024];
 
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
-#define USE_PATCH_DTA
+//#define USE_PATCH_DTA
 
 // Enforce a limit of loaded WAD files.
 //#define ENFORCE_WAD_LIMIT
@@ -244,13 +243,26 @@ extern char logfilename[1024];
 #define MAXPLAYERNAME 21
 #define PLAYERSMASK (MAXPLAYERS-1)
 
-// Don't make MAXSKINS higher than 256, since skin numbers are used with an
-// UINT8 in various parts of the codebase. If you do anyway, the data type
-// of those variables will have to be changed into at least an UINT16.
+// Don't make MAXSKINS higher than 255, since skin numbers are used with an UINT8 in
+// various parts of the codebase, and one number is reserved. If you do anyway,
+// the data type of those variables will have to be changed into at least an UINT16.
 // This change must affect code such as demo recording and playback,
 // and the structure of some networking packets and commands.
-#define MAXSKINS 256
+#define MAXSKINS 255
 #define MAXCHARACTERSLOTS (MAXSKINS * 3) // Should be higher than MAXSKINS.
+
+#define MAXMAPS 16386
+
+#define MAX_MAP_NAME_SIZE 256 // This is an arbitrary limit to prevent exceedingly long map names.
+
+#define NEXTMAP_TITLE (MAXMAPS)
+#define NEXTMAP_EVALUATION (MAXMAPS+2)
+#define NEXTMAP_CREDITS (MAXMAPS+3)
+#define NEXTMAP_ENDING (MAXMAPS+4)
+
+#define NUM_NEXTMAPS 4
+
+#define NUMBASEMAPS 1035 // MAP01 to MAPZZ
 
 #define COLORRAMPSIZE 16
 #define MAXCOLORNAME 32
@@ -466,6 +478,8 @@ extern skincolor_t skincolors[MAXSKINCOLORS];
 
 #define MUSICRATE 1000 // sound timing is calculated by milliseconds
 
+#define MAX_MUSIC_NAME 64
+
 #define RING_DIST 512*FRACUNIT // how close you need to be to a ring to attract it
 
 #define PUSHACCEL (2*FRACUNIT) // Acceleration for MF2_SLIDEPUSH items.
@@ -552,7 +566,7 @@ void *M_Memcpy(void* dest, const void* src, size_t n);
 char *va(const char *format, ...) FUNCPRINTF;
 char *M_GetToken(const char *inputString);
 void M_UnGetToken(void);
-void M_TokenizerOpen(const char *inputString);
+void M_TokenizerOpen(const char *inputString, size_t len);
 void M_TokenizerClose(void);
 const char *M_TokenizerRead(UINT32 i);
 const char *M_TokenizerReadZDoom(UINT32 i);
@@ -648,6 +662,7 @@ UINT32 quickncasehash (const char *p, size_t n)
 #else
 #define I_Assert(e) ((void)0)
 #endif
+#define I_StaticAssert(e) static_assert(e, "Static assertion failed: " #e)
 
 // The character that separates pathnames. Forward slash on
 // most systems, but reverse solidus (\) on Windows.
@@ -696,13 +711,6 @@ extern int
 ///	Shuffle's incomplete OpenGL sorting code.
 #define SHUFFLE // This has nothing to do with sorting, why was it disabled?
 
-///	Allow the use of the SOC RESETINFO command.
-///	\note	Builds that are tight on memory should disable this.
-///	    	This stops the game from storing backups of the states, sprites, and mobjinfo tables.
-///	    	Though this info is compressed under normal circumstances, it's still a lot of extra
-///	    	memory that never gets touched.
-#define ALLOW_RESETDATA
-
 /// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
 //#define REDSANALOG
 
@@ -729,7 +737,7 @@ extern int
 /// Maintain compatibility with older 2.2 demos
 #define OLD22DEMOCOMPAT
 
-#ifdef HAVE_CURL
+#if defined (HAVE_CURL) && !(defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__))
 #define MASTERSERVER
 #else
 #undef UPDATE_ALERT

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -28,6 +28,7 @@
 #include "p_local.h"
 #include "dehacked.h" // get_number (for thok)
 #include "m_cond.h"
+#include "deh_tables.h"
 #ifdef HWRENDER
 #include "hardware/hw_md2.h"
 #endif
@@ -35,30 +36,95 @@
 INT32 numskins = 0;
 skin_t **skins = NULL;
 
-//
-// P_GetSkinSprite2
-// For non-super players, tries each sprite2's immediate predecessor until it finds one with a number of frames or ends up at standing.
-// For super players, does the same as above - but tries the super equivalent for each sprite2 before the non-super version.
-//
-
-UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
+// Gets the animation ID of a state
+UINT16 P_GetStateSprite2(state_t *state)
 {
-	UINT8 super = 0, i = 0;
+	if (state->sprite2)
+		return state->sprite2;
+	else
+	{
+		// Transform the state frame into an animation ID
+		UINT16 spr2 = state->frame & FF_FRAMEMASK;
+
+		if (state->frame & SPR2F_SUPER)
+			spr2 |= SPR2F_SUPER;
+
+		return spr2;
+	}
+}
+
+// Gets the starting frame of an animation
+UINT16 P_GetSprite2StateFrame(state_t *state)
+{
+	if (state->sprite2)
+		return state->frame & FF_FRAMEMASK;
+	else
+		return 0;
+}
+
+// Checks if a state should use the "super" variant of the animation
+boolean P_IsStateSprite2Super(state_t *state)
+{
+	if (state->sprite2)
+	{
+		if (state->sprite2 & SPR2F_SUPER)
+			return true;
+	}
+	else if (state->frame & SPR2F_SUPER)
+		return true;
+
+	return false;
+}
+
+// Applies SPR2F_SUPER to an animation based on the actor's state
+UINT16 P_ApplySuperFlagToSprite2(UINT16 spr2, mobj_t *mobj)
+{
+	if (mobj->player)
+	{
+		boolean is_nights = mobj->player->powers[pw_carry] == CR_NIGHTSMODE;
+
+		if (mobj->player->charflags & SF_NOSUPERSPRITES || (is_nights && (mobj->player->charflags & SF_NONIGHTSSUPER)))
+			spr2 &= ~SPR2F_SUPER;
+		else if (mobj->player->powers[pw_super] || (is_nights && (mobj->player->charflags & SF_SUPER)))
+			spr2 |= SPR2F_SUPER;
+
+		// Special case for transforming when you are NiGHTS.
+		// Do NOT apply the super sprites in this situation, even if they exist.
+		if (is_nights && mobj->state >= &states[S_PLAY_NIGHTS_TRANS1] && mobj->state <= &states[S_PLAY_NIGHTS_TRANS6])
+		{
+			spr2 &= ~SPR2F_SUPER;
+		}
+	}
+
+	if (spr2 & SPR2F_SUPER)
+	{
+		if (mobj->eflags & MFE_FORCENOSUPER)
+			spr2 &= ~SPR2F_SUPER;
+	}
+	else if (mobj->eflags & MFE_FORCESUPER)
+		spr2 |= SPR2F_SUPER;
+
+	return spr2;
+}
+
+// For non-super players, this tries each sprite2's immediate predecessor until it finds one with a number of frames or ends up at standing.
+// For super players, does the same as above - but tries the super equivalent for each sprite2 before the non-super version.
+UINT16 P_GetSkinSprite2(skin_t *skin, UINT16 spr2, player_t *player)
+{
+	UINT16 super = 0;
+	UINT8 i = 0;
 
 	if (!skin)
 		return 0;
 
-	if ((playersprite_t)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
-		return 0;
-
-	while (!skin->sprites[spr2].numframes
+	while (!P_IsValidSprite2(skin, spr2)
 		&& spr2 != SPR2_STND
 		&& ++i < 32) // recursion limiter
 	{
-		if (spr2 & FF_SPR2SUPER)
+		if (spr2 & SPR2F_SUPER)
 		{
-			super = FF_SPR2SUPER;
-			spr2 &= ~FF_SPR2SUPER;
+			super = SPR2F_SUPER;
+			spr2 &= ~SPR2F_SUPER;
 			continue;
 		}
 
@@ -90,6 +156,51 @@ UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player)
 		return 0;
 
 	return spr2;
+}
+
+// Gets the spritedef of a skin animation
+spritedef_t *P_GetSkinSpritedef(skin_t *skin, UINT16 spr2)
+{
+	if (!skin)
+		return NULL;
+
+	boolean is_super = spr2 & SPR2F_SUPER;
+
+	spr2 &= SPR2F_MASK;
+
+	if (spr2 >= free_spr2)
+		return NULL;
+
+	if (is_super)
+		return &skin->super.sprites[spr2];
+	else
+		return &skin->sprites[spr2];
+}
+
+// Gets the spriteinfo of a skin animation
+spriteinfo_t *P_GetSkinSpriteInfo(skin_t *skin, UINT16 spr2)
+{
+	if (!skin)
+		return NULL;
+
+	boolean is_super = spr2 & SPR2F_SUPER;
+
+	spr2 &= SPR2F_MASK;
+
+	if (spr2 >= free_spr2)
+		return NULL;
+
+	if (is_super)
+		return &skin->super.sprinfo[spr2];
+	else
+		return &skin->sprinfo[spr2];
+}
+
+// Checks if a skin animation is valid
+boolean P_IsValidSprite2(skin_t *skin, UINT16 spr2)
+{
+	spritedef_t *sprdef = P_GetSkinSpritedef(skin, spr2);
+	return sprdef && sprdef->numframes;
 }
 
 static void Sk_SetDefaultValue(skin_t *skin)
@@ -376,7 +487,7 @@ static void SetSkin(player_t *player, INT32 skinnum)
 		player->mo->skin = skin;
 		if (newcolor)
 			player->mo->color = newcolor;
-		P_SetScale(player->mo, player->mo->scale);
+		P_SetScale(player->mo, player->mo->scale, false);
 		player->mo->radius = radius;
 
 		P_SetMobjState(player->mo, player->mo->state-states); // Prevent visual errors when switching between skins with differing number of frames
@@ -500,10 +611,10 @@ static UINT16 W_CheckForPatchSkinMarkerInPwad(UINT16 wadid, UINT16 startlump)
 	return INT16_MAX; // not found
 }
 
-static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, skin_t *skin, UINT8 start_spr2)
+static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, skin_t *skin, UINT16 start_spr2)
 {
 	UINT16 newlastlump;
-	UINT8 sprite2;
+	UINT16 sprite2;
 
 	*lump += 1; // start after S_SKIN
 	*lastlump = W_CheckNumForNamePwad("S_END",wadnum,*lump); // stop at S_END
@@ -523,7 +634,7 @@ static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, ski
 		newlastlump++;
 		// load all sprite sets we are aware of... for super!
 		for (sprite2 = start_spr2; sprite2 < free_spr2; sprite2++)
-			R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[FF_SPR2SUPER|sprite2], wadnum, newlastlump, *lastlump);
+			R_AddSingleSpriteDef(spr2names[sprite2], &skin->super.sprites[sprite2], wadnum, newlastlump, *lastlump, false);
 
 		newlastlump--;
 		*lastlump = newlastlump; // okay, make the normal sprite set loading end there
@@ -531,10 +642,18 @@ static void R_LoadSkinSprites(UINT16 wadnum, UINT16 *lump, UINT16 *lastlump, ski
 
 	// load all sprite sets we are aware of... for normal stuff.
 	for (sprite2 = start_spr2; sprite2 < free_spr2; sprite2++)
-		R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[sprite2], wadnum, *lump, *lastlump);
+		R_AddSingleSpriteDef(spr2names[sprite2], &skin->sprites[sprite2], wadnum, *lump, *lastlump, false);
 
 	if (skin->sprites[0].numframes == 0)
 		CONS_Alert(CONS_ERROR, M_GetText("No frames found for sprite SPR2_%s\n"), spr2names[0]);
+
+	// TODO: 2.3: Delete
+	memcpy(&skin->sprites_compat[start_spr2],
+		&skin->sprites[start_spr2],
+		sizeof(spritedef_t) * (free_spr2 - start_spr2));
+	memcpy(&skin->sprites_compat[start_spr2 + NUMPLAYERSPRITES],
+		&skin->super.sprites[start_spr2],
+		sizeof(spritedef_t) * (free_spr2 - start_spr2));
 }
 
 // returns whether found appropriate property
@@ -621,6 +740,8 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETFLAG(MACHINE)
 	GETFLAG(DASHMODE)
 	GETFLAG(FASTEDGE)
+	GETFLAG(FASTWAIT)
+	GETFLAG(JETFUME)
 	GETFLAG(MULTIABILITY)
 	GETFLAG(NONIGHTSROTATION)
 	GETFLAG(NONIGHTSSUPER)
@@ -669,6 +790,88 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 		return found;
 	}
 	return true;
+}
+
+// e.g. "RUN" => S_PLAY_RUN, "RUN1" => S_PLAY_RUN, "RUN8" => S_PLAY_RUN
+static statenum_t GetCanonicalPlayerStateNumByName(const char *name)
+{
+	if (startswith(name, "STAND"))               return S_PLAY_STND;
+	else if (startswith(name, "STND"))           return S_PLAY_STND;
+	else if (startswith(name, "WAIT"))           return S_PLAY_WAIT;
+	else if (startswith(name, "WALK"))           return S_PLAY_WALK;
+	else if (startswith(name, "SKID"))           return S_PLAY_SKID;
+	else if (startswith(name, "RUN"))            return S_PLAY_RUN;
+	else if (startswith(name, "DASH"))           return S_PLAY_DASH;
+	else if (startswith(name, "PAIN"))           return S_PLAY_PAIN;
+	else if (startswith(name, "STUN"))           return S_PLAY_STUN;
+	else if (startswith(name, "DEAD"))           return S_PLAY_DEAD;
+	else if (startswith(name, "DRWN"))           return S_PLAY_DRWN;
+	else if (startswith(name, "ROLL"))           return S_PLAY_ROLL;
+	else if (startswith(name, "GASP"))           return S_PLAY_GASP;
+	else if (startswith(name, "JUMP"))           return S_PLAY_JUMP;
+	else if (startswith(name, "SPRING"))         return S_PLAY_SPRING;
+	else if (startswith(name, "FALL"))           return S_PLAY_FALL;
+	else if (startswith(name, "EDGE"))           return S_PLAY_EDGE;
+	else if (startswith(name, "RIDE"))           return S_PLAY_RIDE;
+	else if (startswith(name, "SPINDASH"))       return S_PLAY_SPINDASH;
+	else if (startswith(name, "FLY"))            return S_PLAY_FLY;
+	else if (startswith(name, "SWIM"))           return S_PLAY_SWIM;
+	else if (startswith(name, "FLY_TIRED"))      return S_PLAY_FLY_TIRED;
+	else if (startswith(name, "GLIDE"))          return S_PLAY_GLIDE;
+	else if (startswith(name, "GLIDE_LANDING"))  return S_PLAY_GLIDE_LANDING;
+	else if (startswith(name, "CLING"))          return S_PLAY_CLING;
+	else if (startswith(name, "CLIMB"))          return S_PLAY_CLIMB;
+	else if (startswith(name, "FLOAT"))          return S_PLAY_FLOAT;
+	else if (startswith(name, "FLOAT_RUN"))      return S_PLAY_FLOAT_RUN;
+	else if (startswith(name, "BOUNCE"))         return S_PLAY_BOUNCE;
+	else if (startswith(name, "BOUNCE_LANDING")) return S_PLAY_BOUNCE_LANDING;
+	else if (startswith(name, "FIRE"))           return S_PLAY_FIRE;
+	else if (startswith(name, "FIRE_FINISH"))    return S_PLAY_FIRE_FINISH;
+	else if (startswith(name, "TWINSPIN"))       return S_PLAY_TWINSPIN;
+	else if (startswith(name, "MELEE"))          return S_PLAY_MELEE;
+	else if (startswith(name, "MELEE_FINISH"))   return S_PLAY_MELEE_FINISH;
+	else if (startswith(name, "MELEE_LANDING"))  return S_PLAY_MELEE_LANDING;
+	else if (startswith(name, "NIGHTS_STAND"))   return S_PLAY_NIGHTS_STAND;
+	else if (startswith(name, "NIGHTS_FLOAT"))   return S_PLAY_NIGHTS_FLOAT;
+	else if (startswith(name, "NIGHTS_FLY"))     return S_PLAY_NIGHTS_FLY;
+	else if (startswith(name, "NIGHTS_DRILL"))   return S_PLAY_NIGHTS_DRILL;
+	else if (startswith(name, "NIGHTS_STUN"))    return S_PLAY_NIGHTS_STUN;
+	else if (startswith(name, "NIGHTS_PULL"))    return S_PLAY_NIGHTS_PULL;
+	else if (startswith(name, "NIGHTS_ATTACK"))  return S_PLAY_NIGHTS_ATTACK;
+	else return S_NULL;
+}
+
+static void CacheCustomSkinStates(skin_t *skin)
+{
+	SIMPLEHASH_CLEAR(skin->defaulttocustomstate, hashentry_int32_int32_t)
+	SIMPLEHASH_CLEAR(skin->customtodefaultstate, hashentry_int32_int32_t)
+
+	char *skinstateprefix = va("SKIN_%s_", skin->name);
+	strupr(skinstateprefix);
+	size_t skinstateprefixlen = strlen(skinstateprefix);
+
+	for (INT32 state = S_FIRSTFREESLOT; state <= S_LASTFREESLOT; state++)
+	{
+		const char *statename = FREE_STATES[state - S_FIRSTFREESLOT];
+
+		if (!statename)
+			continue;
+		if (strncmp(statename, skinstateprefix, skinstateprefixlen))
+			continue;
+
+		statenum_t defaultstate = GetCanonicalPlayerStateNumByName(&statename[skinstateprefixlen]);
+		if (defaultstate)
+		{
+			// If a default state is overriden by multiple custom states, use the first one as reference
+			// e.g. WALK+WALK2+WALK3+WALK4 instead of just WALK
+			statenum_t alreadyoverriden;
+			SIMPLEHASH_FIND_INT(skin->defaulttocustomstate, hashentry_int32_int32_t, defaultstate, S_NULL, alreadyoverriden)
+			if (!alreadyoverriden)
+				SIMPLEHASH_REPLACE_INT(skin->defaulttocustomstate, hashentry_int32_int32_t, defaultstate, state)
+
+			SIMPLEHASH_REPLACE_INT(skin->customtodefaultstate, hashentry_int32_int32_t, state, defaultstate)
+		}
+	}
 }
 
 //
@@ -825,6 +1028,8 @@ next_token:
 
 		R_FlushTranslationColormapCache();
 
+		CacheCustomSkinStates(skin);
+
 		if (mainfile == false)
 			CONS_Printf(M_GetText("Added skin '%s'\n"), skin->name);
 
@@ -961,6 +1166,8 @@ next_token:
 		//ST_LoadFaceGraphics(skinnum); -- nah let's do this elsewhere
 
 		R_FlushTranslationColormapCache();
+
+		CacheCustomSkinStates(skin);
 
 		if (mainfile == false)
 			CONS_Printf(M_GetText("Patched skin '%s'\n"), skin->name);

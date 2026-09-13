@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by James Haley
-// Copyright (C) 2006-2023 by Sonic Team Junior.
+// Copyright (C) 2006-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -878,15 +878,15 @@ static void Polyobj_carryThings(polyobj_t *po, fixed_t dx, fixed_t dy)
 		{
 			mobj_t *mo;
 			blocknode_t *block;
+			blocknode_t *next = NULL;
 
 			if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
 				continue;
 
-			block = blocklinks[y * bmapwidth + x];
-
-			for (; block; block = block->mnext)
+			for (block = blocklinks[y * bmapwidth + x]; block != NULL; block = next)
 			{
 				mo = block->mobj;
+				next = block->mnext;
 
 				if (mo->lastlook == pomovecount)
 					continue;
@@ -927,11 +927,11 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 	if (!(po->flags & POF_SOLID))
 		return hitflags;
 
-	// adjust linedef bounding box to blockmap, extend by MAXRADIUS
-	linebox[BOXLEFT]   = (unsigned)(line->bbox[BOXLEFT]   - bmaporgx - MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXRIGHT]  = (unsigned)(line->bbox[BOXRIGHT]  - bmaporgx + MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXBOTTOM] = (unsigned)(line->bbox[BOXBOTTOM] - bmaporgy - MAXRADIUS) >> MAPBLOCKSHIFT;
-	linebox[BOXTOP]    = (unsigned)(line->bbox[BOXTOP]    - bmaporgy + MAXRADIUS) >> MAPBLOCKSHIFT;
+	// adjust linedef bounding box to blockmap
+	linebox[BOXLEFT]   = (unsigned)(line->bbox[BOXLEFT]   - bmaporgx) >> MAPBLOCKSHIFT;
+	linebox[BOXRIGHT]  = (unsigned)(line->bbox[BOXRIGHT]  - bmaporgx) >> MAPBLOCKSHIFT;
+	linebox[BOXBOTTOM] = (unsigned)(line->bbox[BOXBOTTOM] - bmaporgy) >> MAPBLOCKSHIFT;
+	linebox[BOXTOP]    = (unsigned)(line->bbox[BOXTOP]    - bmaporgy) >> MAPBLOCKSHIFT;
 
 	// check all mobj blockmap cells the line contacts
 	for (y = linebox[BOXBOTTOM]; y <= linebox[BOXTOP]; ++y)
@@ -942,9 +942,11 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 			{
 				mobj_t *mo = NULL;
 				blocknode_t *block = blocklinks[y * bmapwidth + x];
+				blocknode_t *next = NULL;
 
-				for (; block; block = block->mnext)
+				for (; block != NULL; block = next)
 				{
+					next = block->mnext;
 					mo = block->mobj;
 
 					// Don't scroll objects that aren't affected by gravity
@@ -1115,15 +1117,15 @@ static void Polyobj_rotateThings(polyobj_t *po, vector2_t origin, angle_t delta,
 		{
 			mobj_t *mo;
 			blocknode_t *block;
+			blocknode_t *next = NULL;
 
 			if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
 				continue;
 
-			block = blocklinks[y * bmapwidth + x];
-
-			for (; block; block = block->mnext)
+			for (block = blocklinks[y * bmapwidth + x]; block != NULL; block = next)
 			{
 				mo = block->mobj;
+				next = block->mnext;
 
 				if (mo->lastlook == pomovecount)
 					continue;
@@ -1316,7 +1318,7 @@ void Polyobj_InitLevel(void)
 	// the mobj_t pointers on a queue for use below.
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo = (mobj_t *)th;
@@ -1649,7 +1651,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 		distx = target->x - pox;
 		disty = target->y - poy;
 		distz = target->z - poz;
-		dist = P_AproxDistance(P_AproxDistance(distx, disty), distz);
+		dist = GetDistance3D(pox, poy, poz, target->x, target->y, target->z);
 
 		if (dist < 1)
 			dist = 1;
@@ -2032,7 +2034,7 @@ boolean EV_DoPolyObjRotate(polyrotdata_t *prdata)
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polyrotate_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyObjRotate;
+	th->thinker.function = (actionf_p1)T_PolyObjRotate;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
@@ -2104,7 +2106,7 @@ boolean EV_DoPolyObjMove(polymovedata_t *pmdata)
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polymove_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyObjMove;
+	th->thinker.function = (actionf_p1)T_PolyObjMove;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
@@ -2166,7 +2168,7 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polywaypoint_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyObjWaypoint;
+	th->thinker.function = (actionf_p1)T_PolyObjWaypoint;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
@@ -2234,7 +2236,7 @@ static void Polyobj_doSlideDoor(polyobj_t *po, polydoordata_t *doordata)
 
 	// allocate and add a new slide door thinker
 	th = Z_Malloc(sizeof(polyslidedoor_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyDoorSlide;
+	th->thinker.function = (actionf_p1)T_PolyDoorSlide;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 
 	// point the polyobject to this thinker
@@ -2285,7 +2287,7 @@ static void Polyobj_doSwingDoor(polyobj_t *po, polydoordata_t *doordata)
 
 	// allocate and add a new swing door thinker
 	th = Z_Malloc(sizeof(polyswingdoor_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyDoorSwing;
+	th->thinker.function = (actionf_p1)T_PolyDoorSwing;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 
 	// point the polyobject to this thinker
@@ -2370,7 +2372,7 @@ boolean EV_DoPolyObjDisplace(polydisplacedata_t *prdata)
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polydisplace_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyObjDisplace;
+	th->thinker.function = (actionf_p1)T_PolyObjDisplace;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
@@ -2419,7 +2421,7 @@ boolean EV_DoPolyObjRotDisplace(polyrotdisplacedata_t *prdata)
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polyrotdisplace_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyObjRotDisplace;
+	th->thinker.function = (actionf_p1)T_PolyObjRotDisplace;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
@@ -2524,7 +2526,7 @@ boolean EV_DoPolyObjFlag(polyflagdata_t *pfdata)
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polymove_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyObjFlag;
+	th->thinker.function = (actionf_p1)T_PolyObjFlag;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 
@@ -2672,12 +2674,12 @@ boolean EV_DoPolyObjFade(polyfadedata_t *pfdata)
 	if (po->translucency == pfdata->destvalue)
 		return true;
 
-	if (po->thinker && po->thinker->function.acp1 == (actionf_p1)T_PolyObjFade)
+	if (po->thinker && po->thinker->function == (actionf_p1)T_PolyObjFade)
 		P_RemoveThinker(po->thinker);
 
 	// create a new thinker
 	th = Z_Malloc(sizeof(polyfade_t), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_PolyObjFade;
+	th->thinker.function = (actionf_p1)T_PolyObjFade;
 	P_AddThinker(THINK_POLYOBJ, &th->thinker);
 	po->thinker = &th->thinker;
 

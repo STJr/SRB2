@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,7 +14,9 @@
 #include "d_player.h"
 #include "s_sound.h"
 #include "d_event.h"
+#include "p_local.h"
 #include "lua_hudlib_drawlist.h"
+#include "netcode/d_clisrv.h"
 
 /*
 Do you know what an 'X Macro' is? Such a macro is called over each element of
@@ -38,7 +40,11 @@ automatically.
 	X (BossDeath),/* A_BossDeath */\
 	X (MobjRemoved),/* P_RemoveMobj */\
 	X (BotRespawn),/* B_CheckRespawn */\
+	X (ShouldBlockMobj),/* PIT_CheckThing */\
+	X (ShouldBlockMobjMove),/* PIT_CheckThing */\
 	X (MobjMoveBlocked),/* P_XYMovement (when movement is blocked) */\
+	X (MobjHitFloor),/* P_ZMovement (when movement is blocked by floor) */\
+	X (MobjHitCeiling),/* P_ZMovement (when movement is blocked by ceiling) */\
 	X (MapThingSpawn),/* P_SpawnMapThing */\
 	X (FollowMobj),/* P_PlayerAfterThink Smiles mobj-following */\
 	X (HurtMsg),/* imhurttin */\
@@ -62,18 +68,26 @@ automatically.
 	X (ShieldSpecial),/* shield abilities */\
 	X (PlayerCanDamage),/* P_PlayerCanDamage */\
 	X (PlayerQuit),\
+	X (NameChange),\
 	X (IntermissionThinker),/* Y_Ticker */\
 	X (TeamSwitch),/* team switching in... uh... *what* speak, spit it the fuck out */\
 	X (ViewpointSwitch),/* spy mode (no trickstabs) */\
 	X (SeenPlayer),/* MT_NAMECHECK */\
 	X (PlayerThink),/* P_PlayerThink */\
+	X (GameStart),\
 	X (GameQuit),\
+	X (GameEnd),\
 	X (PlayerCmd),/* building the player's ticcmd struct (Ported from SRB2Kart) */\
 	X (MusicChange),\
+	X (SoundPlay),\
 	X (PlayerHeight),/* override player height */\
 	X (PlayerCanEnterSpinGaps),\
+	X (AddonLoaded),\
+	X (CameraThinker),/* P_MoveChaseCamera */\
 	X (KeyDown),\
 	X (KeyUp),\
+	X (PlayerHitFloor), /* P_PlayerHitFloor */ \
+	X (TextInput),\
 
 #define STRING_HOOK_LIST(X) \
 	X (BotAI),/* B_BuildTailsTiccmd by skin name */\
@@ -85,7 +99,10 @@ automatically.
 	X (scores),/* emblems/multiplayer list */\
 	X (title),/* titlescreen */\
 	X (titlecard),\
+	X (escpanel) /* rings/time/score/emblem panel in pause menu */,\
 	X (intermission),\
+	X (continue),\
+	X (playersetup),\
 
 /*
 I chose to access the hook enums through a macro as well. This could provide
@@ -117,6 +134,17 @@ extern boolean hook_cmd_running;
 
 void LUA_HookVoid(int hook);
 void LUA_HookHUD(int hook, huddrawlist_h drawlist);
+int LUA_HookCharacterHUD
+(
+	int hook, huddrawlist_h drawlist, player_t *player,
+	fixed_t x, fixed_t y, fixed_t scale,
+	INT32 skinIndex, UINT8 sprite2, UINT8 frame, UINT8 rotation, skincolornum_t color,
+	INT32 ticker, boolean mode
+);
+boolean LUA_HookEscapePanel(
+	int hook, huddrawlist_h drawlist,
+	int x, int y, int width, int height
+);
 
 int  LUA_HookMobj(mobj_t *, int hook);
 int  LUA_Hook2Mobj(mobj_t *, mobj_t *, int hook);
@@ -125,6 +153,7 @@ void LUA_HookBool(boolean value, int hook);
 int  LUA_HookPlayer(player_t *, int hook);
 int  LUA_HookTiccmd(player_t *, ticcmd_t *, int hook);
 int  LUA_HookKey(event_t *event, int hook); // Hooks for key events
+int  LUA_HookText(event_t *event, int hook); // Hooks for text events
 
 void LUA_HookPreThinkFrame(void);
 void LUA_HookThinkFrame(void);
@@ -134,20 +163,27 @@ int  LUA_HookTouchSpecial(mobj_t *special, mobj_t *toucher);
 int  LUA_HookShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype);
 int  LUA_HookMobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype);
 int  LUA_HookMobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damagetype);
+int  LUA_HookMobjCollide(mobj_t *mobj1, mobj_t *mobj2, int hook_type);
 int  LUA_HookMobjMoveBlocked(mobj_t *, mobj_t *, line_t *);
+int  LUA_HookMobjHitFloor(mobj_t *);
+int  LUA_HookMobjHitCeiling(mobj_t *);
 int  LUA_HookBotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd);
 void LUA_HookLinedefExecute(line_t *, mobj_t *, sector_t *);
 int  LUA_HookPlayerMsg(int source, int target, int flags, char *msg);
 int  LUA_HookHurtMsg(player_t *, mobj_t *inflictor, mobj_t *source, UINT8 damagetype);
 int  LUA_HookMapThingSpawn(mobj_t *, mapthing_t *);
 int  LUA_HookFollowMobj(player_t *, mobj_t *);
+int  LUA_HookCameraThinker(player_t *, camera_t *);
 int  LUA_HookPlayerCanDamage(player_t *, mobj_t *);
 void LUA_HookPlayerQuit(player_t *, kickreason_t);
+int  LUA_HookNameChange(player_t *plr, const char *name);
 int  LUA_HookTeamSwitch(player_t *, int newteam, boolean fromspectators, boolean tryingautobalance, boolean tryingscramble);
 int  LUA_HookViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean forced);
 int  LUA_HookSeenPlayer(player_t *player, player_t *seenfriend);
 int  LUA_HookShouldJingleContinue(player_t *, const char *musname);
 int  LUA_HookPlayerCmd(player_t *, ticcmd_t *);
 int  LUA_HookMusicChange(const char *oldname, struct MusicChange *);
+int  LUA_HookSoundPlay(sfxenum_t sfx_id, void *origin, const int origintype);
 fixed_t LUA_HookPlayerHeight(player_t *player);
 int  LUA_HookPlayerCanEnterSpinGaps(player_t *player);
+int LUA_HookPlayerHitFloor(player_t* player);

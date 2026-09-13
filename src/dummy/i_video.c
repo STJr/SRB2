@@ -5,8 +5,6 @@
 rendermode_t rendermode = render_none;
 rendermode_t chosenrendermode = render_none;
 
-boolean highcolor = false;
-
 boolean allow_fullscreen = false;
 
 consvar_t cv_vidwait = CVAR_INIT ("vid_wait", "On", CV_SAVE, CV_OnOff, NULL);

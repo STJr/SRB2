@@ -63,16 +63,18 @@ consvar_t cv_masterserver_token = CVAR_INIT
 
 static int hms_started;
 
+static boolean hms_args_checked;
+#ifndef NO_IPV6
 static boolean hms_allow_ipv6;
+#endif
+static boolean hms_allow_ipv4;
 
 static char *hms_api;
-#ifdef HAVE_THREADS
 static I_mutex hms_api_mutex;
-#endif
 
-static char *hms_server_token;
+static boolean hms_registered_ipv4;
 #ifndef NO_IPV6
-static char *hms_server_token_ipv6;
+static boolean hms_registered_ipv6;
 #endif
 
 static char hms_useragent[512];
@@ -82,7 +84,8 @@ struct HMS_buffer
 	CURL *curl;
 	char *buffer;
 	int   needle;
-	int    end;
+	int   end;
+	char *errbuf;
 };
 
 static void
@@ -119,13 +122,21 @@ HMS_on_read (char *s, size_t _1, size_t n, void *userdata)
 
 	buffer = userdata;
 
-	if (n >= (size_t)( buffer->end - buffer->needle ))
+	while (n >= (size_t)( buffer->end - buffer->needle ))
 	{
 		/* resize to next multiple of buffer size */
 		blocks = ( n / DEFAULT_BUFFER_SIZE + 1 );
 		buffer->end += ( blocks * DEFAULT_BUFFER_SIZE );
 
-		buffer->buffer = realloc(buffer->buffer, buffer->end);
+		void *tmp = realloc(buffer->buffer, buffer->end);
+		if (tmp == NULL)
+		{
+			// not enough memory to read it, bail
+			free(buffer->buffer);
+			buffer->buffer = NULL;
+			return 0;
+		}
+		buffer->buffer = tmp;
 	}
 
 	memcpy(&buffer->buffer[buffer->needle], s, n);
@@ -134,7 +145,19 @@ HMS_on_read (char *s, size_t _1, size_t n, void *userdata)
 	return n;
 }
 
-static struct HMS_buffer *
+static void HMS_check_args_once(void)
+{
+	if (hms_args_checked)
+		return;
+
+#ifndef NO_IPV6
+	hms_allow_ipv6 = !M_CheckParm("-noipv6");
+#endif
+	hms_allow_ipv4 = !M_CheckParm("-noipv4");
+	hms_args_checked = true;
+}
+
+FUNCDEBUG static struct HMS_buffer *
 HMS_connect (int proto, const char *format, ...)
 {
 	va_list ap;
@@ -144,6 +167,7 @@ HMS_connect (int proto, const char *format, ...)
 	size_t seek;
 	size_t token_length;
 	struct HMS_buffer *buffer;
+	CURLcode cc;
 
 #ifdef NO_IPV6
 	if (proto == PROTO_V6)
@@ -152,7 +176,6 @@ HMS_connect (int proto, const char *format, ...)
 
 	if (! hms_started)
 	{
-		hms_allow_ipv6 = !M_CheckParm("-noipv6");
 		if (curl_global_init(CURL_GLOBAL_ALL) != 0)
 		{
 			Contact_error();
@@ -168,7 +191,7 @@ HMS_connect (int proto, const char *format, ...)
 
 	curl = curl_easy_init();
 
-	if (! curl)
+	if (!curl)
 	{
 		Contact_error();
 		Blame("From curl_easy_init.\n");
@@ -186,9 +209,7 @@ HMS_connect (int proto, const char *format, ...)
 		token_length = 0;
 	}
 
-#ifdef HAVE_THREADS
 	I_lock_mutex(&hms_api_mutex);
-#endif
 
 	init_user_agent_once();
 
@@ -200,9 +221,7 @@ HMS_connect (int proto, const char *format, ...)
 
 	sprintf(url, "%s/", hms_api);
 
-#ifdef HAVE_THREADS
 	I_unlock_mutex(hms_api_mutex);
-#endif
 
 	va_start (ap, format);
 	seek += vsprintf(&url[seek], format, ap);
@@ -218,33 +237,65 @@ HMS_connect (int proto, const char *format, ...)
 	buffer->end = DEFAULT_BUFFER_SIZE;
 	buffer->buffer = malloc(buffer->end);
 	buffer->needle = 0;
+	buffer->errbuf = malloc(CURL_ERROR_SIZE);
+	buffer->errbuf[0] = 0x00;
+
+	cc = curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, buffer->errbuf);
 
 	if (cv_masterserver_debug.value)
 	{
-		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-		curl_easy_setopt(curl, CURLOPT_STDERR, logstream);
+		cc = curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
+
+		cc = curl_easy_setopt(curl, CURLOPT_STDERR, logstream);
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
 	}
 
-	if (M_CheckParm("-bindaddr") && M_IsNextParm())
-	{
-		curl_easy_setopt(curl, CURLOPT_INTERFACE, M_GetNextParm());
-	}
+	cc = curl_easy_setopt(curl, CURLOPT_URL, url);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
 
-	curl_easy_setopt(curl, CURLOPT_URL, url);
-	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+	cc = curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
 
 #ifndef NO_IPV6
-	if (proto == PROTO_V6)
-		curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V6);
-	if (proto == PROTO_V4)
+	if (proto == PROTO_V6 || (proto == PROTO_ANY && !hms_allow_ipv4))
+	{
+		cc = curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V6);
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
+
+		if (M_CheckParm("-bindaddr6") && M_IsNextParm())
+		{
+			cc = curl_easy_setopt(curl, CURLOPT_INTERFACE, M_GetNextParm());
+			if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
+		}
+	}
+	if (proto == PROTO_V4 || (proto == PROTO_ANY && !hms_allow_ipv6))
 #endif
-		curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+	{
+		cc = curl_easy_setopt(curl, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+		if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
 
-	curl_easy_setopt(curl, CURLOPT_TIMEOUT, cv_masterserver_timeout.value);
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HMS_on_read);
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, buffer);
+		if (M_CheckParm("-bindaddr") && M_IsNextParm())
+		{
+			cc = curl_easy_setopt(curl, CURLOPT_INTERFACE, M_GetNextParm());
+			if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
+		}
+	}
 
-	curl_easy_setopt(curl, CURLOPT_USERAGENT, hms_useragent);
+	cc = curl_easy_setopt(curl, CURLOPT_TIMEOUT, cv_masterserver_timeout.value);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
+
+	cc = curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 30L);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
+
+	cc = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HMS_on_read);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
+
+	cc = curl_easy_setopt(curl, CURLOPT_WRITEDATA, buffer);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
+
+	cc = curl_easy_setopt(curl, CURLOPT_USERAGENT, hms_useragent);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
 
 	curl_free(quack_token);
 	free(url);
@@ -266,15 +317,15 @@ HMS_do (struct HMS_buffer *buffer)
 	{
 		Contact_error();
 		Blame(
-				"From curl_easy_perform: %s\n",
-				curl_easy_strerror(cc)
+				"From curl_easy_perform: %s\n", buffer->errbuf
 		);
 		return 0;
 	}
 
 	buffer->buffer[buffer->needle] = '\0';
 
-	curl_easy_getinfo(buffer->curl, CURLINFO_RESPONSE_CODE, &status);
+	cc = curl_easy_getinfo(buffer->curl, CURLINFO_RESPONSE_CODE, &status);
+	if (cc != CURLE_OK) I_OutputMsg("libcurl: %s\n", buffer->errbuf);
 
 	if (status != 200)
 	{
@@ -326,6 +377,8 @@ HMS_fetch_rooms (int joining, int query_id)
 
 	(void)query_id;
 
+	HMS_check_args_once();
+
 	hms = HMS_connect(PROTO_ANY, "rooms");
 
 	if (! hms)
@@ -355,7 +408,6 @@ HMS_fetch_rooms (int joining, int query_id)
 				*/
 				if (joining || id_no != 0)
 				{
-#ifdef HAVE_THREADS
 					I_lock_mutex(&ms_QueryId_mutex);
 					{
 						if (query_id != ms_QueryId)
@@ -365,7 +417,6 @@ HMS_fetch_rooms (int joining, int query_id)
 
 					if (! doing_shit)
 						break;
-#endif
 
 					room_list[i].header.buffer[0] = 1;
 
@@ -389,9 +440,7 @@ HMS_fetch_rooms (int joining, int query_id)
 
 		if (doing_shit)
 		{
-#ifdef HAVE_THREADS
 			I_lock_mutex(&m_menu_mutex);
-#endif
 			{
 				for (i = 0; room_list[i].header.buffer[0]; i++)
 				{
@@ -403,9 +452,7 @@ HMS_fetch_rooms (int joining, int query_id)
 					}
 				}
 			}
-#ifdef HAVE_THREADS
 			I_unlock_mutex(m_menu_mutex);
-#endif
 		}
 	}
 	else
@@ -420,18 +467,15 @@ int
 HMS_register (void)
 {
 	struct HMS_buffer *hms;
-	int ok;
+	int ok = 0;
 
 	char post[256];
 
 	char *title;
 
-	hms = HMS_connect(PROTO_V4, "rooms/%d/register", ms_RoomId);
+	HMS_check_args_once();
 
-	if (! hms)
-		return 0;
-
-	title = curl_easy_escape(hms->curl, cv_servername.string, 0);
+	title = curl_easy_escape(NULL, cv_servername.string, 0);
 
 	snprintf(post, sizeof post,
 			"port=%d&"
@@ -447,34 +491,33 @@ HMS_register (void)
 
 	curl_free(title);
 
-	curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDS, post);
-
-	ok = HMS_do(hms);
-
-	if (ok)
+	if (hms_allow_ipv4)
 	{
-		hms_server_token = strdup(strtok(hms->buffer, "\n"));
-	}
+		hms = HMS_connect(PROTO_V4, "rooms/%d/register", cv_masterserver_room_id.value);
 
-	HMS_end(hms);
+		if (! hms)
+			return 0;
+
+		curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDS, post);
+
+		ok = hms_registered_ipv4 = HMS_do(hms);
+
+		HMS_end(hms);
+	}
 
 #ifndef NO_IPV6
 	if (!hms_allow_ipv6)
 		return ok;
 
-	hms = HMS_connect(PROTO_V6, "rooms/%d/register", ms_RoomId);
+	hms = HMS_connect(PROTO_V6, "rooms/%d/register", cv_masterserver_room_id.value);
 
 	if (! hms)
 		return 0;
 
 	curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDS, post);
 
-	ok = HMS_do(hms);
-
-	if (ok)
-	{
-		hms_server_token_ipv6 = strdup(strtok(hms->buffer, "\n"));
-	}
+	hms_registered_ipv6 = HMS_do(hms);
+	ok = ok || hms_registered_ipv6;
 
 	HMS_end(hms);
 #endif
@@ -486,25 +529,13 @@ int
 HMS_unlist (void)
 {
 	struct HMS_buffer *hms;
-	int ok;
+	int ok = 0;
 
-	hms = HMS_connect(PROTO_V4, "servers/%s/unlist", hms_server_token);
+	HMS_check_args_once();
 
-	if (! hms)
-		return 0;
-
-	curl_easy_setopt(hms->curl, CURLOPT_POST, 1);
-	curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDSIZE, 0);
-
-	ok = HMS_do(hms);
-	HMS_end(hms);
-
-	free(hms_server_token);
-
-#ifndef NO_IPV6
-	if (hms_server_token_ipv6 && hms_allow_ipv6)
+	if (hms_registered_ipv4 && hms_allow_ipv4)
 	{
-		hms = HMS_connect(PROTO_V6, "servers/%s/unlist", hms_server_token_ipv6);
+		hms = HMS_connect(PROTO_V4, "servers/%d/unlist", current_port);
 
 		if (! hms)
 			return 0;
@@ -515,54 +546,24 @@ HMS_unlist (void)
 		ok = HMS_do(hms);
 		HMS_end(hms);
 
-		free(hms_server_token_ipv6);
+		hms_registered_ipv4 = false;
 	}
-#endif
-
-	return ok;
-}
-
-int
-HMS_update (void)
-{
-	struct HMS_buffer *hms;
-	int ok;
-
-	char post[256];
-
-	char *title;
-
-	hms = HMS_connect(PROTO_V4, "servers/%s/update", hms_server_token);
-
-	if (! hms)
-		return 0;
-
-	title = curl_easy_escape(hms->curl, cv_servername.string, 0);
-
-	snprintf(post, sizeof post,
-			"title=%s",
-			title
-	);
-
-	curl_free(title);
-
-	curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDS, post);
-
-	ok = HMS_do(hms);
-	HMS_end(hms);
 
 #ifndef NO_IPV6
-	if (hms_server_token_ipv6 && hms_allow_ipv6)
+	if (hms_registered_ipv6 && hms_allow_ipv6)
 	{
-		hms = HMS_connect(PROTO_V6, "servers/%s/update", hms_server_token_ipv6);
+		hms = HMS_connect(PROTO_V6, "servers/%d/unlist", current_port);
 
 		if (! hms)
-			return ok;
+			return 0;
 
-		curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDS, post);
+		curl_easy_setopt(hms->curl, CURLOPT_POST, 1);
+		curl_easy_setopt(hms->curl, CURLOPT_POSTFIELDSIZE, 0);
 
 		ok = HMS_do(hms);
 		HMS_end(hms);
+
+		hms_registered_ipv6 = false;
 	}
 #endif
 
@@ -576,6 +577,8 @@ HMS_list_servers (void)
 
 	char *list;
 	char *p;
+
+	HMS_check_args_once();
 
 	hms = HMS_connect(PROTO_ANY, "servers");
 
@@ -621,6 +624,8 @@ HMS_fetch_servers (msg_server_t *list, int room_number, int query_id)
 	char *p;
 
 	int i;
+
+	HMS_check_args_once();
 
 	(void)query_id;
 
@@ -668,7 +673,6 @@ HMS_fetch_servers (msg_server_t *list, int room_number, int query_id)
 
 				if (address && port && title && version)
 				{
-#ifdef HAVE_THREADS
 					I_lock_mutex(&ms_QueryId_mutex);
 					{
 						if (query_id != ms_QueryId)
@@ -678,7 +682,6 @@ HMS_fetch_servers (msg_server_t *list, int room_number, int query_id)
 
 					if (! doing_shit)
 						break;
-#endif
 
 					if (strcmp(version, local_version) == 0)
 					{
@@ -733,6 +736,8 @@ HMS_compare_mod_version (char *buffer, size_t buffer_size)
 	char *version;
 	char *version_name;
 
+	HMS_check_args_once();
+
 	hms = HMS_connect(PROTO_ANY, "versions/%d", MODID);
 
 	if (! hms)
@@ -765,16 +770,12 @@ HMS_compare_mod_version (char *buffer, size_t buffer_size)
 void
 HMS_set_api (char *api)
 {
-#ifdef HAVE_THREADS
 	I_lock_mutex(&hms_api_mutex);
-#endif
 	{
 		free(hms_api);
 		hms_api = api;
 	}
-#ifdef HAVE_THREADS
 	I_unlock_mutex(hms_api_mutex);
-#endif
 }
 
 #endif/*MASTERSERVER*/

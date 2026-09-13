@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -390,8 +390,6 @@ static void md2_loadTexture(md2_t *model)
 	if (!grPatch->mipmap->downloaded && !grPatch->mipmap->data)
 	{
 		int w = 0, h = 0;
-		UINT32 size;
-		RGBA_t *image;
 
 #ifdef HAVE_PNG
 		grPatch->mipmap->format = PNG_Load(filename, &w, &h, grPatch);
@@ -412,13 +410,19 @@ static void md2_loadTexture(md2_t *model)
 		grPatch->mipmap->width = (UINT16)w;
 		grPatch->mipmap->height = (UINT16)h;
 
-		// Lactozilla: Apply colour cube
-		image = grPatch->mipmap->data;
-		size = w*h;
-		while (size--)
+		// for palette rendering, color cube is applied in post-processing instead of here
+		if (!HWR_ShouldUsePaletteRendering())
 		{
-			V_CubeApply(&image->s.red, &image->s.green, &image->s.blue);
-			image++;
+			UINT32 size;
+			RGBA_t *image;
+			// Lactozilla: Apply colour cube
+			image = grPatch->mipmap->data;
+			size = w*h;
+			while (size--)
+			{
+				V_CubeApply(&image->s.red, &image->s.green, &image->s.blue);
+				image++;
+			}
 		}
 	}
 	HWD.pfnSetTexture(grPatch->mipmap);
@@ -567,19 +571,15 @@ void HWR_LoadModels(void)
 		}
 
 		// Add sprite models.
-		// Must be 4 characters long exactly. Otherwise, it's not a sprite name.
-		if (len == 4)
+		for (i = 0; i < numsprites; i++)
 		{
-			for (i = 0; i < numsprites; i++)
+			if (stricmp(name, sprnames[i]) == 0)
 			{
-				if (stricmp(name, sprnames[i]) == 0)
-				{
-					md2_models[i].scale = scale;
-					md2_models[i].offset = offset;
-					md2_models[i].found = true;
-					strcpy(md2_models[i].filename, filename);
-					goto modelfound;
-				}
+				md2_models[i].scale = scale;
+				md2_models[i].offset = offset;
+				md2_models[i].found = true;
+				strcpy(md2_models[i].filename, filename);
+				goto modelfound;
 			}
 		}
 
@@ -620,12 +620,13 @@ static void HWR_CreateBlendedTexture(patch_t *gpatch, patch_t *blendgpatch, GLMi
 	UINT16 w = gpatch->width, h = gpatch->height;
 	UINT32 size = w*h;
 	RGBA_t *image, *blendimage, *cur, blendcolor;
+	RGBA_t *palette = HWR_GetTexturePalette();
 	UINT16 translation[16]; // First the color index
 	UINT8 cutoff[16]; // Brightness cutoff before using the next color
 	UINT8 translen = 0;
 	UINT8 i;
 
-	blendcolor = V_GetColor(0); // initialize
+	blendcolor = palette[0]; // initialize
 	memset(translation, 0, sizeof(translation));
 	memset(cutoff, 0, sizeof(cutoff));
 
@@ -807,7 +808,7 @@ static void HWR_CreateBlendedTexture(patch_t *gpatch, patch_t *blendgpatch, GLMi
 
 						for (i = 0; i < translen; i++)
 						{
-							RGBA_t tempc = V_GetColor(translation[i]);
+							RGBA_t tempc = palette[translation[i]];
 							SETBRIGHTNESS(colorbrightnesses[i], tempc.s.red, tempc.s.green, tempc.s.blue); // store brightnesses for comparison
 						}
 
@@ -869,7 +870,7 @@ static void HWR_CreateBlendedTexture(patch_t *gpatch, patch_t *blendgpatch, GLMi
 						mul = cutoff[firsti] - brightness;
 					}
 
-					blendcolor = V_GetColor(translation[firsti]);
+					blendcolor = palette[translation[firsti]];
 
 					if (secondi >= translen)
 						mul = 0;
@@ -880,11 +881,11 @@ static void HWR_CreateBlendedTexture(patch_t *gpatch, patch_t *blendgpatch, GLMi
 						if (secondi >= translen)
 						{
 							// blend to black
-							nextcolor = V_GetColor(31);
+							nextcolor = palette[31];
 						}
 						else
 #endif
-							nextcolor = V_GetColor(translation[secondi]);
+							nextcolor = palette[translation[secondi]];
 
 						// Find difference between points
 						r = (INT32)(nextcolor.s.red - blendcolor.s.red);
@@ -1062,42 +1063,55 @@ static boolean HWR_AllowModel(mobj_t *mobj)
 
 static boolean HWR_CanInterpolateModel(mobj_t *mobj, model_t *model)
 {
-	if (cv_glmodelinterpolation.value == 2) // Always interpolate
-		return true;
 	return model->interpolate[(mobj->frame & FF_FRAMEMASK)];
 }
 
 static boolean HWR_CanInterpolateSprite2(modelspr2frames_t *spr2frame)
 {
-	if (cv_glmodelinterpolation.value == 2) // Always interpolate
-		return true;
 	return spr2frame->interpolate;
 }
 
-//
-// HWR_GetModelSprite2 (see P_GetSkinSprite2)
-// For non-super players, tries each sprite2's immediate predecessor until it finds one with a number of frames or ends up at standing.
-// For super players, does the same as above - but tries the super equivalent for each sprite2 before the non-super version.
-//
-
-static UINT8 HWR_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t *player)
+static modelspr2frames_t *HWR_GetModelSprite2Frames(md2_t *md2, UINT16 spr2)
 {
-	UINT8 super = 0, i = 0;
+	if (!md2 || !md2->model)
+		return NULL;
 
-	if (!md2 || !md2->model || !md2->model->spr2frames || !skin)
-		return 0;
+	boolean is_super = spr2 & SPR2F_SUPER;
 
-	if ((playersprite_t)(spr2 & ~FF_SPR2SUPER) >= free_spr2)
-		return 0;
+	spr2 &= SPR2F_MASK;
 
-	while (!md2->model->spr2frames[spr2].numframes
-		&& spr2 != SPR2_STND
-		&& ++i != 32) // recursion limiter
+	if (spr2 >= free_spr2)
+		return NULL;
+
+	if (is_super)
 	{
-		if (spr2 & FF_SPR2SUPER)
+		modelspr2frames_t *frames = md2->model->superspr2frames;
+		if (frames && md2->model->superspr2frames[spr2].numframes)
+			return &md2->model->superspr2frames[spr2];
+	}
+
+	if (md2->model->spr2frames[spr2].numframes)
+		return &md2->model->spr2frames[spr2];
+
+	return NULL;
+}
+
+static UINT16 HWR_GetModelSprite2Num(md2_t *md2, skin_t *skin, UINT16 spr2, player_t *player)
+{
+	UINT16 super = 0;
+	UINT8 i = 0;
+
+	if (!md2 || !md2->model || !skin)
+		return 0;
+
+	while (!HWR_GetModelSprite2Frames(md2, spr2)
+		&& spr2 != SPR2_STND
+		&& ++i < 32) // recursion limiter
+	{
+		if (spr2 & SPR2F_SUPER)
 		{
-			super = FF_SPR2SUPER;
-			spr2 &= ~FF_SPR2SUPER;
+			super = SPR2F_SUPER;
+			spr2 &= ~SPR2F_SUPER;
 			continue;
 		}
 
@@ -1126,7 +1140,7 @@ static UINT8 HWR_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t 
 	}
 
 	if (i >= 32) // probably an infinite loop...
-		return 0;
+		spr2 = 0;
 
 	return spr2;
 }
@@ -1136,6 +1150,9 @@ static void adjustTextureCoords(model_t *model, patch_t *patch)
 {
 	int i;
 	GLPatch_t *gpatch = ((GLPatch_t *)patch->hardware);
+
+	if (!gpatch)
+		return;
 
 	for (i = 0; i < model->numMeshes; i++)
 	{
@@ -1173,6 +1190,90 @@ static void adjustTextureCoords(model_t *model, patch_t *patch)
 	model->max_t = gpatch->max_t;
 }
 
+static INT32 GetAnimDuration(mobj_t *mobj) //part of p_mobj's setplayermobjstate logic, used to make sure that anim durations are actually correct when the speed gets adjusted on players
+{
+	player_t *player = mobj->player;
+	INT32 tics = mobj->state->tics;
+
+	if (!(mobj->frame & FF_ANIMATE) && mobj->anim_duration) //set manually by something through lua
+		return mobj->anim_duration;
+
+	if (!player && mobj->type == MT_TAILSOVERLAY && mobj->tracer) //so tails overlays interpolate properly
+		player = mobj->tracer->player;
+	if (player)
+	{
+		if (player->panim == PA_EDGE && (player->charflags & SF_FASTEDGE))
+			tics = 2;
+		else if (player->powers[pw_tailsfly] && (!(player->mo->eflags & MFE_UNDERWATER) || (mobj->type == MT_PLAYER))) //tailsoverlay does not get adjusted from these rules when underwater
+		{
+			if (player->fly1 > 0)
+				tics = 1;
+			else if (!(player->mo->eflags & MFE_UNDERWATER))
+				tics = 2;
+			else
+				tics = 4;
+		}
+		else if (!(disableSpeedAdjust || player->charflags & SF_NOSPEEDADJUST))
+		{
+			fixed_t speed;// = FixedDiv(player->speed, FixedMul(mobj->scale, player->mo->movefactor));
+			if (player->panim == PA_FALL)
+			{
+				speed = FixedDiv(abs(mobj->momz), mobj->scale);
+				if (speed < 10<<FRACBITS)
+					tics = 4;
+				else if (speed < 20<<FRACBITS)
+					tics = 3;
+				else if (speed < 30<<FRACBITS)
+					tics = 2;
+				else
+					tics = 1;
+			}
+			else if (player->panim == PA_ABILITY2 && player->charability2 == CA2_SPINDASH)
+			{
+				fixed_t step = (player->maxdash - player->mindash)/4;
+				speed = (player->dashspeed - player->mindash);
+				if (speed > 3*step)
+					tics = 1;
+				else if (speed > step)
+					tics = 2;
+				else
+					tics = 3;
+			}
+			else
+			{
+				speed = FixedDiv(player->speed, FixedMul(mobj->scale, player->mo->movefactor));
+				if (player->panim == PA_ROLL || player->panim == PA_JUMP)
+				{
+					if (speed > 16<<FRACBITS)
+						tics = 1;
+					else
+						tics = 2;
+				}
+				else if (P_IsObjectOnGround(mobj) || ((player->charability == CA_FLOAT || player->charability == CA_SLOWFALL) && player->secondjump == 1) || player->powers[pw_super]) // Only if on the ground or superflying.
+				{
+					if (player->panim == PA_WALK)
+					{
+						if (speed > 12<<FRACBITS)
+							tics = 2;
+						else if (speed > 6<<FRACBITS)
+							tics = 3;
+						else
+							tics = 4;
+					}
+					else if ((player->panim == PA_RUN) || (player->panim == PA_DASH))
+					{
+						if (speed > 52<<FRACBITS)
+							tics = 1;
+						else
+							tics = 2;
+					}
+				}
+			}
+		}
+	}
+	return tics;
+}
+
 //
 // HWR_DrawModel
 //
@@ -1184,7 +1285,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 	char filename[64];
 	INT32 frame = 0;
 	INT32 nextFrame = -1;
-	UINT8 spr2 = 0;
+	modelspr2frames_t *spr2frames = NULL;
 	FTransform p;
 	FSurfaceInfo Surf;
 
@@ -1207,22 +1308,23 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		sector_t *sector = spr->mobj->subsector->sector;
 		UINT8 lightlevel = 255;
 		extracolormap_t *colormap = NULL;
-
 		if (sector->numlights)
 		{
 			INT32 light;
 
-			light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false); // Always use the light at the top instead of whatever I was doing before
+			light = P_GetSectorLightNumAt(sector, spr->mobj->x, spr->mobj->y, spr->mobj->z + spr->mobj->height);
 
 			if (R_ThingIsFullDark(spr->mobj))
 				lightlevel = 0;
 			else if (R_ThingIsSemiBright(spr->mobj))
 				lightlevel = 128 + (*sector->lightlist[light].lightlevel>>1);
 			else if (!R_ThingIsFullBright(spr->mobj))
-				lightlevel = *sector->lightlist[light].lightlevel > 255 ? 255 : *sector->lightlist[light].lightlevel;
-
-			if (*sector->lightlist[light].extra_colormap)
-				colormap = *sector->lightlist[light].extra_colormap;
+				lightlevel = max(min(255, *sector->lightlist[light].lightlevel), 0);
+			if (!(spr->mobj->renderflags & RF_NOCOLORMAPS))
+			{
+				if (*sector->lightlist[light].extra_colormap)
+					colormap = *sector->lightlist[light].extra_colormap;
+			}
 		}
 		else
 		{
@@ -1231,13 +1333,15 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			else if (R_ThingIsSemiBright(spr->mobj))
 				lightlevel = 128 + (sector->lightlevel>>1);
 			else if (!R_ThingIsFullBright(spr->mobj))
-				lightlevel = sector->lightlevel > 255 ? 255 : sector->lightlevel;
-
-			if (sector->extra_colormap)
-				colormap = sector->extra_colormap;
+				lightlevel = max(min(255, sector->lightlevel), 0);
+			if (!(spr->mobj->renderflags & RF_NOCOLORMAPS))
+			{
+				if (sector->extra_colormap)
+					colormap = sector->extra_colormap;
+			}			
 		}
-
 		HWR_Lighting(&Surf, lightlevel, colormap);
+			
 	}
 	else
 		Surf.PolyColor.rgba = 0xFFFFFFFF;
@@ -1246,12 +1350,13 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 	{
 		patch_t *gpatch, *blendgpatch;
 		GLPatch_t *hwrPatch = NULL, *hwrBlendPatch = NULL;
-		float durs = (float)spr->mobj->state->tics;
+		float durs = GetAnimDuration(spr->mobj);
 		float tics = (float)spr->mobj->tics;
 		const boolean papersprite = (R_ThingIsPaperSprite(spr->mobj) && !R_ThingIsFloorSprite(spr->mobj));
 		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !R_ThingVerticallyFlipped(spr->mobj));
 		const UINT8 hflip = (UINT8)(!(spr->mobj->mirrored) != !R_ThingHorizontallyFlipped(spr->mobj));
 		spritedef_t *sprdef;
+		UINT16 spr2 = 0;
 		spriteframe_t *sprframe;
 		INT32 mod;
 		interpmobjstate_t interp;
@@ -1266,8 +1371,13 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		}
 
 		// Apparently people don't like jump frames like that, so back it goes
-		//if (tics > durs)
-			//durs = tics;
+		if (tics > durs)
+			durs = tics;
+
+		// Make linkdraw objects use their tracer's alpha value
+		fixed_t newalpha = spr->mobj->alpha;
+		if ((spr->mobj->flags2 & MF2_LINKDRAW) && spr->mobj->tracer)
+			newalpha = spr->mobj->tracer->alpha;
 
 		INT32 blendmode;
 		if (spr->mobj->frame & FF_BLENDMASK)
@@ -1281,6 +1391,13 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		{
 			Surf.PolyColor.s.alpha = (spr->mobj->flags2 & MF2_SHADOW) ? 0x40 : 0xff;
 			Surf.PolyFlags = HWR_GetBlendModeFlag(blendmode);
+		}
+		
+		if (newalpha < FRACUNIT)
+		{
+			// TODO: The ternary operator is a hack to make alpha values roughly match what their FF_TRANSMASK equivalent would be
+			// See if there's a better way of doing this
+			Surf.PolyColor.s.alpha = min(FixedMul(newalpha, Surf.PolyColor.s.alpha == 0xFF ? 256 : Surf.PolyColor.s.alpha), 0xFF);
 		}
 
 		// don't forget to enable the depth test because we can't do this
@@ -1361,37 +1478,8 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 
 		if (gpatch && hwrPatch && hwrPatch->mipmap->format) // else if meant that if a texture couldn't be loaded, it would just end up using something else's texture
 		{
-			INT32 skinnum = TC_DEFAULT;
+			INT32 skinnum = R_GetTranslationIndexForThing(spr->mobj, spr->mobj->color);
 
-			if ((spr->mobj->flags & (MF_ENEMY|MF_BOSS)) && (spr->mobj->flags2 & MF2_FRET) && !(spr->mobj->flags & MF_GRENADEBOUNCE) && (leveltime & 1)) // Bosses "flash"
-			{
-				if (spr->mobj->type == MT_CYBRAKDEMON || spr->mobj->colorized)
-					skinnum = TC_ALLWHITE;
-				else if (spr->mobj->type == MT_METALSONIC_BATTLE)
-					skinnum = TC_METALSONIC;
-				else
-					skinnum = TC_BOSS;
-			}
-			else if ((skincolornum_t)spr->mobj->color != SKINCOLOR_NONE)
-			{
-				if (spr->mobj->colorized)
-					skinnum = TC_RAINBOW;
-				else if (spr->mobj->player && spr->mobj->player->dashmode >= DASHMODE_THRESHOLD
-					&& (spr->mobj->player->charflags & SF_DASHMODE)
-					&& ((leveltime/2) & 1))
-				{
-					if (spr->mobj->player->charflags & SF_MACHINE)
-						skinnum = TC_DASHMODE;
-					else
-						skinnum = TC_RAINBOW;
-				}
-				else if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
-					skinnum = ((skin_t*)spr->mobj->skin)->skinnum;
-				else
-					skinnum = TC_DEFAULT;
-			}
-
-			// Translation or skin number found
 			HWR_GetBlendedTexture(gpatch, blendgpatch, skinnum, spr->colormap, (skincolornum_t)spr->mobj->color);
 		}
 		else // Sprite
@@ -1414,18 +1502,28 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			tics = (float)spr->mobj->anim_duration;
 		}
 
+		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
+			sprdef = P_GetSkinSpritedef(spr->mobj->skin, spr->mobj->sprite2);
+		else
+			sprdef = &sprites[spr->mobj->sprite];
+
 		frame = (spr->mobj->frame & FF_FRAMEMASK);
-		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY && md2->model->spr2frames)
+		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
 		{
-			spr2 = HWR_GetModelSprite2(md2, spr->mobj->skin, spr->mobj->sprite2, spr->mobj->player);
-			mod = md2->model->spr2frames[spr2].numframes;
+			spr2 = HWR_GetModelSprite2Num(md2, spr->mobj->skin, spr->mobj->sprite2, spr->mobj->player);
+			spr2frames = HWR_GetModelSprite2Frames(md2, spr2);
+		}
+		if (spr2frames)
+		{
+			spritedef_t *defaultdef = P_GetSkinSpritedef(spr->mobj->skin, spr2);
+			mod = spr2frames->numframes;
 #ifndef DONTHIDEDIFFANIMLENGTH // by default, different anim length is masked by the mod
-			if (mod > (INT32)((skin_t *)spr->mobj->skin)->sprites[spr2].numframes)
-				mod = ((skin_t *)spr->mobj->skin)->sprites[spr2].numframes;
+			if (mod > (INT32)defaultdef->numframes)
+				mod = defaultdef->numframes;
 #endif
 			if (!mod)
 				mod = 1;
-			frame = md2->model->spr2frames[spr2].frames[frame%mod];
+			frame = spr2frames->frames[frame % mod];
 		}
 		else
 		{
@@ -1445,13 +1543,18 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			if (durs > INTERPOLERATION_LIMIT)
 				durs = INTERPOLERATION_LIMIT;
 
-			if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY && md2->model->spr2frames)
+			if (spr2frames)
 			{
-				if (HWR_CanInterpolateSprite2(&md2->model->spr2frames[spr2])
+				UINT16 next_spr2 = P_GetStateSprite2(&states[spr->mobj->state->nextstate]);
+
+				// Add or remove SPR2F_SUPER based on certain conditions
+				next_spr2 = P_ApplySuperFlagToSprite2(next_spr2, spr->mobj);
+
+				if (HWR_CanInterpolateSprite2(spr2frames)
 					&& (spr->mobj->frame & FF_ANIMATE
 					|| (spr->mobj->state->nextstate != S_NULL
 					&& states[spr->mobj->state->nextstate].sprite == SPR_PLAY
-					&& ((P_GetSkinSprite2(spr->mobj->skin, (((spr->mobj->player && spr->mobj->player->powers[pw_super]) ? FF_SPR2SUPER : 0)|states[spr->mobj->state->nextstate].frame) & FF_FRAMEMASK, spr->mobj->player) == spr->mobj->sprite2)))))
+					&& ((P_GetSkinSprite2(spr->mobj->skin, next_spr2, spr->mobj->player) == spr->mobj->sprite2)))))
 				{
 					nextFrame = (spr->mobj->frame & FF_FRAMEMASK) + 1;
 					if (nextFrame >= mod)
@@ -1462,7 +1565,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 							nextFrame = 0;
 					}
 					if (frame || !(spr->mobj->state->frame & FF_SPR2ENDSTATE))
-						nextFrame = md2->model->spr2frames[spr2].frames[nextFrame];
+						nextFrame = spr2frames->frames[nextFrame];
 					else
 						nextFrame = -1;
 				}
@@ -1498,11 +1601,6 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		else
 			p.z = FIXED_TO_FLOAT(interp.z);
 
-		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
-			sprdef = &((skin_t *)spr->mobj->skin)->sprites[spr->mobj->sprite2];
-		else
-			sprdef = &sprites[spr->mobj->sprite];
-
 		sprframe = &sprdef->spriteframes[spr->mobj->frame & FF_FRAMEMASK];
 
 		if (sprframe->rotate || papersprite)
@@ -1525,6 +1623,8 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			if (anglef)
 			{
 				fixed_t camAngleDiff = AngleFixed(viewangle) - FLOAT_TO_FIXED(p.angley); // dumb reconversion back, I know
+
+				anglef *= flip ? -1 : 1; // Adjust for flipping
 
 				p.rollangle = FIXED_TO_FLOAT(anglef);
 				p.roll = true;
@@ -1550,7 +1650,9 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		p.flip = atransform.flip;
 		p.mirror = atransform.mirror;
 
-		HWD.pfnSetShader(SHADER_MODEL);	// model shader
+		if (HWR_UseShader())
+			HWD.pfnSetShader(HWR_GetShaderFromTarget(SHADER_MODEL));
+		
 		{
 			float this_scale = FIXED_TO_FLOAT(interp.scale);
 
@@ -1560,6 +1662,16 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			float ox = xs * FIXED_TO_FLOAT(interp.spritexoffset);
 			float oy = ys * FIXED_TO_FLOAT(interp.spriteyoffset);
 
+			SINT8 flipoffset = 1;
+
+			if ((spr->mobj->renderflags & RF_FLIPOFFSETS) && flip)
+			{
+				flipoffset = -1;
+			}
+
+			ox *= flipoffset;
+			oy *= flipoffset;
+
 			// offset perpendicular to the camera angle
 			p.x -= ox * gl_viewsin;
 			p.y += ox * gl_viewcos;
@@ -1568,7 +1680,6 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, md2->scale * xs, md2->scale * ys, flip, hflip, &Surf);
 		}
 	}
-
 	return true;
 }
 

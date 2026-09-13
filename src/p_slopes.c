@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2009      by Stephen McGranahan.
-// Copyright (C) 2015-2023 by Sonic Team Junior.
+// Copyright (C) 2015-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,6 +27,8 @@
 
 pslope_t *slopelist = NULL;
 UINT16 slopecount = 0;
+
+static void P_UpdateMidtextureSlopesForSector(sector_t *sector);
 
 // Calculate line normal
 void P_CalculateSlopeNormal(pslope_t *slope)
@@ -98,7 +100,7 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 				);
 
 		// NOTE: FV3_Magnitude() doesn't work properly in some cases, and chaining FixedHypot() seems to give worse results.
-		m = R_PointToDist2(0, 0, R_PointToDist2(0, 0, slope->normal.x, slope->normal.y), slope->normal.z);
+		m = GetDistance3D(0, 0, 0, slope->normal.x, slope->normal.y, slope->normal.z);
 
 		// Invert normal if it's facing down.
 		if (slope->normal.z < 0)
@@ -107,7 +109,7 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 		FV3_Divide(&slope->normal, m);
 
 		// Get direction vector
-		m = FixedHypot(slope->normal.x, slope->normal.y);
+		m = GetDistance2D(0, 0, slope->normal.x, slope->normal.y);
 		slope->d.x = -FixedDiv(slope->normal.x, m);
 		slope->d.y = -FixedDiv(slope->normal.y, m);
 
@@ -151,7 +153,7 @@ static void ReconfigureViaConstants (pslope_t *slope, const double pa, const dou
 		FV3_Negate(normal);
 
 	// Get direction vector
-	m = FixedHypot(normal->x, normal->y);
+	m = GetDistance2D(0, 0, normal->x, normal->y);
 	slope->d.x = -FixedDiv(normal->x, m);
 	slope->d.y = -FixedDiv(normal->y, m);
 
@@ -180,7 +182,7 @@ void T_DynamicSlopeLine (dynlineplanethink_t* th)
 	pslope_t* slope = th->slope;
 	line_t* srcline = th->sourceline;
 
-	fixed_t zdelta;
+	fixed_t zdelta, oldoz = slope->o.z;
 
 	switch(th->type) {
 	case DP_FRONTFLOOR:
@@ -207,11 +209,14 @@ void T_DynamicSlopeLine (dynlineplanethink_t* th)
 		return;
 	}
 
-	if (slope->zdelta != FixedDiv(zdelta, th->extent)) {
+	if (slope->zdelta != FixedDiv(zdelta, th->extent) || oldoz != slope->o.z) {
 		slope->zdelta = FixedDiv(zdelta, th->extent);
 		slope->zangle = R_PointToAngle2(0, 0, th->extent, -zdelta);
 		slope->moved = true;
 		P_CalculateSlopeNormal(slope);
+		P_UpdateMidtextureSlopesForSector(srcline->frontsector);
+		if (srcline->backsector)
+			P_UpdateMidtextureSlopesForSector(srcline->backsector);
 	}
 }
 
@@ -232,12 +237,18 @@ void T_DynamicSlopeVert (dynvertexplanethink_t* th)
 	}
 
 	ReconfigureViaVertexes(th->slope, th->vex[0], th->vex[1], th->vex[2]);
+
+	for (i = 0; i < 3; i++)
+	{
+		if (th->secs[i])
+			P_UpdateMidtextureSlopesForSector(th->secs[i]);
+	}
 }
 
 static inline void P_AddDynLineSlopeThinker (pslope_t* slope, dynplanetype_t type, line_t* sourceline, fixed_t extent)
 {
 	dynlineplanethink_t* th = Z_Calloc(sizeof (*th), PU_LEVSPEC, NULL);
-	th->thinker.function.acp1 = (actionf_p1)T_DynamicSlopeLine;
+	th->thinker.function = (actionf_p1)T_DynamicSlopeLine;
 	th->slope = slope;
 	th->type = type;
 	th->sourceline = sourceline;
@@ -253,7 +264,7 @@ static inline void P_AddDynVertexSlopeThinker (pslope_t* slope, const INT16 tags
 	dynvertexplanethink_t* th = Z_Calloc(sizeof (*th), PU_LEVSPEC, NULL);
 	size_t i;
 	INT32 l;
-	th->thinker.function.acp1 = (actionf_p1)T_DynamicSlopeVert;
+	th->thinker.function = (actionf_p1)T_DynamicSlopeVert;
 	th->slope = slope;
 
 	for (i = 0; i < 3; i++) {
@@ -319,13 +330,13 @@ static fixed_t GetExtent(sector_t *sector, line_t *line)
 			continue;
 
 		P_ClosestPointOnLine(li->v1->x, li->v1->y, line, &tempv);
-		dist = R_PointToDist2(tempv.x, tempv.y, li->v1->x, li->v1->y);
+		dist = GetDistance2D(tempv.x, tempv.y, li->v1->x, li->v1->y);
 		if(dist > fardist)
 			fardist = dist;
 
 		// Okay, maybe do it for v2 as well?
 		P_ClosestPointOnLine(li->v2->x, li->v2->y, line, &tempv);
-		dist = R_PointToDist2(tempv.x, tempv.y, li->v2->x, li->v2->y);
+		dist = GetDistance2D(tempv.x, tempv.y, li->v2->x, li->v2->y);
 		if(dist > fardist)
 			fardist = dist;
 	}
@@ -389,7 +400,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 	}
 
 	{
-		fixed_t len = R_PointToDist2(0, 0, line->dx, line->dy);
+		fixed_t len = GetDistance2D(0, 0, line->dx, line->dy);
 		nx = FixedDiv(line->dy, len);
 		ny = -FixedDiv(line->dx, len);
 	}
@@ -654,6 +665,7 @@ static void SpawnVertexSlopes(void)
 		else
 			v3 = l2->v2;
 
+		// Set Floor Slope
 		if (v1->floorzset || v2->floorzset || v3->floorzset)
 		{
 			vector3_t vtx[3] = {
@@ -663,9 +675,14 @@ static void SpawnVertexSlopes(void)
 			pslope_t *slop = Slope_Add(0);
 			sc->f_slope = slop;
 			sc->hasslope = true;
+
+			if (sc->specialflags & SSF_NOPHYSICSFLOOR)
+				sc->f_slope->flags |= SL_NOPHYSICS;
+
 			ReconfigureViaVertexes(slop, vtx[0], vtx[1], vtx[2]);
 		}
 
+		// Set Ceiling Slope
 		if (v1->ceilingzset || v2->ceilingzset || v3->ceilingzset)
 		{
 			vector3_t vtx[3] = {
@@ -675,6 +692,10 @@ static void SpawnVertexSlopes(void)
 			pslope_t *slop = Slope_Add(0);
 			sc->c_slope = slop;
 			sc->hasslope = true;
+
+			if (sc->specialflags & SSF_NOPHYSICSCEILING)
+				sc->c_slope->flags |= SL_NOPHYSICS;		
+
 			ReconfigureViaVertexes(slop, vtx[0], vtx[1], vtx[2]);
 		}
 	}
@@ -758,6 +779,111 @@ pslope_t *P_MakeSlopeViaEquationConstants(const double a, const double b, const 
 	return ret;
 }
 
+static pslope_t *P_GetReferenceSlopeForMidtexture(line_t *line)
+{
+	if (line->flags & ML_MIDPEG)
+	{
+		// Line has ML_MIDPEG, so use the floor slope
+		fixed_t frontheight = P_GetSectorFloorZAt(line->frontsector, line->v1->x, line->v1->y);
+		fixed_t backheight = P_GetSectorFloorZAt(line->backsector, line->v1->x, line->v1->y);
+
+		if (frontheight > backheight)
+		{
+			return line->frontsector->f_slope;
+		}
+		else
+		{
+			return line->backsector->f_slope;
+		}
+	}
+	else
+	{
+		// Line does not have ML_MIDPEG, so use the ceiling slope
+		fixed_t frontheight = P_GetSectorCeilingZAt(line->frontsector, line->v1->x, line->v1->y);
+		fixed_t backheight = P_GetSectorCeilingZAt(line->backsector, line->v1->x, line->v1->y);
+
+		if (frontheight < backheight)
+		{
+			return line->frontsector->c_slope;
+		}
+		else
+		{
+			return line->backsector->c_slope;
+		}
+	}
+
+	return NULL;
+}
+
+// Updates a slope for a solid midtexture based on the slope of the sector it's in.
+static void P_UpdateSolidMidtextureSlope(line_t *line, pslope_t *ref)
+{
+	pslope_t *slope = line->midtexslope;
+
+	if (ref == NULL)
+		return;
+
+	// Set origin
+	vector3_t origin;
+	origin.x = line->v1->x;
+	origin.y = line->v1->y;
+	origin.z = P_GetSlopeZAt(ref, origin.x, origin.y);
+	FV3_Copy(&slope->o, &origin);
+
+	// Get where the line ends
+	vector3_t point;
+	point.x = line->v2->x;
+	point.y = line->v2->y;
+	point.z = P_GetSlopeZAt(ref, point.x, point.y);
+
+	// Get length of the line
+	fixed_t extent = GetDistance2D(0, 0, line->dx, line->dy);
+
+	// Precalculate variables
+	slope->zdelta = FixedDiv(origin.z - point.z, extent);
+	slope->zangle = R_PointToAngle2(0, origin.z, extent, point.z);
+	slope->xydirection = line->angle;
+
+	// Precalculate the direction
+	vector2_t dir;
+	dir.x = FixedMul(FINECOSINE(slope->zangle >> ANGLETOFINESHIFT), FINECOSINE((slope->xydirection+ANGLE_180) >> ANGLETOFINESHIFT));
+	dir.y = FixedMul(FINECOSINE(slope->zangle >> ANGLETOFINESHIFT), FINESINE((slope->xydirection+ANGLE_180) >> ANGLETOFINESHIFT));
+	FV2_Copy(&slope->d, &dir);
+
+	P_CalculateSlopeNormal(slope);
+
+	// Calling P_CalculateSlopeVectors is not necessary.
+	slope->moved = true;
+}
+
+// Goes through every line in the sector and updates the midtexture slope if it is present
+static void P_UpdateMidtextureSlopesForSector(sector_t *sector)
+{
+	for (size_t i = 0; i < sector->linecount; i++)
+	{
+		if (sector->lines[i]->midtexslope != NULL)
+			P_UpdateSolidMidtextureSlope(sector->lines[i], P_GetReferenceSlopeForMidtexture(sector->lines[i]));
+	}
+}
+
+// Creates a solid midtexture slope for the line if possible
+static void P_CreateSolidMidtextureSlope(line_t *line)
+{
+	if (line->backsector == NULL) // Ignore single-sided lines (of course)
+		return;
+
+	if ((line->flags & ML_MIDSOLID) == 0) // Ignore if the midtexture is not solid
+		return;
+
+	pslope_t *ref = P_GetReferenceSlopeForMidtexture(line);
+	if (ref)
+	{
+		line->midtexslope = Slope_Add(ref->flags & SL_NOPHYSICS);
+
+		P_UpdateSolidMidtextureSlope(line, ref);
+	}
+}
+
 /// Initializes and reads the slopes from the map data.
 void P_SpawnSlopes(const boolean fromsave) {
 	size_t i;
@@ -785,14 +911,21 @@ void P_SpawnSlopes(const boolean fromsave) {
 
 	/// Copies slopes from tagged sectors via line specials.
 	/// \note Doesn't actually copy, but instead they share the same pointers.
+	// Also, creates midtexture slopes.
 	for (i = 0; i < numlines; i++)
-		switch (lines[i].special)
+	{
+		line_t *line = &lines[i];
+
+		switch (line->special)
 		{
 			case 720:
-				P_CopySectorSlope(&lines[i]);
+				P_CopySectorSlope(line);
 			default:
 				break;
 		}
+
+		P_CreateSolidMidtextureSlope(line);
+	}
 }
 
 /// Initializes slopes.
@@ -810,10 +943,10 @@ void P_InitSlopes(void)
 // Returns the height of the sloped plane at (x, y) as a fixed_t
 fixed_t P_GetSlopeZAt(const pslope_t *slope, fixed_t x, fixed_t y)
 {
-	fixed_t dist = FixedMul(x - slope->o.x, slope->d.x) +
-	               FixedMul(y - slope->o.y, slope->d.y);
+	fixed_t dist = FixedMul(x - slope->o.x, slope->d.x) / 2 +
+	               FixedMul(y - slope->o.y, slope->d.y) / 2;
 
-	return slope->o.z + FixedMul(dist, slope->zdelta);
+	return slope->o.z + FixedMul(dist, slope->zdelta) * 2;
 }
 
 // Like P_GetSlopeZAt but falls back to z if slope is NULL
@@ -923,15 +1056,37 @@ fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope)
 {
 	vector3_t slopemom, axis;
 	angle_t ang;
+	angle_t advanceAng = ANG15;
+	const boolean upwards = (slope->zangle < ANGLE_180);
 
 	if (slope->flags & SL_NOPHYSICS)
 		return 0;
 
 	// If there's physics, time for launching.
 	// Doesn't kill the vertical momentum as much as P_SlopeLaunch does.
-	ang = slope->zangle + ANG15*((slope->zangle > 0) ? 1 : -1);
-	if (ang > ANGLE_90 && ang < ANGLE_180)
-		ang = ((slope->zangle > 0) ? ANGLE_90 : InvAngle(ANGLE_90)); // hard cap of directly upwards
+	ang = slope->zangle;
+
+	// for the time being, let's pretend the slope inclines upwards only
+	if (!upwards)
+	{
+		ang += ANGLE_180;
+	}
+
+	// angles past 90 degrees need to shrink to get closer to 90 degrees
+	if (ang > ANGLE_90)
+	{
+		advanceAng = InvAngle(advanceAng);
+	}
+
+	// now we set the actual final angle
+	if ((ang > ANGLE_90) != (ang + advanceAng > ANGLE_90)) // does advancing the angle push it past directly upwards?
+	{
+		ang = (upwards ? ANGLE_90 : InvAngle(ANGLE_90)); // hard cap of directly upwards
+	}
+	else
+	{
+		ang = slope->zangle + advanceAng;
+	}
 
 	slopemom.x = mo->momx;
 	slopemom.y = mo->momy;

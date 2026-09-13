@@ -1,4 +1,4 @@
-version: 2.2.14.{branch}-{build}
+version: 2.2.16.{branch}-{build}
 os: MinGW
 
 environment:

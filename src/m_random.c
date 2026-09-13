@@ -193,9 +193,9 @@ INT32 M_RandomKey(INT32 a)
   */
 INT32 M_RandomRange(INT32 a, INT32 b)
 {
-  	if (b < a)
+	if (b < a)
 	{
-    	INT32 temp;
+		INT32 temp;
 
 		temp = a;
 		a = b;
@@ -332,8 +332,6 @@ INT32 P_RandomRangeD(const char *rfile, INT32 rline, INT32 a, INT32 b)
 #endif
 	return (INT32)(((INT64)__internal_prng__() * (b-a+1)) >> FRACBITS) + a;
 }
-
-
 
 // ----------------------
 // PRNG seeds & debugging

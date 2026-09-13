@@ -20,6 +20,7 @@ boolean deh_loaded = false;
 boolean gamedataadded = false;
 boolean titlechanged = false;
 boolean introchanged = false;
+boolean bootmapchanged = false;
 
 static int dbg_line;
 static INT32 deh_num_warning = 0;
@@ -192,11 +193,14 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 	INT32 i;
 
 	if (!deh_loaded)
+	{
 		initfreeslots();
+		deh_loaded = true;
+	}
 
 	deh_num_warning = 0;
 
-	gamedataadded = titlechanged = introchanged = false;
+	gamedataadded = titlechanged = introchanged = bootmapchanged = false;
 
 	// it doesn't test the version of SRB2 and version of dehacked file
 	dbg_line = -1; // start at -1 so the first line is 0.
@@ -372,18 +376,32 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 				}
 				else if (fastcmp(word, "LEVEL"))
 				{
-					// Support using the actual map name,
-					// i.e., Level AB, Level FZ, etc.
+					boolean is_valid_level = false;
 
-					// Convert to map number
-					if (word2[0] >= 'A' && word2[0] <= 'Z')
-						i = M_MapNumber(word2[0], word2[1]);
+					if (G_IsValidMapName(word2))
+					{
+						INT16 mapnum = G_GetMapNumber(word2);
+						if (mapnum != 0)
+						{
+							i = mapnum;
+							is_valid_level = true;
+						}
+					}
+					else
+					{
+						is_valid_level = true;
+					}
 
-					if (i > 0 && i <= NUMMAPS)
+					if (!is_valid_level)
+					{
+						deh_warning("Unknown level %s", word2);
+						ignorelines(f);
+					}
+					else if (i > 0 && i <= numgamemaps)
 						readlevelheader(f, i);
 					else
 					{
-						deh_warning("Level number %d out of range (1 - %d)", i, NUMMAPS);
+						deh_warning("Level number %d out of range (1 - %d)", i, numgamemaps);
 						ignorelines(f);
 					}
 				}
@@ -587,7 +605,12 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 
 	if (gamestate == GS_TITLESCREEN)
 	{
-		if (introchanged)
+		if (bootmapchanged && bootmap)
+		{
+			menuactive = false;
+			D_MapChange(bootmap, gametype, ultimatemode, true, 0, false, false);
+		}
+		else if (introchanged)
 		{
 			menuactive = false;
 			I_UpdateMouseGrab();
@@ -605,14 +628,10 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 	if (deh_num_warning)
 	{
 		CONS_Printf(M_GetText("%d warning%s in the SOC lump\n"), deh_num_warning, deh_num_warning == 1 ? "" : "s");
-		if (devparm) {
+		if (devparm)
 			I_Error("%s%s",va(M_GetText("%d warning%s in the SOC lump\n"), deh_num_warning, deh_num_warning == 1 ? "" : "s"), M_GetText("See log.txt for details.\n"));
-			//while (!I_GetKey())
-				//I_OsPolling();
-		}
 	}
 
-	deh_loaded = true;
 	Z_Free(s);
 }
 

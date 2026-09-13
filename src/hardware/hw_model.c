@@ -292,6 +292,7 @@ void LoadModelSprite2(model_t *model)
 {
 	INT32 i;
 	modelspr2frames_t *spr2frames = NULL;
+	modelspr2frames_t *superspr2frames = NULL;
 	INT32 numframes = model->meshes[0].numFrames;
 	char *framename = model->frameNames;
 
@@ -335,25 +336,33 @@ void LoadModelSprite2(model_t *model)
 				spr2idx = 0;
 				while (spr2idx < free_spr2)
 				{
+					modelspr2frames_t *frames = NULL;
 					if (!memcmp(spr2names[spr2idx], name, 4))
 					{
 						if (!spr2frames)
-							spr2frames = (modelspr2frames_t*)Z_Calloc(sizeof(modelspr2frames_t)*NUMPLAYERSPRITES*2, PU_STATIC, NULL);
+							spr2frames = (modelspr2frames_t*)Z_Calloc(sizeof(modelspr2frames_t)*NUMPLAYERSPRITES, PU_STATIC, NULL);
+						frames = spr2frames;
+
 						if (super)
-							spr2idx |= FF_SPR2SUPER;
+						{
+							if (!superspr2frames)
+								superspr2frames = (modelspr2frames_t*)Z_Calloc(sizeof(modelspr2frames_t)*NUMPLAYERSPRITES, PU_STATIC, NULL);
+							frames = superspr2frames;
+						}
+
 						if (framechars[0])
 						{
 							frame = atoi(framechars);
-							if (spr2frames[spr2idx].numframes < frame+1)
-								spr2frames[spr2idx].numframes = frame+1;
+							if (frames[spr2idx].numframes < frame+1)
+								frames[spr2idx].numframes = frame+1;
 						}
 						else
 						{
-							frame = spr2frames[spr2idx].numframes;
-							spr2frames[spr2idx].numframes++;
+							frame = frames[spr2idx].numframes;
+							frames[spr2idx].numframes++;
 						}
-						spr2frames[spr2idx].frames[frame] = i;
-						spr2frames[spr2idx].interpolate = interpolate;
+						frames[spr2idx].frames[frame] = i;
+						frames[spr2idx].interpolate = interpolate;
 						break;
 					}
 					spr2idx++;
@@ -366,7 +375,10 @@ void LoadModelSprite2(model_t *model)
 
 	if (model->spr2frames)
 		Z_Free(model->spr2frames);
+	if (model->superspr2frames)
+		Z_Free(model->superspr2frames);
 	model->spr2frames = spr2frames;
+	model->superspr2frames = superspr2frames;
 }
 
 //

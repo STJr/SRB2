@@ -48,7 +48,7 @@ typedef struct visplane_s
 	UINT16 padbottomstart, bottom[MAXVIDWIDTH], padbottomend;
 	INT32 high, low; // R_PlaneBounds should set these.
 
-	fixed_t xoffs, yoffs; // Scrolling flats.
+	INT64 xoffs, yoffs; // Scrolling flats.
 	fixed_t xscale, yscale;
 
 	sector_t *sector;
@@ -85,7 +85,7 @@ void R_DrawSinglePlane(visplane_t *pl);
 
 // Calculates the slope vectors needed for tilted span drawing.
 void R_SetSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle);
-void R_SetScaledSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xs, fixed_t ys, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle);
+void R_SetScaledSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xs, fixed_t ys, INT64 xoff, INT64 yoff, angle_t angle, angle_t plangle);
 
 typedef struct planemgr_s
 {

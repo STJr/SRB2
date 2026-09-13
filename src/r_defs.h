@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -24,6 +24,10 @@
 #include "p_mobj.h"
 
 #include "screen.h" // MAXVIDWIDTH, MAXVIDHEIGHT
+
+#ifdef HWRENDER
+#include "m_aatree.h"
+#endif
 
 #include "taglist.h"
 
@@ -58,6 +62,8 @@ typedef UINT8 lighttable_t;
 #define CMF_FADEFULLBRIGHTSPRITES  1
 #define CMF_FOG 4
 
+#define TEXTURE_255_IS_TRANSPARENT
+
 // ExtraColormap type. Use for extra_colormaps from now on.
 typedef struct extracolormap_s
 {
@@ -70,6 +76,14 @@ typedef struct extracolormap_s
 	INT32 fadergba; // The colour the colourmaps fade to
 
 	lighttable_t *colormap;
+
+#ifdef HWRENDER
+	struct {
+		UINT32 id; // The id of the hardware lighttable. Zero means it does not exist yet.
+		RGBA_t *data; // The texture data of the hardware lighttable.
+		boolean needs_update; // If the colormap changed recently or not.
+	} gl_lighttable;
+#endif
 
 #ifdef EXTRACOLORMAPLUMPS
 	lumpnum_t lump; // for colormap lump matching, init to LUMPERROR
@@ -233,9 +247,8 @@ typedef struct sectorportal_s
 		struct sector_s *sector;
 		struct mobj_s *mobj;
 	};
-	struct {
-		fixed_t x, y;
-	} origin;
+	struct sector_s *target;
+	boolean ceiling;
 } sectorportal_t;
 
 typedef struct ffloor_s
@@ -351,7 +364,7 @@ typedef struct pslope_s
 
 	double dzdelta;
 
-	boolean moved : 1;
+	boolean moved;
 
 	UINT8 flags; // Slope options
 } pslope_t;
@@ -398,6 +411,8 @@ typedef enum
 	SSF_ROPEHANG = 1<<18,
 	SSF_JUMPFLIP = 1<<19,
 	SSF_GRAVITYOVERRIDE = 1<<20, // combine with MSF_GRAVITYFLIP
+	SSF_NOPHYSICSFLOOR = 1<<21,
+	SSF_NOPHYSICSCEILING = 1<<22,
 } sectorspecialflags_t;
 
 typedef enum
@@ -543,6 +558,8 @@ typedef struct sector_s
 	// portals
 	UINT32 portal_floor;
 	UINT32 portal_ceiling;
+
+	struct customargs_s* customargs;
 } sector_t;
 
 //
@@ -575,7 +592,7 @@ typedef struct line_s
 	angle_t angle; // Precalculated angle between dx and dy
 
 	// Animation related.
-	INT16 flags;
+	UINT32 flags;
 	INT16 special;
 	taglist_t tags;
 	INT32 args[NUMLINEARGS];
@@ -603,7 +620,16 @@ typedef struct line_s
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
 
 	UINT32 secportal; // transferred sector portal
+
+	struct pslope_s *midtexslope;
+	struct customargs_s *customargs;
 } line_t;
+
+// Don't make available to Lua or I will find where you live
+typedef enum
+{
+	SIDEFLAG_CLIP_MIDTEX     = 1 << 0, // Like the line counterpart, but only for this side.
+} sideflags_t;
 
 typedef struct
 {
@@ -613,12 +639,20 @@ typedef struct
 	// add this to the calculated texture top
 	fixed_t rowoffset;
 
-	// per-texture offsets for UDMF
+	// per-texture offsets
 	fixed_t offsetx_top, offsetx_mid, offsetx_bottom;
 	fixed_t offsety_top, offsety_mid, offsety_bottom;
 
 	fixed_t scalex_top, scalex_mid, scalex_bottom;
 	fixed_t scaley_top, scaley_mid, scaley_bottom;
+
+	// Rendering-related flags
+	UINT16 flags;
+
+	// per-wall lighting for UDMF
+	// TODO: implement per-texture lighting
+	INT16 light, light_top, light_mid, light_bottom;
+	boolean lightabsolute, lightabsolute_top, lightabsolute_mid, lightabsolute_bottom;
 
 	// Texture indices.
 	// We do not maintain names here.
@@ -634,6 +668,7 @@ typedef struct
 	INT16 repeatcnt; // # of times to repeat midtexture
 
 	extracolormap_t *colormap_data; // storage for colormaps; not applied to sectors.
+	struct customargs_s* customargs;
 } side_t;
 
 //
@@ -744,9 +779,6 @@ typedef struct seg_s
 	lightmap_t *lightmaps; // for static lightmap
 #endif
 
-	// Why slow things down by calculating lightlists for every thick side?
-	size_t numlights;
-	r_lightlist_t *rlights;
 	polyobj_t *polyseg;
 	boolean dontrenderme;
 	boolean glseg;
@@ -766,7 +798,7 @@ typedef struct
 
 	// If NF_SUBSECTOR its a subsector.
 	UINT16 children[2];
-} node_t;
+} bspnode_t;
 
 #if defined(_MSC_VER)
 #pragma pack(1)
@@ -830,6 +862,7 @@ typedef struct drawseg_s
 	INT16 *sprtopclip;
 	INT16 *sprbottomclip;
 	fixed_t *maskedtexturecol;
+	fixed_t *maskedtextureheight; // For handling sloped midtextures
 	fixed_t *invscale;
 
 	struct visplane_s *ffloorplanes[MAXFFLOORS];
@@ -841,19 +874,8 @@ typedef struct drawseg_s
 
 	UINT8 portalpass; // if > 0 and <= portalrender, do not affect sprite clipping
 
-	fixed_t maskedtextureheight[MAXVIDWIDTH]; // For handling sloped midtextures
-
 	vertex_t leftpos, rightpos; // Used for rendering FOF walls with slopes
 } drawseg_t;
-
-typedef enum
-{
-	PALETTE         = 0,  // 1 byte is the index in the doom palette (as usual)
-	INTENSITY       = 1,  // 1 byte intensity
-	INTENSITY_ALPHA = 2,  // 2 byte: alpha then intensity
-	RGB24           = 3,  // 24 bit rgb
-	RGBA32          = 4,  // 32 bit rgba
-} pic_mode_t;
 
 #ifdef ROTSPRITE
 typedef struct
@@ -979,6 +1001,8 @@ typedef struct
 	rotsprite_t *rotated[16]; // Rotated patches
 #endif
 } spriteframe_t;
+
+#define MAXFRAMENUM 256
 
 //
 // A sprite definition:  a number of animation frames.

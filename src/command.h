@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,6 +15,7 @@
 
 #include <stdio.h>
 #include "doomdef.h"
+#include "p_saveg.h"
 
 //===================================
 // Command buffer & command execution
@@ -64,6 +65,9 @@ void COM_ImmedExecute(const char *ptext);
 
 // Execute commands in buffer, flush them
 void COM_BufExecute(void);
+
+// Executes a script from a file
+boolean COM_ExecFile(const char *scriptname, com_flags_t flags, boolean silent);
 
 // As above; and progress the wait timer.
 void COM_BufTicker(void);
@@ -121,6 +125,7 @@ typedef enum
                    // used on menus
 	CV_CHEAT = 2048, // Don't let this be used in multiplayer unless cheats are on.
 	CV_ALLOWLUA = 4096,/* Let this be called from Lua */
+	CV_MENU = 8192, // Lua exclusive flag, to give choice to modders regarding custom options menu.
 } cvflags_t;
 
 typedef struct CV_PossibleValue_s
@@ -129,14 +134,19 @@ typedef struct CV_PossibleValue_s
 	const char *strvalue;
 } CV_PossibleValue_t;
 
-typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NULL
+typedef struct consvar_s //NULL, NULL, NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NULL
 {
 	const char *name;
 	const char *defaultvalue;
+	
 	INT32 flags;            // flags see cvflags_t above
 	CV_PossibleValue_t *PossibleValue; // table of possible values
 	void (*func)(void);   // called on change, if CV_CALL set
 	boolean (*can_change)(const char*);   // called before change, if CV_CALL set
+
+	const char* displayname;
+	const char* category;
+
 	INT32 value;            // for INT32 and fixed_t
 	const char *string;   // value in string
 	char *zstring;        // Either NULL or same as string.
@@ -159,10 +169,10 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 
 /* name, defaultvalue, flags, PossibleValue, func */
 #define CVAR_INIT( ... ) \
-{ __VA_ARGS__, NULL, 0, NULL, NULL, {0, {NULL}}, 0U, (char)0, NULL }
+{ __VA_ARGS__, NULL, NULL, NULL, 0, NULL, NULL, {0, {NULL}}, 0U, (char)0, NULL}
 
 #define CVAR_INIT_WITH_CALLBACKS( ... ) \
-{ __VA_ARGS__, 0, NULL, NULL, {0, {NULL}}, 0U, (char)0, NULL }
+{ __VA_ARGS__, NULL, NULL, 0, NULL, NULL, {0, {NULL}}, 0U, (char)0, NULL}
 
 #ifdef OLD22DEMOCOMPAT
 typedef struct old_demo_var old_demo_var_t;
@@ -218,19 +228,19 @@ void CV_AddValue(consvar_t *var, INT32 increment);
 void CV_SaveVariables(FILE *f);
 
 // load/save gamesate (load and save option and for network join in game)
-void CV_SaveVars(UINT8 **p, boolean in_demo);
+void CV_SaveVars(save_t *p, boolean in_demo);
 
 #define CV_SaveNetVars(p) CV_SaveVars(p, false)
-void CV_LoadNetVars(UINT8 **p);
+void CV_LoadNetVars(save_t *p);
 
 // then revert after leaving a netgame
 void CV_RevertNetVars(void);
 
 #define CV_SaveDemoVars(p) CV_SaveVars(p, true)
-void CV_LoadDemoVars(UINT8 **p);
+void CV_LoadDemoVars(save_t *p);
 
 #ifdef OLD22DEMOCOMPAT
-void CV_LoadOldDemoVars(UINT8 **p);
+void CV_LoadOldDemoVars(save_t *p);
 #endif
 
 // reset cheat netvars after cheats is deactivated

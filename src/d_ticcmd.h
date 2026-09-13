@@ -26,23 +26,20 @@
 // Button/action code definitions.
 typedef enum
 {
-	// First 3 bits are weapon change info, DO NOT USE!
-	BT_WEAPONMASK = 0x07,  //our first three bits.
-	
-	BT_SHIELD     = 1<<3,  // shield or super action
+	// First 4 bits are weapon change info, DO NOT USE!
+	BT_WEAPONMASK = 0x0F, //our first four bits.
 
-	BT_WEAPONNEXT = 1<<4,  // select next weapon
-	BT_WEAPONPREV = 1<<5,  // select previous weapon
+	BT_WEAPONNEXT = 1<<4,
+	BT_WEAPONPREV = 1<<5,
 
-	BT_ATTACK     = 1<<6,  // shoot rings
-	BT_SPIN       = 1<<7,  // spin action
-	BT_CAMLEFT    = 1<<8,  // turn camera left
-	BT_CAMRIGHT   = 1<<9,  // turn camera right
-	BT_TOSSFLAG   = 1<<10, // toss flag or emeralds
-	BT_JUMP       = 1<<11, // jump action
-	BT_FIRENORMAL = 1<<12, // fire a normal ring no matter what
-	
-	// custom lua buttons
+	BT_ATTACK     = 1<<6, // shoot rings
+	BT_SPIN       = 1<<7,
+	BT_CAMLEFT    = 1<<8, // turn camera left
+	BT_CAMRIGHT   = 1<<9, // turn camera right
+	BT_TOSSFLAG   = 1<<10,
+	BT_JUMP       = 1<<11,
+	BT_FIRENORMAL = 1<<12, // Fire a normal ring no matter what
+
 	BT_CUSTOM1    = 1<<13,
 	BT_CUSTOM2    = 1<<14,
 	BT_CUSTOM3    = 1<<15,

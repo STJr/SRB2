@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2007-2016 by John "JTE" Muniz.
-// Copyright (C) 2011-2023 by Sonic Team Junior.
+// Copyright (C) 2011-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,8 +22,8 @@
 void B_UpdateBotleader(player_t *player)
 {
 	UINT32 i;
-	fixed_t dist;
-	fixed_t neardist = INT32_MAX;
+	INT32 dist;
+	INT32 neardist = INT32_MAX;
 	player_t *nearplayer = NULL;
 	//Find new botleader
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -41,7 +41,7 @@ void B_UpdateBotleader(player_t *player)
 			return;
 
 		//Update best candidate based on nearest distance
-		dist = R_PointToDist2(player->mo->x, player->mo->y, players[i].mo->x, players[i].mo->y);
+		dist = P_GetMobjLargeDistance2D(player->mo, players[i].mo);
 		if (neardist > dist)
 		{
 			neardist = dist;
@@ -72,11 +72,11 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	boolean jump_last = (bot->lastbuttons & BT_JUMP);
 	boolean spin_last = (bot->lastbuttons & BT_SPIN);
 
-	fixed_t dist = P_AproxDistance(sonic->x - tails->x, sonic->y - tails->y);
+	fixed_t dist = P_GetMobjDistance2D(sonic, tails);
 	fixed_t zdist = flip * (sonic->z - tails->z);
 	angle_t ang = sonic->angle;
-	fixed_t pmom = P_AproxDistance(sonic->momx, sonic->momy);
-	fixed_t bmom = P_AproxDistance(tails->momx, tails->momy);
+	fixed_t pmom = P_GetMobjMomentum2D(sonic);
+	fixed_t bmom = P_GetMobjMomentum2D(tails);
 	fixed_t followmax = 128 * 8 * scale; // Max follow distance before AI begins to enter catchup state
 	fixed_t followthres = 92 * scale; // Distance that AI will try to reach
 	fixed_t followmin = 32 * scale;
@@ -92,6 +92,11 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	// Lua can handle it!
 	if (LUA_HookBotAI(sonic, tails, cmd))
 		return;
+
+	// Bot AI isn't programmed in analog.
+	// fox 5/14/2026 - just set pflags to avoid mudding settings.
+	// Also set PF_AUTOBRAKE to decouple from P2 settings; bot seems to prefer it.
+	bot->pflags = (bot->pflags & ~PF_ANALOGMODE) | PF_DIRECTIONCHAR | PF_AUTOBRAKE;
 
 	// We can't follow Sonic if he's not around!
 	if (!sonic || sonic->health <= 0)
@@ -311,7 +316,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		else if (dist > followmin && abs(zdist) < 192*scale)
 		{
 			if (!_2d)
-				cmd->forwardmove = FixedHypot(pcmd->forwardmove, pcmd->sidemove);
+				cmd->forwardmove = GetDistance2D(0, 0, pcmd->forwardmove, pcmd->sidemove);
 			else
 				cmd->sidemove = pcmd->sidemove;
 		}
@@ -385,9 +390,6 @@ void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 			cmd->buttons |= BT_JUMP;
 		return;
 	}
-
-	// Bot AI isn't programmed in analog.
-	CV_SetValue(&cv_analog[1], false);
 
 	// Let Lua scripts build ticcmds
 	if (LUA_HookTiccmd(player, cmd, HOOK(BotTiccmd)))
@@ -531,7 +533,7 @@ boolean B_CheckRespawn(player_t *player)
 	}
 
 	// If you can't see Sonic, I guess we should?
-	if (!P_CheckSight(sonic, tails) && P_AproxDistance(P_AproxDistance(tails->x-sonic->x, tails->y-sonic->y), tails->z-sonic->z) > FixedMul(1024*FRACUNIT, tails->scale))
+	if (!P_CheckSight(sonic, tails) && P_AreMobjsFar3D(tails, sonic, FixedMul(1024*FRACUNIT, tails->scale)))
 		return true;
 	return false;
 }
@@ -589,8 +591,9 @@ void B_RespawnBot(INT32 playernum)
 	}
 	else
 		P_SetMobjState(tails, S_PLAY_FALL);
-	P_SetScale(tails, sonic->scale);
+	P_SetScale(tails, sonic->scale, false);
 	tails->destscale = sonic->destscale;
+	tails->old_scale = sonic->old_scale;
 }
 
 void B_HandleFlightIndicator(player_t *player)

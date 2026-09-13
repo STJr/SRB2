@@ -26,7 +26,7 @@ packet versions.
 If you change the struct or the meaning of a field
 therein, increment this number.
 */
-#define PACKETVERSION 5
+#define PACKETVERSION 6
 
 // Network play related stuff.
 // There is a data struct that stores network
@@ -89,6 +89,8 @@ typedef enum
 	PT_CLIENTJOIN,    // Client wants to join; used in start game.
 
 	PT_LOGIN,         // Login attempt from the client.
+	PT_LOGINCHALLENGE,// Challenge request sent to the client.
+	PT_LOGINAUTH,     // Challenge response from the client.
 
 	PT_TELLFILESNEEDED, // Client, to server: "what other files do I need starting from this number?"
 	PT_MOREFILESNEEDED, // Server, to client: "you need these (+ more on top of those)"
@@ -132,23 +134,6 @@ typedef struct
 	UINT8 numslots; // "Slots filled": Highest player number in use plus one.
 	ticcmd_t cmds[45];
 } ATTRPACK servertics_pak;
-
-typedef struct
-{
-	// Server launch stuffs
-	UINT8 serverplayer;
-	UINT8 totalslotnum; // "Slots": highest player number in use plus one.
-
-	tic_t gametic;
-	UINT8 clientnode;
-	UINT8 gamestate;
-
-	UINT8 gametype;
-	UINT8 modifiedgame;
-	UINT8 usedCheats;
-
-	char server_context[8]; // Unique context id, generated at server startup.
-} ATTRPACK serverconfig_pak;
 
 typedef struct
 {
@@ -226,7 +211,7 @@ typedef struct
 	tic_t time;
 	tic_t leveltime;
 	char servername[MAXSERVERNAME];
-	char mapname[8];
+	char mapname[24];
 	char maptitle[33];
 	unsigned char mapmd5[16];
 	UINT8 actnum;
@@ -284,6 +269,12 @@ typedef struct
 	UINT8 files[MAXFILENEEDED]; // is filled with writexxx (byteptr.h)
 } ATTRPACK filesneededconfig_pak;
 
+typedef struct
+{
+	UINT32 ping[MAXPLAYERS+1];
+	UINT32 pl[MAXPLAYERS];
+} pingtable_pak;
+
 //
 // Network packet data
 //
@@ -294,19 +285,20 @@ typedef struct
 	UINT8 ackreturn; // The return of the ack number
 
 	UINT8 packettype;
-	UINT8 reserved; // Padding
+	UINT8 packetindex;
 	union
 	{
 		clientcmd_pak clientpak;
 		client2cmd_pak client2pak;
 		servertics_pak serverpak;
-		serverconfig_pak servercfg;
 		UINT8 textcmd[MAXTEXTCMD+1];
 		filetx_pak filetxpak;
 		fileack_pak fileack;
 		UINT8 filereceived;
 		clientconfig_pak clientcfg;
+		char salt[9];
 		UINT8 md5sum[16];
+		UINT8 sha256sum[32];
 		serverinfo_pak serverinfo;
 		serverrefuse_pak serverrefuse;
 		askinfo_pak askinfo;
@@ -315,7 +307,7 @@ typedef struct
 		plrconfig_pak playerconfig[MAXPLAYERS];
 		INT32 filesneedednum;
 		filesneededconfig_pak filesneededcfg;
-		UINT32 pingtable[MAXPLAYERS+1];
+		pingtable_pak pingtable;
 	} u; // This is needed to pack diff packet types data together
 } ATTRPACK doomdata_t;
 

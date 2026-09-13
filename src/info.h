@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -298,276 +298,278 @@ enum actionnum
 	NUMACTIONS
 };
 
+struct mobj_s;
+
 // IMPORTANT NOTE: If you add/remove from this list of action
 // functions, don't forget to update them in deh_tables.c!
-void A_Explode();
-void A_Pain();
-void A_Fall();
-void A_MonitorPop();
-void A_GoldMonitorPop();
-void A_GoldMonitorRestore();
-void A_GoldMonitorSparkle();
-void A_Look();
-void A_Chase();
-void A_FaceStabChase();
-void A_FaceStabRev();
-void A_FaceStabHurl();
-void A_FaceStabMiss();
-void A_StatueBurst();
-void A_FaceTarget();
-void A_FaceTracer();
-void A_Scream();
-void A_BossDeath();
-void A_SetShadowScale();
-void A_ShadowScream(); // MARIA!!!!!!
-void A_CustomPower(); // Use this for a custom power
-void A_GiveWeapon(); // Gives the player weapon(s)
-void A_RingBox(); // Obtained Ring Box Tails
-void A_Invincibility(); // Obtained Invincibility Box
-void A_SuperSneakers(); // Obtained Super Sneakers Box
-void A_BunnyHop(); // have bunny hop tails
-void A_BubbleSpawn(); // Randomly spawn bubbles
-void A_FanBubbleSpawn();
-void A_BubbleRise(); // Bubbles float to surface
-void A_BubbleCheck(); // Don't draw if not underwater
-void A_AwardScore();
-void A_ExtraLife(); // Extra Life
-void A_GiveShield(); // Obtained Shield
-void A_GravityBox();
-void A_ScoreRise(); // Rise the score logo
-void A_AttractChase(); // Ring Chase
-void A_DropMine(); // Drop Mine from Skim or Jetty-Syn Bomber
-void A_FishJump(); // Fish Jump
-void A_ThrownRing(); // Sparkle trail for red ring
-void A_SetSolidSteam();
-void A_UnsetSolidSteam();
-void A_SignSpin();
-void A_SignPlayer();
-void A_OverlayThink();
-void A_JetChase();
-void A_JetbThink(); // Jetty-Syn Bomber Thinker
-void A_JetgThink(); // Jetty-Syn Gunner Thinker
-void A_JetgShoot(); // Jetty-Syn Shoot Function
-void A_ShootBullet(); // JetgShoot without reactiontime setting
-void A_MinusDigging();
-void A_MinusPopup();
-void A_MinusCheck();
-void A_ChickenCheck();
-void A_MouseThink(); // Mouse Thinker
-void A_DetonChase(); // Deton Chaser
-void A_CapeChase(); // Fake little Super Sonic cape
-void A_RotateSpikeBall(); // Spike ball rotation
-void A_SlingAppear();
-void A_UnidusBall();
-void A_RockSpawn();
-void A_SetFuse();
-void A_CrawlaCommanderThink(); // Crawla Commander
-void A_SmokeTrailer();
-void A_RingExplode();
-void A_OldRingExplode();
-void A_MixUp();
-void A_RecyclePowers();
-void A_BossScream();
-void A_Boss2TakeDamage();
-void A_GoopSplat();
-void A_Boss2PogoSFX();
-void A_Boss2PogoTarget();
-void A_EggmanBox();
-void A_TurretFire();
-void A_SuperTurretFire();
-void A_TurretStop();
-void A_JetJawRoam();
-void A_JetJawChomp();
-void A_PointyThink();
-void A_CheckBuddy();
-void A_HoodFire();
-void A_HoodThink();
-void A_HoodFall();
-void A_ArrowBonks();
-void A_SnailerThink();
-void A_SharpChase();
-void A_SharpSpin();
-void A_SharpDecel();
-void A_CrushstaceanWalk();
-void A_CrushstaceanPunch();
-void A_CrushclawAim();
-void A_CrushclawLaunch();
-void A_VultureVtol();
-void A_VultureCheck();
-void A_VultureHover();
-void A_VultureBlast();
-void A_VultureFly();
-void A_SkimChase();
-void A_SkullAttack();
-void A_LobShot();
-void A_FireShot();
-void A_SuperFireShot();
-void A_BossFireShot();
-void A_Boss7FireMissiles();
-void A_Boss1Laser();
-void A_FocusTarget();
-void A_Boss4Reverse();
-void A_Boss4SpeedUp();
-void A_Boss4Raise();
-void A_SparkFollow();
-void A_BuzzFly();
-void A_GuardChase();
-void A_EggShield();
-void A_SetReactionTime();
-void A_Boss1Spikeballs();
-void A_Boss3TakeDamage();
-void A_Boss3Path();
-void A_Boss3ShockThink();
-void A_Shockwave();
-void A_LinedefExecute();
-void A_LinedefExecuteFromArg();
-void A_PlaySeeSound();
-void A_PlayAttackSound();
-void A_PlayActiveSound();
-void A_1upThinker();
-void A_BossZoom(); //Unused
-void A_Boss1Chase();
-void A_Boss2Chase();
-void A_Boss2Pogo();
-void A_Boss7Chase();
-void A_BossJetFume();
-void A_SpawnObjectAbsolute();
-void A_SpawnObjectRelative();
-void A_ChangeAngleRelative();
-void A_ChangeAngleAbsolute();
-void A_RollAngle();
-void A_ChangeRollAngleRelative();
-void A_ChangeRollAngleAbsolute();
-void A_PlaySound();
-void A_FindTarget();
-void A_FindTracer();
-void A_SetTics();
-void A_SetRandomTics();
-void A_ChangeColorRelative();
-void A_ChangeColorAbsolute();
-void A_Dye();
-void A_SetTranslation();
-void A_MoveRelative();
-void A_MoveAbsolute();
-void A_Thrust();
-void A_ZThrust();
-void A_SetTargetsTarget();
-void A_SetObjectFlags();
-void A_SetObjectFlags2();
-void A_RandomState();
-void A_RandomStateRange();
-void A_StateRangeByAngle();
-void A_StateRangeByParameter();
-void A_DualAction();
-void A_RemoteAction();
-void A_ToggleFlameJet();
-void A_OrbitNights();
-void A_GhostMe();
-void A_SetObjectState();
-void A_SetObjectTypeState();
-void A_KnockBack();
-void A_PushAway();
-void A_RingDrain();
-void A_SplitShot();
-void A_MissileSplit();
-void A_MultiShot();
-void A_InstaLoop();
-void A_Custom3DRotate();
-void A_SearchForPlayers();
-void A_CheckRandom();
-void A_CheckTargetRings();
-void A_CheckRings();
-void A_CheckTotalRings();
-void A_CheckHealth();
-void A_CheckRange();
-void A_CheckHeight();
-void A_CheckTrueRange();
-void A_CheckThingCount();
-void A_CheckAmbush();
-void A_CheckCustomValue();
-void A_CheckCusValMemo();
-void A_SetCustomValue();
-void A_UseCusValMemo();
-void A_RelayCustomValue();
-void A_CusValAction();
-void A_ForceStop();
-void A_ForceWin();
-void A_SpikeRetract();
-void A_InfoState();
-void A_Repeat();
-void A_SetScale();
-void A_RemoteDamage();
-void A_HomingChase();
-void A_TrapShot();
-void A_VileTarget();
-void A_VileAttack();
-void A_VileFire();
-void A_BrakChase();
-void A_BrakFireShot();
-void A_BrakLobShot();
-void A_NapalmScatter();
-void A_SpawnFreshCopy();
-void A_FlickySpawn();
-void A_FlickyCenter();
-void A_FlickyAim();
-void A_FlickyFly();
-void A_FlickySoar();
-void A_FlickyCoast();
-void A_FlickyHop();
-void A_FlickyFlounder();
-void A_FlickyCheck();
-void A_FlickyHeightCheck();
-void A_FlickyFlutter();
-void A_FlameParticle();
-void A_FadeOverlay();
-void A_Boss5Jump();
-void A_LightBeamReset();
-void A_MineExplode();
-void A_MineRange();
-void A_ConnectToGround();
-void A_SpawnParticleRelative();
-void A_MultiShotDist();
-void A_WhoCaresIfYourSonIsABee();
-void A_ParentTriesToSleep();
-void A_CryingToMomma();
-void A_CheckFlags2();
-void A_Boss5FindWaypoint();
-void A_DoNPCSkid();
-void A_DoNPCPain();
-void A_PrepareRepeat();
-void A_Boss5ExtraRepeat();
-void A_Boss5Calm();
-void A_Boss5CheckOnGround();
-void A_Boss5CheckFalling();
-void A_Boss5PinchShot();
-void A_Boss5MakeItRain();
-void A_Boss5MakeJunk();
-void A_LookForBetter();
-void A_Boss5BombExplode();
-void A_DustDevilThink();
-void A_TNTExplode();
-void A_DebrisRandom();
-void A_TrainCameo();
-void A_TrainCameo2();
-void A_CanarivoreGas();
-void A_KillSegments();
-void A_SnapperSpawn();
-void A_SnapperThinker();
-void A_SaloonDoorSpawn();
-void A_MinecartSparkThink();
-void A_ModuloToState();
-void A_LavafallRocks();
-void A_LavafallLava();
-void A_FallingLavaCheck();
-void A_FireShrink();
-void A_SpawnPterabytes();
-void A_PterabyteHover();
-void A_RolloutSpawn();
-void A_RolloutRock();
-void A_DragonbomberSpawn();
-void A_DragonWing();
-void A_DragonSegment();
-void A_ChangeHeight();
+void A_Explode(void *actor);
+void A_Pain(void *actor);
+void A_Fall(void *actor);
+void A_MonitorPop(void *actor);
+void A_GoldMonitorPop(void *actor);
+void A_GoldMonitorRestore(void *actor);
+void A_GoldMonitorSparkle(void *actor);
+void A_Look(void *actor);
+void A_Chase(void *actor);
+void A_FaceStabChase(void *actor);
+void A_FaceStabRev(void *actor);
+void A_FaceStabHurl(void *actor);
+void A_FaceStabMiss(void *actor);
+void A_StatueBurst(void *actor);
+void A_FaceTarget(void *actor);
+void A_FaceTracer(void *actor);
+void A_Scream(void *actor);
+void A_BossDeath(void *actor);
+void A_SetShadowScale(void *actor);
+void A_ShadowScream(void *actor); // MARIA!!!!!!
+void A_CustomPower(void *actor); // Use this for a custom power
+void A_GiveWeapon(void *actor); // Gives the player weapon(s)
+void A_RingBox(void *actor); // Obtained Ring Box Tails
+void A_Invincibility(void *actor); // Obtained Invincibility Box
+void A_SuperSneakers(void *actor); // Obtained Super Sneakers Box
+void A_BunnyHop(void *actor); // have bunny hop tails
+void A_BubbleSpawn(void *actor); // Randomly spawn bubbles
+void A_FanBubbleSpawn(void *actor);
+void A_BubbleRise(void *actor); // Bubbles float to surface
+void A_BubbleCheck(void *actor); // Don't draw if not underwater
+void A_AwardScore(void *actor);
+void A_ExtraLife(void *actor); // Extra Life
+void A_GiveShield(void *actor); // Obtained Shield
+void A_GravityBox(void *actor);
+void A_ScoreRise(void *actor); // Rise the score logo
+void A_AttractChase(void *actor); // Ring Chase
+void A_DropMine(void *actor); // Drop Mine from Skim or Jetty-Syn Bomber
+void A_FishJump(void *actor); // Fish Jump
+void A_ThrownRing(void *actor); // Sparkle trail for red ring
+void A_SetSolidSteam(void *actor);
+void A_UnsetSolidSteam(void *actor);
+void A_SignSpin(void *actor);
+void A_SignPlayer(void *actor);
+void A_OverlayThink(void *actor);
+void A_JetChase(void *actor);
+void A_JetbThink(void *actor); // Jetty-Syn Bomber Thinker
+void A_JetgThink(void *actor); // Jetty-Syn Gunner Thinker
+void A_JetgShoot(void *actor); // Jetty-Syn Shoot Function
+void A_ShootBullet(void *actor); // JetgShoot without reactiontime setting
+void A_MinusDigging(void *actor);
+void A_MinusPopup(void *actor);
+void A_MinusCheck(void *actor);
+void A_ChickenCheck(void *actor);
+void A_MouseThink(void *actor); // Mouse Thinker
+void A_DetonChase(void *actor); // Deton Chaser
+void A_CapeChase(void *actor); // Fake little Super Sonic cape
+void A_RotateSpikeBall(void *actor); // Spike ball rotation
+void A_SlingAppear(void *actor);
+void A_UnidusBall(void *actor);
+void A_RockSpawn(void *actor);
+void A_SetFuse(void *actor);
+void A_CrawlaCommanderThink(void *actor); // Crawla Commander
+void A_SmokeTrailer(void *actor);
+void A_RingExplode(void *actor);
+void A_OldRingExplode(void *actor);
+void A_MixUp(void *actor);
+void A_RecyclePowers(void *actor);
+void A_BossScream(void *actor);
+void A_Boss2TakeDamage(void *actor);
+void A_GoopSplat(void *actor);
+void A_Boss2PogoSFX(void *actor);
+void A_Boss2PogoTarget(void *actor);
+void A_EggmanBox(void *actor);
+void A_TurretFire(void *actor);
+void A_SuperTurretFire(void *actor);
+void A_TurretStop(void *actor);
+void A_JetJawRoam(void *actor);
+void A_JetJawChomp(void *actor);
+void A_PointyThink(void *actor);
+void A_CheckBuddy(void *actor);
+void A_HoodFire(void *actor);
+void A_HoodThink(void *actor);
+void A_HoodFall(void *actor);
+void A_ArrowBonks(void *actor);
+void A_SnailerThink(void *actor);
+void A_SharpChase(void *actor);
+void A_SharpSpin(void *actor);
+void A_SharpDecel(void *actor);
+void A_CrushstaceanWalk(void *actor);
+void A_CrushstaceanPunch(void *actor);
+void A_CrushclawAim(void *actor);
+void A_CrushclawLaunch(void *actor);
+void A_VultureVtol(void *actor);
+void A_VultureCheck(void *actor);
+void A_VultureHover(void *actor);
+void A_VultureBlast(void *actor);
+void A_VultureFly(void *actor);
+void A_SkimChase(void *actor);
+void A_SkullAttack(void *actor);
+void A_LobShot(void *actor);
+void A_FireShot(void *actor);
+void A_SuperFireShot(void *actor);
+void A_BossFireShot(void *actor);
+void A_Boss7FireMissiles(void *actor);
+void A_Boss1Laser(void *actor);
+void A_FocusTarget(void *actor);
+void A_Boss4Reverse(void *actor);
+void A_Boss4SpeedUp(void *actor);
+void A_Boss4Raise(void *actor);
+void A_SparkFollow(void *actor);
+void A_BuzzFly(void *actor);
+void A_GuardChase(void *actor);
+void A_EggShield(void *actor);
+void A_SetReactionTime(void *actor);
+void A_Boss1Spikeballs(void *actor);
+void A_Boss3TakeDamage(void *actor);
+void A_Boss3Path(void *actor);
+void A_Boss3ShockThink(void *actor);
+void A_Shockwave(void *actor);
+void A_LinedefExecute(void *actor);
+void A_LinedefExecuteFromArg(void *actor);
+void A_PlaySeeSound(void *actor);
+void A_PlayAttackSound(void *actor);
+void A_PlayActiveSound(void *actor);
+void A_1upThinker(void *actor);
+void A_BossZoom(void *actor); //Unused
+void A_Boss1Chase(void *actor);
+void A_Boss2Chase(void *actor);
+void A_Boss2Pogo(void *actor);
+void A_Boss7Chase(void *actor);
+void A_BossJetFume(void *actor);
+void A_SpawnObjectAbsolute(void *actor);
+void A_SpawnObjectRelative(void *actor);
+void A_ChangeAngleRelative(void *actor);
+void A_ChangeAngleAbsolute(void *actor);
+void A_RollAngle(void *actor);
+void A_ChangeRollAngleRelative(void *actor);
+void A_ChangeRollAngleAbsolute(void *actor);
+void A_PlaySound(void *actor);
+void A_FindTarget(void *actor);
+void A_FindTracer(void *actor);
+void A_SetTics(void *actor);
+void A_SetRandomTics(void *actor);
+void A_ChangeColorRelative(void *actor);
+void A_ChangeColorAbsolute(void *actor);
+void A_Dye(void *actor);
+void A_SetTranslation(void *actor);
+void A_MoveRelative(void *actor);
+void A_MoveAbsolute(void *actor);
+void A_Thrust(void *actor);
+void A_ZThrust(void *actor);
+void A_SetTargetsTarget(void *actor);
+void A_SetObjectFlags(void *actor);
+void A_SetObjectFlags2(void *actor);
+void A_RandomState(void *actor);
+void A_RandomStateRange(void *actor);
+void A_StateRangeByAngle(void *actor);
+void A_StateRangeByParameter(void *actor);
+void A_DualAction(void *actor);
+void A_RemoteAction(void *actor);
+void A_ToggleFlameJet(void *actor);
+void A_OrbitNights(void *actor);
+void A_GhostMe(void *actor);
+void A_SetObjectState(void *actor);
+void A_SetObjectTypeState(void *actor);
+void A_KnockBack(void *actor);
+void A_PushAway(void *actor);
+void A_RingDrain(void *actor);
+void A_SplitShot(void *actor);
+void A_MissileSplit(void *actor);
+void A_MultiShot(void *actor);
+void A_InstaLoop(void *actor);
+void A_Custom3DRotate(void *actor);
+void A_SearchForPlayers(void *actor);
+void A_CheckRandom(void *actor);
+void A_CheckTargetRings(void *actor);
+void A_CheckRings(void *actor);
+void A_CheckTotalRings(void *actor);
+void A_CheckHealth(void *actor);
+void A_CheckRange(void *actor);
+void A_CheckHeight(void *actor);
+void A_CheckTrueRange(void *actor);
+void A_CheckThingCount(void *actor);
+void A_CheckAmbush(void *actor);
+void A_CheckCustomValue(void *actor);
+void A_CheckCusValMemo(void *actor);
+void A_SetCustomValue(void *actor);
+void A_UseCusValMemo(void *actor);
+void A_RelayCustomValue(void *actor);
+void A_CusValAction(void *actor);
+void A_ForceStop(void *actor);
+void A_ForceWin(void *actor);
+void A_SpikeRetract(void *actor);
+void A_InfoState(void *actor);
+void A_Repeat(void *actor);
+void A_SetScale(void *actor);
+void A_RemoteDamage(void *actor);
+void A_HomingChase(void *actor);
+void A_TrapShot(void *actor);
+void A_VileTarget(void *actor);
+void A_VileAttack(void *actor);
+void A_VileFire(void *actor);
+void A_BrakChase(void *actor);
+void A_BrakFireShot(void *actor);
+void A_BrakLobShot(void *actor);
+void A_NapalmScatter(void *actor);
+void A_SpawnFreshCopy(void *actor);
+void A_FlickySpawn(void *actor);
+void A_FlickyCenter(void *actor);
+void A_FlickyAim(void *actor);
+void A_FlickyFly(void *actor);
+void A_FlickySoar(void *actor);
+void A_FlickyCoast(void *actor);
+void A_FlickyHop(void *actor);
+void A_FlickyFlounder(void *actor);
+void A_FlickyCheck(void *actor);
+void A_FlickyHeightCheck(void *actor);
+void A_FlickyFlutter(void *actor);
+void A_FlameParticle(void *actor);
+void A_FadeOverlay(void *actor);
+void A_Boss5Jump(void *actor);
+void A_LightBeamReset(void *actor);
+void A_MineExplode(void *actor);
+void A_MineRange(void *actor);
+void A_ConnectToGround(void *actor);
+void A_SpawnParticleRelative(void *actor);
+void A_MultiShotDist(void *actor);
+void A_WhoCaresIfYourSonIsABee(void *actor);
+void A_ParentTriesToSleep(void *actor);
+void A_CryingToMomma(void *actor);
+void A_CheckFlags2(void *actor);
+void A_Boss5FindWaypoint(void *actor);
+void A_DoNPCSkid(void *actor);
+void A_DoNPCPain(void *actor);
+void A_PrepareRepeat(void *actor);
+void A_Boss5ExtraRepeat(void *actor);
+void A_Boss5Calm(void *actor);
+void A_Boss5CheckOnGround(void *actor);
+void A_Boss5CheckFalling(void *actor);
+void A_Boss5PinchShot(void *actor);
+void A_Boss5MakeItRain(void *actor);
+void A_Boss5MakeJunk(void *actor);
+void A_LookForBetter(void *actor);
+void A_Boss5BombExplode(void *actor);
+void A_DustDevilThink(void *actor);
+void A_TNTExplode(void *actor);
+void A_DebrisRandom(void *actor);
+void A_TrainCameo(void *actor);
+void A_TrainCameo2(void *actor);
+void A_CanarivoreGas(void *actor);
+void A_KillSegments(void *actor);
+void A_SnapperSpawn(void *actor);
+void A_SnapperThinker(void *actor);
+void A_SaloonDoorSpawn(void *actor);
+void A_MinecartSparkThink(void *actor);
+void A_ModuloToState(void *actor);
+void A_LavafallRocks(void *actor);
+void A_LavafallLava(void *actor);
+void A_FallingLavaCheck(void *actor);
+void A_FireShrink(void *actor);
+void A_SpawnPterabytes(void *actor);
+void A_PterabyteHover(void *actor);
+void A_RolloutSpawn(void *actor);
+void A_RolloutRock(void *actor);
+void A_DragonbomberSpawn(void *actor);
+void A_DragonWing(void *actor);
+void A_DragonSegment(void *actor);
+void A_ChangeHeight(void *actor);
 
 extern int actionsoverridden[NUMACTIONS][MAX_ACTION_RECURSION];
 
@@ -575,6 +577,7 @@ extern int actionsoverridden[NUMACTIONS][MAX_ACTION_RECURSION];
 #define NUMMOBJFREESLOTS 1024
 #define NUMSPRITEFREESLOTS NUMMOBJFREESLOTS
 #define NUMSTATEFREESLOTS (NUMMOBJFREESLOTS*8)
+#define MAXSPRITENAME 64
 
 // Hey, moron! If you change this table, don't forget about sprnames in info.c and the sprite lights in hw_light.c!
 typedef enum sprite
@@ -854,6 +857,8 @@ typedef enum sprite
 	SPR_XMS4, // Lamppost
 	SPR_XMS5, // Hanging Star
 	SPR_XMS6, // Mistletoe
+	SPR_SNTT, // Silver Shiver tree
+	SPR_SSTT, // Silver Shiver tree with snow
 	SPR_FHZI, // FHZ Ice
 	SPR_ROSY,
 
@@ -887,6 +892,8 @@ typedef enum sprite
 	// Misc Scenery
 	SPR_STLG, // Stalagmites
 	SPR_DBAL, // Disco
+	SPR_GINE, // Crystalline Heights tree
+	SPR_PPAL, // Pristine Shores palm trees
 
 	// Powerup Indicators
 	SPR_ARMA, // Armageddon Shield Orb
@@ -1073,14 +1080,14 @@ typedef enum sprite
 	SPR_GWLG,
 	SPR_GWLR,
 
+	// LJ Knuckles
+	SPR_OLDK,
+
 	SPR_FIRSTFREESLOT,
 	SPR_LASTFREESLOT = SPR_FIRSTFREESLOT + NUMSPRITEFREESLOTS - 1,
 	NUMSPRITES
 } spritenum_t;
 
-// Make sure to be conscious of FF_FRAMEMASK and the fact sprite2 is stored as a UINT8 whenever you change this table.
-// Currently, FF_FRAMEMASK is 0xff, or 255 - but the second half is used by FF_SPR2SUPER, so the limitation is 0x7f.
-// Since this is zero-based, there can be at most 128 different SPR2_'s without changing that.
 typedef enum playersprite
 {
 	SPR2_STND = 0,
@@ -1149,6 +1156,18 @@ typedef enum playersprite
 	SPR2_TALB,
 	SPR2_TALC,
 
+	// Misc slots
+	SPR2_MSC0,
+	SPR2_MSC1,
+	SPR2_MSC2,
+	SPR2_MSC3,
+	SPR2_MSC4,
+	SPR2_MSC5,
+	SPR2_MSC6,
+	SPR2_MSC7,
+	SPR2_MSC8,
+	SPR2_MSC9,
+
 	SPR2_CNT1, // continue disappointment
 	SPR2_CNT2, // continue lift
 	SPR2_CNT3, // continue spin
@@ -1160,15 +1179,17 @@ typedef enum playersprite
 	SPR2_XTRA, // stuff that isn't in-map - "would this ever need an md2 or variable length animation?"
 
 	SPR2_FIRSTFREESLOT,
-	SPR2_LASTFREESLOT = 0x7f,
+	SPR2_LASTFREESLOT = 1024, // Do not make higher than SPR2F_MASK (currently 0x3FF) plus one
 	NUMPLAYERSPRITES
 } playersprite_t;
 
-// SPR2_XTRA
-#define XTRA_LIFEPIC    0                 // Life icon patch
-#define XTRA_CHARSEL    1                 // Character select picture
-#define XTRA_CONTINUE   2                 // Continue icon
-#define XTRA_ENDING     3                 // Ending finale patches
+enum
+{
+	XTRA_LIFEPIC,
+	XTRA_CHARSEL,
+	XTRA_CONTINUE,
+	XTRA_ENDING
+};
 
 typedef enum state
 {
@@ -1894,11 +1915,11 @@ typedef enum state
 	S_FANG_FIRE1,
 	S_FANG_FIRE2,
 	S_FANG_FIRE3,
-	S_FANG_FIRE4,
 	S_FANG_FIREREPEAT,
 	S_FANG_LOBSHOT0,
 	S_FANG_LOBSHOT1,
 	S_FANG_LOBSHOT2,
+	S_FANG_LOBSHOT3,
 	S_FANG_WAIT1,
 	S_FANG_WAIT2,
 	S_FANG_WALLHIT,
@@ -1920,6 +1941,7 @@ typedef enum state
 	S_FANG_PINCHLOBSHOT2,
 	S_FANG_PINCHLOBSHOT3,
 	S_FANG_PINCHLOBSHOT4,
+	S_FANG_PINCHLOBSHOT5,
 	S_FANG_DIE1,
 	S_FANG_DIE2,
 	S_FANG_DIE3,
@@ -3058,6 +3080,10 @@ typedef enum state
 	S_LAMPPOST2,  // with snow
 	S_HANGSTAR,
 	S_MISTLETOE,
+	S_SSZTREE,
+	S_SSZTREE_BRANCH,
+	S_SSZTREE2,
+	S_SSZTREE2_BRANCH,
 	// Xmas GFZ bushes
 	S_XMASBLUEBERRYBUSH,
 	S_XMASBERRYBUSH,
@@ -3065,11 +3091,9 @@ typedef enum state
 	// FHZ
 	S_FHZICE1,
 	S_FHZICE2,
-	S_ROSY_IDLE1,
-	S_ROSY_IDLE2,
-	S_ROSY_IDLE3,
-	S_ROSY_IDLE4,
+	S_ROSY_IDLE,
 	S_ROSY_JUMP,
+	S_ROSY_FALL,
 	S_ROSY_WALK,
 	S_ROSY_HUG,
 	S_ROSY_PAIN,
@@ -3178,6 +3202,9 @@ typedef enum state
 	S_DBALL5,
 	S_DBALL6,
 	S_EGGSTATUE2,
+	S_GINE,
+	S_PPAL,
+	S_PPEL,
 
 	// Shield Orb
 	S_ARMA1,
@@ -4062,6 +4089,7 @@ typedef enum state
 	S_MARIOBUSH2,
 	S_TOAD,
 
+
 	// Nights-specific stuff
 	S_NIGHTSDRONE_MAN1,
 	S_NIGHTSDRONE_MAN2,
@@ -4366,6 +4394,12 @@ typedef enum state
 
 	S_NAMECHECK,
 
+	// LJ Knuckles
+	S_OLDK_STND,
+	S_OLDK_DIE0,
+	S_OLDK_DIE1,
+	S_OLDK_DIE2,
+
 	S_FIRSTFREESLOT,
 	S_LASTFREESLOT = S_FIRSTFREESLOT + NUMSTATEFREESLOTS - 1,
 	NUMSTATES
@@ -4376,15 +4410,16 @@ typedef struct
 	spritenum_t sprite;
 	UINT32 frame; // we use the upper 16 bits for translucency and other shade effects
 	INT32 tics;
-	actionf_t action;
+	actionf_p1 action;
 	INT32 var1;
 	INT32 var2;
 	statenum_t nextstate;
+	UINT16 sprite2;
 } state_t;
 
 extern state_t states[NUMSTATES];
-extern char sprnames[NUMSPRITES + 1][5];
-extern char spr2names[NUMPLAYERSPRITES][5];
+extern char sprnames[NUMSPRITES + 1][MAXSPRITENAME + 1];
+extern char spr2names[NUMPLAYERSPRITES][MAXSPRITENAME + 1];
 extern playersprite_t spr2defaults[NUMPLAYERSPRITES];
 extern state_t *astate;
 extern playersprite_t free_spr2;
@@ -4856,6 +4891,10 @@ typedef enum mobj_type
 	MT_LAMPPOST2,  // with snow
 	MT_HANGSTAR,
 	MT_MISTLETOE,
+	MT_SSZTREE,
+	MT_SSZTREE_BRANCH,
+	MT_SSZTREE2,
+	MT_SSZTREE2_BRANCH,
 	// Xmas GFZ bushes
 	MT_XMASBLUEBERRYBUSH,
 	MT_XMASBERRYBUSH,
@@ -4935,6 +4974,9 @@ typedef enum mobj_type
 	// Misc scenery
 	MT_DBALL,
 	MT_EGGSTATUE2,
+	MT_GINE,
+	MT_PPAL,
+	MT_PPEL,
 
 	// Powerup Indicators
 	MT_ELEMENTAL_ORB, // Elemental shield mobj
@@ -5163,6 +5205,8 @@ typedef enum mobj_type
 	MT_NAMECHECK,
 	MT_RAY, // General purpose mobj
 
+	MT_OLDK,
+
 	MT_FIRSTFREESLOT,
 	MT_LASTFREESLOT = MT_FIRSTFREESLOT + NUMMOBJFREESLOTS - 1,
 	NUMMOBJTYPES
@@ -5199,9 +5243,5 @@ typedef struct
 extern mobjinfo_t mobjinfo[NUMMOBJTYPES];
 
 void P_PatchInfoTables(void);
-
-void P_BackupTables(void);
-
-void P_ResetData(INT32 flags);
 
 #endif

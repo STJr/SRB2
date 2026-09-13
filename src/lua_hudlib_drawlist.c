@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2014-2016 by John "JTE" Muniz.
-// Copyright (C) 2014-2023 by Sonic Team Junior.
+// Copyright (C) 2014-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -25,6 +25,7 @@ enum drawitem_e {
 	DI_DrawNum,
 	DI_DrawPaddedNum,
 	DI_DrawFill,
+	DI_DrawFixedFill,
 	DI_DrawString,
 	DI_DrawNameTag,
 	DI_DrawScaledNameTag,
@@ -180,7 +181,8 @@ static const char *CopyString(huddrawlist_h list, const char* str)
 		const char *old_offset = list->strbuf;
 		size_t i;
 		if (list->strbuf_capacity == 0) list->strbuf_capacity = 256;
-		else list->strbuf_capacity *= 2;
+		while (list->strbuf_capacity <= list->strbuf_len + lenstr + 1)
+			list->strbuf_capacity *= 2;
 		list->strbuf = (char*) Z_Realloc(list->strbuf, sizeof(char) * list->strbuf_capacity, PU_STATIC, NULL);
 
 		// align the string pointers to make sure old pointers don't point towards invalid addresses
@@ -345,6 +347,25 @@ void LUA_HUD_AddDrawFill(
 	item->c = c;
 }
 
+void LUA_HUD_AddDrawFixedFill(
+	huddrawlist_h list,
+	fixed_t x,
+	fixed_t y,
+	fixed_t w,
+	fixed_t h,
+	INT32 c
+)
+{
+	size_t i = AllocateDrawItem(list);
+	drawitem_t *item = &list->items[i];
+	item->type = DI_DrawFixedFill;
+	item->x = x;
+	item->y = y;
+	item->w = w;
+	item->h = h;
+	item->c = c;
+}
+
 void LUA_HUD_AddDrawString(
 	huddrawlist_h list,
 	fixed_t x,
@@ -480,6 +501,9 @@ void LUA_HUD_DrawList(huddrawlist_h list)
 				break;
 			case DI_DrawFill:
 				V_DrawFill(item->x, item->y, item->w, item->h, item->c);
+				break;
+			case DI_DrawFixedFill:
+				V_DrawFixedFill(item->x, item->y, item->w, item->h, item->c);
 				break;
 			case DI_DrawString:
 				switch(item->align)

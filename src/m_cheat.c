@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -75,7 +75,7 @@ static UINT8 cheatf_warp(void)
 	if (menuactive && currentMenu != &MainDef)
 		return 0; // Only on the main menu!
 
-	S_StartSound(0, sfx_itemup);
+	S_StartSoundFromEverywhere(sfx_itemup);
 
 	// Temporarily unlock stuff.
 	G_SetUsedCheats(false);
@@ -97,7 +97,7 @@ static UINT8 cheatf_devmode(void)
 	if (menuactive && currentMenu != &MainDef)
 		return 0; // Only on the main menu!
 
-	S_StartSound(0, sfx_itemup);
+	S_StartSoundFromEverywhere(sfx_itemup);
 
 	// Just unlock all the things and turn on -debug and console devmode.
 	G_SetUsedCheats(false);
@@ -472,7 +472,7 @@ void Command_RTeleport_f(void)
 	if (!P_SetOrigin(p->mo, p->mo->x+intx*FRACUNIT, p->mo->y+inty*FRACUNIT, intz))
 		CONS_Alert(CONS_WARNING, M_GetText("Unable to teleport to that spot!\n"));
 	else
-		S_StartSound(p->mo, sfx_mixup);
+		S_StartSoundFromMobj(p->mo, sfx_mixup);
 	P_MapEnd();
 }
 
@@ -562,7 +562,7 @@ void Command_Teleport_f(void)
 
 			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				if (th->removing)
 					continue;
 
 				mo2 = (mobj_t *)th;
@@ -693,7 +693,7 @@ void Command_Teleport_f(void)
 	if (!P_SetOrigin(p->mo, intx, inty, intz))
 		CONS_Alert(CONS_WARNING, M_GetText("Unable to teleport to that spot!\n"));
 	else
-		S_StartSound(p->mo, sfx_mixup);
+		S_StartSoundFromMobj(p->mo, sfx_mixup);
 	P_MapEnd();
 }
 
@@ -1072,7 +1072,7 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 
 		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			if (th->removing)
 				continue;
 
 			mo = (mobj_t *)th;
@@ -1110,9 +1110,9 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 	mt->pitch = mt->roll = 0;
 
 	// Ignore offsets
-	if (mt->type == MT_EMBLEM)
+	if (mt->type == mobjinfo[MT_EMBLEM].doomednum)
 		mt->args[1] = 1;
-	else
+	else if (!(mt->type == mobjinfo[MT_METALSONIC_RACE].doomednum || mt->type == mobjinfo[MT_ROSY].doomednum))
 		mt->args[0] = 1;
 
 	return mt;
@@ -1432,14 +1432,22 @@ void OP_ObjectplaceMovement(player_t *player)
 //
 // Objectplace related commands.
 //
-/*void Command_Writethings_f(void)
+void Command_Writethings_f(void)
 {
 	REQUIRE_INLEVEL;
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_OBJECTPLACE;
 
-	P_WriteThings();
-}*/
+	if (COM_Argc() > 1)
+	{
+		P_WriteThings(COM_Argv(1));
+	}
+	else
+	{
+		CONS_Printf(M_GetText("writethings <filename>: write out map things to a file, .txt or .lmp automatically appended.\n"));
+		return;
+	}
+}
 
 void Command_ObjectPlace_f(void)
 {

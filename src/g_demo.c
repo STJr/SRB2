@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -46,7 +46,7 @@ boolean nodrawers; // for comparative timing purposes
 boolean noblit; // for comparative timing purposes
 tic_t demostarttime; // for comparative timing purposes
 
-static char demoname[64];
+static char demoname[512];
 boolean demorecording;
 boolean demoplayback;
 boolean titledemo; // Title Screen demo can be cancelled by any key
@@ -66,6 +66,8 @@ mobj_t *metalplayback;
 static UINT8 *metalbuffer = NULL;
 static UINT8 *metal_p;
 static UINT16 metalversion;
+
+consvar_t cv_resyncdemo = CVAR_INIT("resyncdemo", "On", 0, CV_OnOff, NULL);
 
 // extra data stuff (events registered this frame while recording)
 static struct {
@@ -98,7 +100,7 @@ demoghost *ghosts = NULL;
 // DEMO RECORDING
 //
 
-#define DEMOVERSION 0x0011
+#define DEMOVERSION 0x0012
 #define DEMOHEADER  "\xF0" "SRB2Replay" "\x0F"
 
 #define DF_GHOST        0x01 // This demo contains ghost data too!
@@ -409,7 +411,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 	{
 		oldghost.sprite2 = ghost->sprite2;
 		ziptic |= GZT_SPR2;
-		WRITEUINT8(demo_p,oldghost.sprite2);
+		WRITEUINT16(demo_p,oldghost.sprite2);
 	}
 
 	// Check for sprite set changes
@@ -509,7 +511,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 		temp = ghost->player->followmobj->z-ghost->z;
 		WRITEFIXED(demo_p,temp);
 		if (followtic & FZT_SKIN)
-			WRITEUINT8(demo_p,ghost->player->followmobj->sprite2);
+			WRITEUINT16(demo_p,ghost->player->followmobj->sprite2);
 		WRITEUINT16(demo_p,ghost->player->followmobj->sprite);
 		WRITEUINT8(demo_p,(ghost->player->followmobj->frame & FF_FRAMEMASK));
 		WRITEUINT16(demo_p,ghost->player->followmobj->color);
@@ -545,6 +547,9 @@ void G_ConsGhostTic(void)
 
 	testmo = players[0].mo;
 
+	if (P_MobjWasRemoved(testmo))
+		return; // No valid mobj exists, probably because of unexpected quit
+
 	// Grab ghost data.
 	ziptic = READUINT8(demo_p);
 	if (ziptic & GZT_XYZ)
@@ -571,7 +576,7 @@ void G_ConsGhostTic(void)
 	if (ziptic & GZT_FRAME)
 		demo_p++;
 	if (ziptic & GZT_SPR2)
-		demo_p++;
+		demo_p += (demoversion < 0x0011) ? sizeof(UINT8) : sizeof(UINT16);
 
 	if (ziptic & GZT_EXTRA)
 	{ // But wait, there's more!
@@ -605,7 +610,7 @@ void G_ConsGhostTic(void)
 				mobj = NULL;
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					if (th->removing)
 						continue;
 					mobj = (mobj_t *)th;
 					if (mobj->type == (mobjtype_t)type && mobj->x == x && mobj->y == y && mobj->z == z)
@@ -640,7 +645,7 @@ void G_ConsGhostTic(void)
 		// momx, momy and momz
 		demo_p += (demoversion < 0x000e) ? sizeof(INT16) * 3 : sizeof(fixed_t) * 3;
 		if (followtic & FZT_SKIN)
-			demo_p++;
+			demo_p += (demoversion < 0x0011) ? sizeof(UINT8) : sizeof(UINT16);
 		demo_p += sizeof(UINT16);
 		demo_p++;
 		demo_p += (demoversion==0x000c) ? 1 : sizeof(UINT16);
@@ -660,11 +665,14 @@ void G_ConsGhostTic(void)
 			CONS_Alert(CONS_WARNING, M_GetText("Demo playback has desynced!\n"));
 		demosynced = false;
 
-		P_UnsetThingPosition(testmo);
-		testmo->x = oldghost.x;
-		testmo->y = oldghost.y;
-		P_SetThingPosition(testmo);
-		testmo->z = oldghost.z;
+		if (cv_resyncdemo.value)
+		{
+			P_UnsetThingPosition(testmo);
+			testmo->x = oldghost.x;
+			testmo->y = oldghost.y;
+			P_SetThingPosition(testmo);
+			testmo->z = oldghost.z;
+		}
 	}
 
 	if (*demo_p == DEMOMARKER)
@@ -722,7 +730,7 @@ void G_GhostTicker(void)
 		if (ziptic & GZT_FRAME)
 			g->oldmo.frame = READUINT8(g->p);
 		if (ziptic & GZT_SPR2)
-			g->oldmo.sprite2 = READUINT8(g->p);
+			g->oldmo.sprite2 = (g->version < 0x0011) ? READUINT8(g->p) : READUINT16(g->p);
 
 		// Update ghost
 		P_UnsetThingPosition(g->mo);
@@ -771,7 +779,7 @@ void G_GhostTicker(void)
 			{
 				g->mo->destscale = READFIXED(g->p);
 				if (g->mo->destscale != g->mo->scale)
-					P_SetScale(g->mo, g->mo->destscale);
+					P_SetScale(g->mo, g->mo->destscale, false);
 			}
 			if (xziptic & EZT_THOKMASK)
 			{ // Let's only spawn ONE of these per frame, thanks.
@@ -810,7 +818,7 @@ void G_GhostTicker(void)
 							mobj->frame = (states[mobjinfo[type].spawnstate].frame & FF_FRAMEMASK) | tr_trans60<<FF_TRANSSHIFT;
 							mobj->color = g->mo->color;
 							mobj->skin = g->mo->skin;
-							P_SetScale(mobj, (mobj->destscale = g->mo->scale));
+							P_SetScale(mobj, g->mo->scale, true);
 
 							if (type == MT_THOK) // spintrail-specific modification for MT_THOK
 							{
@@ -926,7 +934,7 @@ void G_GhostTicker(void)
 				else
 					follow->destscale = g->mo->destscale;
 				if (follow->destscale != follow->scale)
-					P_SetScale(follow, follow->destscale);
+					P_SetScale(follow, follow->destscale, false);
 
 				P_UnsetThingPosition(follow);
 				temp = (g->version < 0x000e) ? READINT16(g->p)<<8 : READFIXED(g->p);
@@ -937,7 +945,7 @@ void G_GhostTicker(void)
 				follow->z = g->mo->z + temp;
 				P_SetThingPosition(follow);
 				if (followtic & FZT_SKIN)
-					follow->sprite2 = READUINT8(g->p);
+					follow->sprite2 = (g->version < 0x0011) ? READUINT8(g->p) : READUINT16(g->p);
 				else
 					follow->sprite2 = 0;
 				follow->sprite = READUINT16(g->p);
@@ -1052,7 +1060,7 @@ void G_ReadMetalTic(mobj_t *metal)
 			oldmetal.frame = G_ConvertOldFrameFlags(oldmetal.frame);
 	}
 	if (ziptic & GZT_SPR2)
-		oldmetal.sprite2 = READUINT8(metal_p);
+		oldmetal.sprite2 = (metalversion < 0x0011) ? READUINT8(metal_p) : READUINT16(metal_p);
 
 	// Set movement, position, and angle
 	// oldmetal contains where you're supposed to be.
@@ -1079,7 +1087,7 @@ void G_ReadMetalTic(mobj_t *metal)
 		{
 			metal->destscale = READFIXED(metal_p);
 			if (metal->destscale != metal->scale)
-				P_SetScale(metal, metal->destscale);
+				P_SetScale(metal, metal->destscale, false);
 		}
 		if (xziptic & EZT_THOKMASK)
 		{ // Let's only spawn ONE of these per frame, thanks.
@@ -1117,7 +1125,7 @@ void G_ReadMetalTic(mobj_t *metal)
 						mobj->angle = metal->angle;
 						mobj->color = metal->color;
 						mobj->skin = metal->skin;
-						P_SetScale(mobj, (mobj->destscale = metal->scale));
+						P_SetScale(mobj, metal->scale, true);
 
 						if (type == MT_THOK) // spintrail-specific modification for MT_THOK
 						{
@@ -1184,7 +1192,7 @@ void G_ReadMetalTic(mobj_t *metal)
 				else
 					follow->destscale = metal->destscale;
 				if (follow->destscale != follow->scale)
-					P_SetScale(follow, follow->destscale);
+					P_SetScale(follow, follow->destscale, false);
 
 				P_UnsetThingPosition(follow);
 				temp = (metalversion < 0x000e) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
@@ -1195,7 +1203,7 @@ void G_ReadMetalTic(mobj_t *metal)
 				follow->z = metal->z + temp;
 				P_SetThingPosition(follow);
 				if (followtic & FZT_SKIN)
-					follow->sprite2 = READUINT8(metal_p);
+					follow->sprite2 = (metalversion < 0x0011) ? READUINT8(metal_p) : READUINT16(metal_p);
 				else
 					follow->sprite2 = 0;
 				follow->sprite = READUINT16(metal_p);
@@ -1203,7 +1211,7 @@ void G_ReadMetalTic(mobj_t *metal)
 				if (metalversion < 0x000f)
 					follow->frame = G_ConvertOldFrameFlags(follow->frame);
 				follow->angle = metal->angle;
-				follow->color = (metalversion==0x000c) ? READUINT8(metal_p) : READUINT16(metal_p);
+				follow->color = (metalversion == 0x000c) ? READUINT8(metal_p) : READUINT16(metal_p);
 
 				if (!(followtic & FZT_SPAWNED))
 				{
@@ -1304,7 +1312,7 @@ void G_WriteMetalTic(mobj_t *metal)
 	{
 		oldmetal.sprite2 = metal->sprite2;
 		ziptic |= GZT_SPR2;
-		WRITEUINT8(demo_p,oldmetal.sprite2);
+		WRITEUINT16(demo_p,oldmetal.sprite2);
 	}
 
 	// Check for sprite set changes
@@ -1379,7 +1387,7 @@ void G_WriteMetalTic(mobj_t *metal)
 		temp = metal->player->followmobj->z-metal->z;
 		WRITEFIXED(demo_p,temp);
 		if (followtic & FZT_SKIN)
-			WRITEUINT8(demo_p,metal->player->followmobj->sprite2);
+			WRITEUINT16(demo_p,metal->player->followmobj->sprite2);
 		WRITEUINT16(demo_p,metal->player->followmobj->sprite);
 		WRITEUINT32(demo_p,metal->player->followmobj->frame); // NOT & FF_FRAMEMASK here, so 32 bits
 		WRITEUINT16(demo_p,metal->player->followmobj->color);
@@ -1405,15 +1413,14 @@ void G_WriteMetalTic(mobj_t *metal)
 //
 void G_RecordDemo(const char *name)
 {
-	INT32 maxsize;
+	strlcpy(demoname, name, sizeof(demoname));
 
-	strcpy(demoname, name);
-	strcat(demoname, ".lmp");
-	maxsize = 1024*1024;
+	FIL_ForceExtension(demoname, ".lmp");
+
+	INT32 maxsize = 1024*1024;
 	if (M_CheckParm("-maxdemo") && M_IsNextParm())
 		maxsize = atoi(M_GetNextParm()) * 1024;
-//	if (demobuffer)
-//		free(demobuffer);
+
 	demo_p = NULL;
 	demobuffer = malloc(maxsize);
 	demoend = demobuffer + maxsize;
@@ -1442,6 +1449,7 @@ void G_BeginRecording(void)
 	char *filename;
 	UINT16 totalfiles;
 	UINT8 *m;
+	save_t savebuffer;
 
 	if (demo_p)
 		return;
@@ -1591,7 +1599,11 @@ void G_BeginRecording(void)
 	}
 
 	// Save netvar data
-	CV_SaveDemoVars(&demo_p);
+	savebuffer.buf = demo_p;
+	savebuffer.size = demoend - demo_p;
+	savebuffer.pos = 0;
+	CV_SaveDemoVars(&savebuffer);
+	demo_p = &savebuffer.buf[savebuffer.pos];
 
 	memset(&oldcmd,0,sizeof(oldcmd));
 	memset(&oldghost,0,sizeof(oldghost));
@@ -1650,7 +1662,7 @@ static void G_LoadDemoExtraFiles(UINT8 **pp, UINT16 this_demo_version)
 	UINT16 totalfiles;
 	char filename[MAX_WADPATH];
 	UINT8 md5sum[16];
-	filestatus_t ncs;
+	filestatus_t ncs = FS_NOTFOUND;
 	boolean toomany = false;
 	boolean alreadyloaded;
 	UINT16 i, j;
@@ -2224,10 +2236,24 @@ void G_DoPlayDemo(char *defdemoname)
 	// net var data
 #ifdef OLD22DEMOCOMPAT
 	if (demoversion < 0x000d)
-		CV_LoadOldDemoVars(&demo_p);
+	{
+		save_t savebuffer;
+		savebuffer.buf = demo_p;
+		savebuffer.size = demoend - demo_p;
+		savebuffer.pos = 0;
+		CV_LoadOldDemoVars(&savebuffer);
+		demo_p = &savebuffer.buf[savebuffer.pos];
+	}
 	else
 #endif
-		CV_LoadDemoVars(&demo_p);
+	{
+		save_t savebuffer;
+		savebuffer.buf = demo_p;
+		savebuffer.size = demoend - demo_p;
+		savebuffer.pos = 0;
+		CV_LoadDemoVars(&savebuffer);
+		demo_p = &savebuffer.buf[savebuffer.pos];
+	}
 
 	// Sigh ... it's an empty demo.
 	if (*demo_p == DEMOMARKER)
@@ -2258,8 +2284,9 @@ void G_DoPlayDemo(char *defdemoname)
 
 	LUA_HookInt(gamemap, HOOK(MapChange));
 	displayplayer = consoleplayer = 0;
-	memset(playeringame,0,sizeof(playeringame));
-	playeringame[0] = true;
+	for (i = 0; i < MAXPLAYERS; i++)
+		players[i].ingame = false;
+	players[0].ingame = true;
 	P_SetRandSeed(randseed);
 	G_InitNew(false, G_BuildMapName(gamemap), true, true, false);
 
@@ -2603,10 +2630,10 @@ void G_AddGhost(char *defdemoname)
 		}
 	gh->oldmo.color = gh->mo->color;
 
-	gh->mo->state = states+S_PLAY_STND;
+	gh->mo->state = &states[S_PLAY_STND];
 	gh->mo->sprite = gh->mo->state->sprite;
-	gh->mo->sprite2 = (gh->mo->state->frame & FF_FRAMEMASK);
-	//gh->mo->frame = tr_trans30<<FF_TRANSSHIFT;
+	gh->mo->sprite2 = P_GetStateSprite2(gh->mo->state);
+	gh->mo->frame = (gh->mo->state->frame & ~FF_FRAMEMASK) | P_GetSprite2StateFrame(gh->mo->state);
 	gh->mo->flags2 |= MF2_DONTDRAW;
 	gh->fadein = (9-3)*6; // fade from invisible to trans30 over as close to 35 tics as possible
 	gh->mo->tics = -1;
@@ -2654,7 +2681,7 @@ void G_DoPlayMetal(void)
 	thinker_t *th;
 
 	// it's an internal demo
-	if ((l = W_CheckNumForName(va("%sMS",G_BuildMapName(gamemap)))) == LUMPERROR)
+	if ((l = W_CheckNumForName(G_GetMapMetalSonicReplay(gamemap))) == LUMPERROR)
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("No bot recording for this map.\n"));
 		return;
@@ -2665,7 +2692,7 @@ void G_DoPlayMetal(void)
 	// find metal sonic
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		if (th->removing)
 			continue;
 
 		mo = (mobj_t *)th;
@@ -2730,13 +2757,7 @@ void G_DoneLevelLoad(void)
 static void WriteDemoChecksum(void)
 {
 	UINT8 *p = demobuffer+16; // checksum position
-#ifdef NOMD5
-	UINT8 i;
-	for (i = 0; i < 16; i++, p++)
-		*p = P_RandomByte(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
-#else
 	md5_buffer((char *)p+16, demo_p - (p+16), p); // make a checksum of everything after the checksum in the file.
-#endif
 }
 
 // Stops recording a demo.
@@ -2780,7 +2801,7 @@ ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill)
 	{
 		WRITEUINT8(demo_p, (kill) ? METALDEATH : DEMOMARKER); // add the demo end (or metal death) marker
 		WriteDemoChecksum();
-		sprintf(demoname, "%sMS.LMP", G_BuildMapName(gamemap));
+		snprintf(demoname, sizeof(demoname), "%s.lmp", G_GetMapMetalSonicReplay(gamemap));
 		saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
 	}
 	free(demobuffer);

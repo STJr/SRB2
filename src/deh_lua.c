@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -26,6 +26,12 @@ static inline int lib_freeslot(lua_State *L)
 
 	if (!lua_lumploading)
 		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
+
+	if (!deh_loaded)
+	{
+		initfreeslots();
+		deh_loaded = true;
+	}
 
 	while (n-- > 0)
 	{
@@ -58,24 +64,19 @@ static inline int lib_freeslot(lua_State *L)
 		}
 		else if (fastcmp(type, "SPR"))
 		{
-			char wad;
 			spritenum_t j;
-			lua_getfield(L, LUA_REGISTRYINDEX, "WAD");
-			wad = (char)lua_tointeger(L, -1);
-			lua_pop(L, 1);
+
+			if (strlen(word) > MAXSPRITENAME)
+				return luaL_error(L, "Sprite name is longer than %d characters\n", MAXSPRITENAME);
+
 			for (j = SPR_FIRSTFREESLOT; j <= SPR_LASTFREESLOT; j++)
 			{
-				if (used_spr[(j-SPR_FIRSTFREESLOT)/8] & (1<<(j%8)))
-				{
-					if (!sprnames[j][4] && memcmp(sprnames[j],word,4)==0)
-						sprnames[j][4] = wad;
+				if (in_bit_array(used_spr, j - SPR_FIRSTFREESLOT))
 					continue; // Already allocated, next.
-				}
 				// Found a free slot!
 				CONS_Printf("Sprite SPR_%s allocated.\n",word);
-				strncpy(sprnames[j],word,4);
-				//sprnames[j][4] = 0;
-				used_spr[(j-SPR_FIRSTFREESLOT)/8] |= 1<<(j%8); // Okay, this sprite slot has been named now.
+				strcpy(sprnames[j], word);
+				set_bit_array(used_spr, j - SPR_FIRSTFREESLOT); // Okay, this sprite slot has been named now.
 				// Lua needs to update the value in _G if it exists
 				LUA_UpdateSprName(word, j);
 				lua_pushinteger(L, j);
@@ -187,7 +188,7 @@ static inline int lib_freeslot(lua_State *L)
 // Arguments: mobj_t actor, int var1, int var2
 static int action_call(lua_State *L)
 {
-	actionf_t *action = *((actionf_t **)luaL_checkudata(L, 1, META_ACTION));
+	actionf_p1 *action = *((actionf_p1 **)luaL_checkudata(L, 1, META_ACTION));
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
 
 	var1 = (INT32)luaL_optinteger(L, 3, 0);
@@ -198,7 +199,7 @@ static int action_call(lua_State *L)
 		return LUA_ErrInvalid(L, "mobj_t");
 	}
 
-	action->acp1(actor);
+	(*action)(actor);
 	return 0;
 }
 
@@ -454,17 +455,19 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	}
 	else if (fastncmp("SPR_",word,4)) {
 		p = word+4;
-		for (i = 0; i < NUMSPRITES; i++)
-			if (!sprnames[i][4] && fastncmp(p,sprnames[i],4)) {
-				// updating overridden sprnames is not implemented for soc parser,
-				// so don't use cache
-				if (mathlib)
-					lua_pushinteger(L, i);
-				else
-					CacheAndPushConstant(L, word, i);
-				return 1;
-			}
-		if (mathlib) return luaL_error(L, "sprite '%s' could not be found.\n", word);
+		i = R_GetSpriteNumByName(p);
+		if (i != NUMSPRITES)
+		{
+			// updating overridden sprnames is not implemented for soc parser,
+			// so don't use cache
+			if (mathlib)
+				lua_pushinteger(L, i);
+			else
+				CacheAndPushConstant(L, word, i);
+			return 1;
+		}
+		else if (mathlib)
+			return luaL_error(L, "sprite '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("SPR2_",word,5)) {
@@ -601,7 +604,7 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	{
 		CacheAndPushConstant(L, word, (lua_Integer)BT_SPIN);
 		return 1;
-	} 
+	}
 
 	for (i = 0; INT_CONST[i].n; i++)
 		if (fastcmp(word,INT_CONST[i].n)) {
@@ -629,7 +632,7 @@ FUNCINLINE static ATTRINLINE int getEnum(lua_State *L, boolean mathlib, const ch
 		{
 			if (fasticmp(word, actionpointers[i].name))
 			{
-				// We push the actionf_t* itself as userdata!
+				// We push the actionf_p1* itself as userdata!
 				LUA_PushUserdata(L, &actionpointers[i].action, META_ACTION);
 				return 1;
 			}
@@ -729,18 +732,18 @@ static inline int lib_getenum(lua_State *L)
 // If a sprname has been "cached" to _G, update it to a new value.
 void LUA_UpdateSprName(const char *name, lua_Integer value)
 {
-	char fullname[9] = "SPR_XXXX";
+	char fullname[4 + MAXSPRITENAME + 1] = "SPR_";
 
 	if (!gL)
 		return;
 
-	strncpy(&fullname[4], name, 4);
+	strcpy(&fullname[4], name);
 	lua_pushstring(gL, fullname);
 	lua_rawget(gL, LUA_GLOBALSINDEX);
 
 	if (!lua_isnil(gL, -1))
 	{
-		lua_pushstring(gL, name);
+		lua_pushstring(gL, fullname);
 		lua_pushinteger(gL, value);
 		lua_rawset(gL, LUA_GLOBALSINDEX);
 	}
@@ -767,7 +770,7 @@ static int lib_getActionName(lua_State *L)
 {
 	if (lua_isuserdata(L, 1)) // arg 1 is built-in action, expect action userdata
 	{
-		actionf_t *action = *((actionf_t **)luaL_checkudata(L, 1, META_ACTION));
+		actionf_p1 *action = *((actionf_p1 **)luaL_checkudata(L, 1, META_ACTION));
 		const char *name = NULL;
 		if (!action)
 			return luaL_error(L, "not a valid action?");
@@ -837,11 +840,11 @@ int LUA_SOCLib(lua_State *L)
 
 const char *LUA_GetActionName(void *action)
 {
-	actionf_t *act = (actionf_t *)action;
+	actionf_p1 *act = (actionf_p1 *)action;
 	size_t z;
 	for (z = 0; actionpointers[z].name; z++)
 	{
-		if (actionpointers[z].action.acv == act->acv)
+		if (actionpointers[z].action == *act)
 			return actionpointers[z].name;
 	}
 	return NULL;
@@ -856,8 +859,6 @@ void LUA_SetActionByName(void *state, const char *actiontocompare)
 		if (fasticmp(actiontocompare, actionpointers[z].name))
 		{
 			st->action = actionpointers[z].action;
-			st->action.acv = actionpointers[z].action.acv; // assign
-			st->action.acp1 = actionpointers[z].action.acp1;
 			return;
 		}
 	}

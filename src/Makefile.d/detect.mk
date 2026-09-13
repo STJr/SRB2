@@ -4,7 +4,6 @@
 
 # Previously featured:\
 	PANDORA\
-	HAIKU\
 	DUMMY\
 	DJGPPDOS\
 	SOLARIS\
@@ -17,6 +16,7 @@ all_systems:=\
 	UNIX\
 	LINUX\
 	FREEBSD\
+	HAIKU\
 
 # check for user specified system
 ifeq (,$(filter $(all_systems),$(.VARIABLES)))
@@ -35,6 +35,8 @@ system:=$(shell uname -s)
 
 ifeq ($(system),Linux)
 new_system:=LINUX
+else ifeq ($(system),Haiku)
+new_system:=HAIKU
 else
 
 $(error \

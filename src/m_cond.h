@@ -47,6 +47,7 @@ typedef enum
 	UC_EMBLEM,          // EMBLEM [emblem number]
 	UC_EXTRAEMBLEM,     // EXTRAEMBLEM [extra emblem number]
 	UC_CONDITIONSET,    // CONDITIONSET [condition set number]
+	UC_LUA,				// LUA [condition set number]
 } conditiontype_t;
 
 // Condition Set information
@@ -120,6 +121,7 @@ typedef struct
 	char *stringVar;
 	UINT8 nocecho;
 	UINT8 nochecklist;
+	UINT8 hidden; // Completely hide unlockable from the checklist whether or not it's unlocked.
 } unlockable_t;
 
 #define SECRET_NONE         -6 // Does nil.  Use with levels locked by UnlockRequired
@@ -141,6 +143,7 @@ typedef struct
 #define MAXEMBLEMS       512
 #define MAXEXTRAEMBLEMS   48
 #define MAXUNLOCKABLES    80
+#define MAXLUACONDITIONS 128
 
 /** Time attack information, currently a very small structure.
   */
@@ -202,10 +205,13 @@ typedef struct
 	// UNLOCKABLES UNLOCKED
 	boolean unlocked[MAXUNLOCKABLES];
 
+	// LUA DATA (NOT SAVED INTO GAMEDATA)
+	boolean lua[MAXLUACONDITIONS];
+
 	// TIME ATTACK DATA
-	recorddata_t *mainrecords[NUMMAPS];
-	nightsdata_t *nightsrecords[NUMMAPS];
-	UINT8 mapvisited[NUMMAPS];
+	recorddata_t *mainrecords[MAXMAPS];
+	nightsdata_t *nightsrecords[MAXMAPS];
+	UINT8 mapvisited[MAXMAPS];
 
 	// # OF TIMES THE GAME HAS BEEN BEATEN
 	UINT32 timesBeaten;

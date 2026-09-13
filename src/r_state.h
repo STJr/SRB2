@@ -71,7 +71,7 @@ extern size_t numsubsectors;
 extern subsector_t *subsectors;
 
 extern size_t numnodes;
-extern node_t *nodes;
+extern bspnode_t *nodes;
 
 extern size_t numlines;
 extern line_t *lines;

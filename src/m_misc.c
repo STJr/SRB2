@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -806,7 +806,7 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 	 "Unknown";
 #endif
 	char rendermodetxt[9];
-	char maptext[8];
+	char *maptext;
 	char lvlttltext[48];
 	char locationtxt[40];
 	char ctrevision[40];
@@ -827,9 +827,9 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 	}
 
 	if (gamestate == GS_LEVEL)
-		snprintf(maptext, 8, "%s", G_BuildMapName(gamemap));
+		maptext = Z_StrDup(G_BuildMapName(gamemap));
 	else
-		snprintf(maptext, 8, "Unknown");
+		maptext = Z_StrDup("Unknown");
 
 	if (gamestate == GS_LEVEL && mapheaderinfo[gamemap-1]->lvlttl[0] != '\0')
 		snprintf(lvlttltext, 48, "%s%s%s",
@@ -869,6 +869,8 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 	png_infotext[10].text = strncpy(cttime, comptime, sizeof(cttime)-1);
 
 	png_set_text(png_ptr, png_info_ptr, png_infotext, SRB2PNGTXT);
+
+	Z_Free(maptext);
 #undef SRB2PNGTXT
 #endif
 }
@@ -1254,7 +1256,7 @@ void M_SaveFrame(void)
 	// paranoia: should be unnecessary without singletics
 	static tic_t oldtic = 0;
 
-	if (oldtic == I_GetTime())
+	if (oldtic == I_GetTime() && !singletics)
 		return;
 	else
 		oldtic = I_GetTime();
@@ -1720,7 +1722,7 @@ char *va(const char *format, ...)
 	static char string[1024];
 
 	va_start(argptr, format);
-	vsprintf(string, format, argptr);
+	vsnprintf(string, 1024, format, argptr);
 	va_end(argptr);
 
 	return string;
@@ -1978,9 +1980,9 @@ void M_UnGetToken(void)
 
 static tokenizer_t *globalTokenizer = NULL;
 
-void M_TokenizerOpen(const char *inputString)
+void M_TokenizerOpen(const char *inputString, size_t len)
 {
-	globalTokenizer = Tokenizer_Open(inputString, 2);
+	globalTokenizer = Tokenizer_Open(inputString, len, 2);
 }
 
 void M_TokenizerClose(void)
@@ -2208,6 +2210,8 @@ int M_JumpWordReverse(const char *line, int offset)
 {
 	int (*is)(int);
 	int c;
+	if (offset == 0) // Don't let "--offset" later result in a negative value
+		return 0;
 	c = line[--offset];
 	if (isspace(c))
 		is = isspace;
@@ -2297,6 +2301,30 @@ boolean M_StringToDecimal(const char *input, double *out)
 	return true;
 }
 
+const char *M_GetFilenameFromPath(const char *path)
+{
+	const char *slash = strrchr(path, PATHSEP[0]);
+	if (slash)
+		return slash + 1;
+	return path;
+}
+
+const char *M_GetExtensionFromFilename(const char *filename)
+{
+	const char *dot = strrchr(filename, '.');
+	if (dot)
+		return dot + 1;
+	return NULL;
+}
+
+const char *M_CheckFilenameExtension(const char *filename, const char *ext)
+{
+	const char *dot = strrchr(filename, '.');
+	if (dot && (strstr(dot, ext) || strstr(dot + 1, ext)))
+		return dot + 1;
+	return NULL;
+}
+
 // Rounds off floating numbers and checks for 0 - 255 bounds
 int M_RoundUp(double number)
 {
@@ -2309,4 +2337,35 @@ int M_RoundUp(double number)
 		return (int)number + 1;
 
 	return (int)number;
+}
+
+// Hashes some message using FNV-1a
+#define FNV1A_OFFSET_BASIS 0x811C9DC5
+#define FNV1A_PRIME        0x01000193
+
+UINT32 FNV1a_Hash(const char *message, size_t size)
+{
+	UINT32 hash = FNV1A_OFFSET_BASIS;
+
+	for (size_t i = 0; i < size; i++)
+	{
+		hash ^= message[i];
+		hash *= FNV1A_PRIME;
+	}
+
+	return hash;
+}
+
+UINT32 FNV1a_HashString(const char *message)
+{
+	UINT32 hash = FNV1A_OFFSET_BASIS;
+
+	while (*message)
+	{
+		hash ^= *message;
+		hash *= FNV1A_PRIME;
+		message++;
+	}
+
+	return hash;
 }

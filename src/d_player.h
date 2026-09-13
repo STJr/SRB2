@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -45,14 +45,16 @@ typedef enum
 	SF_MARIODAMAGE      = SF_NOJUMPDAMAGE|SF_STOMPDAMAGE, // The Mario method of being able to damage enemies, etc.
 	SF_MACHINE          = 1<<10, // Beep boop. Are you a robot?
 	SF_DASHMODE         = 1<<11, // Sonic Advance 2 style top speed increase?
-	SF_FASTEDGE         = 1<<12, // Faster edge teeter?
-	SF_MULTIABILITY     = 1<<13, // Revenge of Final Demo.
-	SF_NONIGHTSROTATION = 1<<14, // Disable sprite rotation for NiGHTS
-	SF_NONIGHTSSUPER    = 1<<15, // Disable super colors for NiGHTS (if you have SF_SUPER)
-	SF_NOSUPERSPRITES   = 1<<16, // Don't use super sprites while super
-	SF_NOSUPERJUMPBOOST = 1<<17, // Disable the jump boost given while super (i.e. Knuckles)
-	SF_CANBUSTWALLS     = 1<<18, // Can naturally bust walls on contact? (i.e. Knuckles)
-	SF_NOSHIELDABILITY  = 1<<19, // Disable shield abilities
+	SF_FASTWAIT         = 1<<12, // Faster wait animation?
+	SF_FASTEDGE         = 1<<13, // Faster edge teeter?
+	SF_JETFUME          = 1<<14, // Follow item uses Metal Sonic's jet fume behavior
+	SF_MULTIABILITY     = 1<<15, // Revenge of Final Demo.
+	SF_NONIGHTSROTATION = 1<<16, // Disable sprite rotation for NiGHTS
+	SF_NONIGHTSSUPER    = 1<<17, // Disable super sprites and colors for NiGHTS
+	SF_NOSUPERSPRITES   = 1<<18, // Don't use super sprites while super
+	SF_NOSUPERJUMPBOOST = 1<<19, // Disable the jump boost given while super (i.e. Knuckles)
+	SF_CANBUSTWALLS     = 1<<20, // Can naturally bust walls on contact? (i.e. Knuckles)
+	SF_NOSHIELDABILITY  = 1<<21, // Disable shield abilities
 
 	// free up to and including 1<<31
 } skinflags_t;
@@ -158,10 +160,6 @@ typedef enum
 	PF_FORCESTRAFE = 1<<28, // Turning inputs are translated into strafing inputs
 	PF_CANCARRY    = 1<<29, // Can carry another player?
 	PF_FINISHED    = 1<<30, // The player finished the level. NOT the same as exiting
-	
-	// True if shield button down last tic
-	// This may be the final flag, but 2.3 could free up the others
-	PF_SHIELDDOWN    = 1<<31,
 
 	// up to 1<<31 is free
 } pflags_t;
@@ -373,6 +371,16 @@ typedef enum
 	AI_SPINFOLLOW
 } aistatetype_t;
 
+// NiGHTS text
+typedef enum
+{
+	NTV_NONE = 0,
+	NTV_GETSPHERES,
+	NTV_GETMORESPHERES,
+	NTV_BONUSTIMESTART,
+	NTV_BONUSTIMEEND,
+} nightstextvar_t;
+
 
 // ========================================================================
 //                          PLAYER STRUCTURE
@@ -572,7 +580,8 @@ typedef struct player_s
 	// Statistical purposes.
 	tic_t marebegunat; // Leveltime when mare begun
 	tic_t startedtime; // Time which you started this mare with.
-	tic_t finishedtime; // Time it took you to finish the mare (used for display)
+	tic_t finishedtime; // The time it took to destroy the capsule on this mare (used for bonus time display)
+	tic_t lastmaretime; // The time it took to complete the last mare (used for rank display)
 	tic_t lapbegunat; // Leveltime when lap begun
 	tic_t lapstartedtime; // Time which you started this lap with.
 	INT16 finishedspheres; // The spheres you had left upon finishing the mare
@@ -587,7 +596,7 @@ typedef struct player_s
 	UINT8 totalmarebonuslap; // total mare bonus lap
 	INT32 maxlink; // maximum link obtained
 	UINT8 texttimer; // nights_texttime should not be local
-	UINT8 textvar; // which line of NiGHTS text to show -- let's not use cheap hacks
+	UINT8 textvar; // which line of NiGHTS text to show -- see nightstextvar_t
 
 	INT16 lastsidehit, lastlinehit;
 
@@ -600,9 +609,11 @@ typedef struct player_s
 	INT32 awayviewtics;
 	angle_t awayviewaiming; // Used for cut-away view
 
+	boolean ingame;
 	boolean spectator;
 	boolean outofcoop;
 	boolean removing;
+	boolean muted;
 	UINT8 bot;
 	struct player_s *botleader;
 	UINT16 lastbuttons;

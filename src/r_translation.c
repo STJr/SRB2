@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2006 by Randy Heit.
-// Copyright (C) 2023 by Sonic Team Junior.
+// Copyright (C) 2023-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -556,7 +556,7 @@ static boolean ParseDecimal(tokenizer_t *sc, double *out)
 	return M_StringToDecimal(tkn, out);
 }
 
-static struct PaletteRemapParseResult *ThrowError(const char *format, ...)
+FUNCPRINTF static struct PaletteRemapParseResult *ThrowError(const char *format, ...)
 {
 	const size_t err_size = 512 * sizeof(char);
 
@@ -784,15 +784,15 @@ static struct PaletteRemapParseResult *PaletteRemap_ParseString(tokenizer_t *sc)
 	return NULL;
 }
 
-static struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(const char *translation)
+static struct PaletteRemapParseResult *PaletteRemap_ParseTranslation(const char *translation, size_t len)
 {
-	tokenizer_t *sc = Tokenizer_Open(translation, 1);
+	tokenizer_t *sc = Tokenizer_Open(translation, len, 1);
 	struct PaletteRemapParseResult *result = PaletteRemap_ParseString(sc);
 	Tokenizer_Close(sc);
 	return result;
 }
 
-static void PrintError(const char *name, const char *format, ...)
+FUNCDEBUG static void PrintError(const char *name, const char *format, ...)
 {
 	char error[256];
 
@@ -918,7 +918,7 @@ void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 	text[lumpLength] = '\0';
 	Z_Free(lumpData);
 
-	sc = Tokenizer_Open(text, 1);
+	sc = Tokenizer_Open(text, lumpLength, 1);
 	tkn = sc->get(sc, 0);
 
 	struct NewTranslation *list = NULL;
@@ -963,7 +963,7 @@ void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum)
 
 		// Parse all of the translations
 		do {
-			struct PaletteRemapParseResult *parse_result = PaletteRemap_ParseTranslation(tkn);
+			struct PaletteRemapParseResult *parse_result = PaletteRemap_ParseTranslation(tkn, strlen(tkn));
 			if (parse_result->error)
 			{
 				PrintError(name, "%s", parse_result->error);
@@ -1120,7 +1120,7 @@ UINT8 *R_GetTranslationRemap(int id, skincolornum_t skincolor, INT32 skinnum)
 	if (!tr)
 		return NULL;
 
-	if (!tr->num_sources || skincolor == SKINCOLOR_NONE)
+	if (!tr->num_sources || (skincolor == SKINCOLOR_NONE))
 		return tr->remap;
 
 	if (!tr->skincolor_remaps)
@@ -1144,20 +1144,22 @@ UINT8 *R_GetTranslationRemap(int id, skincolornum_t skincolor, INT32 skinnum)
 	return cache->colors;
 }
 
-static void R_UpdateTranslation(remaptable_t *tr, skincolornum_t skincolor, INT32 skinnum)
+static void R_UpdateTranslation(remaptable_t *tr, skincolornum_t skincolor, INT32 skinnum, INT32 cache_index)
 {
-	if (!tr->num_sources || !tr->skincolor_remaps || !tr->skincolor_remaps[skinnum])
+	if (skincolor == SKINCOLOR_NONE
+	|| !R_IsSkinTranslationRemappable(R_CacheIndexToSkinTranslation(cache_index))
+	|| !tr->num_sources || !tr->skincolor_remaps || !tr->skincolor_remaps[cache_index])
 		return;
 
-	colorcache_t *cache = tr->skincolor_remaps[skinnum][skincolor];
+	colorcache_t *cache = tr->skincolor_remaps[cache_index][skincolor - 1];
 	if (cache)
 		R_ApplyTranslationRemap(tr, cache->colors, skincolor, skinnum);
 }
 
-void R_UpdateTranslationRemaps(skincolornum_t skincolor, INT32 skinnum)
+void R_UpdateTranslationRemaps(skincolornum_t skincolor, INT32 skinnum, INT32 cache_index)
 {
 	for (unsigned i = 0; i < numpaletteremaps; i++)
-		R_UpdateTranslation(paletteremaps[i], skincolor, skinnum);
+		R_UpdateTranslation(paletteremaps[i], skincolor, skinnum, cache_index);
 }
 
 boolean R_TranslationIsValid(int id)

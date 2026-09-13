@@ -7,6 +7,7 @@ jobs:
         environment:
           CC: ccache gcc
           CCACHE_COMPRESS: true
+          CFLAGS: -Wno-error=unused-result
       #- image: ubuntu:trusty
       #  environment:
       #    CC: ccache gcc -m32
@@ -50,11 +51,14 @@ jobs:
             - /home/circleci/.cache/apt
       - checkout
       - run:
+         name: Create deps folder as needed
+         command: mkdir -p make/linux/64/SDL/deps/
+      - run:
           name: make master depend file
-          command: find make/linux64/SDL/deps/ -type f -print0 | sort -z | xargs -r0 cat > make/linux64/SDL.deps
+          command: find make/linux/64/SDL/deps/ -type f -print0 | sort -z | xargs -r0 cat > make/linux/64/SDL.deps
       - restore_cache:
           keys:
-            - v1-SRB2-{{ .Branch }}-{{ checksum "make/linux64/SDL.deps" }}
+            - v1-SRB2-{{ .Branch }}-{{ checksum "make/linux/64/SDL.deps" }}
       - run:
           name: Compile
           command: make -C src LINUX64=1 ERRORMODE=1 -k -j4
@@ -62,6 +66,6 @@ jobs:
           path: /home/circleci/SRB2/bin/
           destination: bin
       - save_cache:
-          key: v1-SRB2-{{ .Branch }}-{{ checksum "make/linux64/SDL.deps" }}
+          key: v1-SRB2-{{ .Branch }}-{{ checksum "make/linux/64/SDL.deps" }}
           paths:
             - /home/circleci/.ccache

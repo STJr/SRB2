@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -35,11 +35,11 @@
 #pragma interface
 #endif
 
-/// \brief Frame flags: only the frame number - 0 to 256 (Frames from 0 to 63, Sprite2 number uses 0 to 127 plus FF_SPR2SUPER)
+/// \brief Frame flags: only the frame number - 0 to 256 (Frames from 0 to 255, Sprite2 number uses 0 to 127 plus FF_SPR2SUPER)
 #define FF_FRAMEMASK 0xff
 
 /// \brief Frame flags - SPR2: Super sprite2
-#define FF_SPR2SUPER 0x80
+#define FF_SPR2SUPER SPR2F_SUPER //TODO: 2.3: remove this backwards compat hack
 /// \brief Frame flags - SPR2: A change of state at the end of Sprite2 animation
 #define FF_SPR2ENDSTATE 0x100
 /// \brief Frame flags - SPR2: 50% of starting in middle of Sprite2 animation
@@ -96,6 +96,11 @@
 #define FF_GLOBALANIM 0x20000000
 /// \brief Frame flags - Animate: Start at a random place in the animation (mutually exclusive with above)
 #define FF_RANDOMANIM 0x40000000
+
+/// \brief Animation flags: Bits used for the animation ID
+#define SPR2F_MASK 0x3FF
+/// \brief Animation flags: "Super" flag
+#define SPR2F_SUPER 0x400
 
 /**	\brief translucency tables
 

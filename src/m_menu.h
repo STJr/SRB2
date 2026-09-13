@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -143,7 +143,7 @@ typedef enum
 
 typedef struct
 {
-	char bgname[8]; // name for background gfx lump; lays over titlemap if this is set
+	char bgname[8+1]; // name for background gfx lump; lays over titlemap if this is set
 	SINT8 fadestrength;  // darken background when displaying this menu, strength 0-31 or -1 for undefined
 	INT32 bgcolor; // fill color, overrides bg name. -1 means follow bg name rules.
 	INT32 titlescrollxspeed; // background gfx scroll per menu; inherits global setting
@@ -153,13 +153,13 @@ typedef struct
 	SINT8 hidetitlepics; // hide title gfx per menu; -1 means undefined, inherits global setting
 	ttmode_enum ttmode; // title wing animation mode; default TTMODE_OLD
 	UINT8 ttscale; // scale of title wing gfx (FRACUNIT / ttscale); -1 means undefined, inherits global setting
-	char ttname[9]; // lump name of title wing gfx. If name length is <= 6, engine will attempt to load numbered frames (TTNAMExx)
+	char ttname[8+1]; // lump name of title wing gfx. If name length is <= 6, engine will attempt to load numbered frames (TTNAMExx)
 	INT16 ttx; // X position of title wing
 	INT16 tty; // Y position of title wing
 	INT16 ttloop; // # frame to loop; -1 means dont loop
 	UINT16 tttics; // # of tics per frame
 
-	char musname[7]; ///< Music track to play. "" for no music.
+	char musname[MAX_MUSIC_NAME+1]; ///< Music track to play. "" for no music.
 	UINT16 mustrack; ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
 	boolean muslooping; ///< Loop the music
 	boolean musstop; ///< Don't play any music
@@ -352,9 +352,7 @@ void M_ClearMenus(boolean callexitmenufunc);
 // Maybe this goes here????? Who knows.
 boolean M_MouseNeeded(void);
 
-#ifdef HAVE_THREADS
 extern I_mutex m_menu_mutex;
-#endif
 
 extern menu_t *currentMenu;
 
@@ -369,8 +367,8 @@ extern menu_t OP_JoystickSetDef;
 typedef struct
 {
 	boolean used;
-	char notes[441];
-	char picname[8];
+	char notes[440+1];
+	char picname[8+1];
 	char skinname[SKINNAMESIZE*2+2]; // skin&skin\0
 	patch_t *charpic;
 	UINT8 prev;
@@ -378,7 +376,7 @@ typedef struct
 	char displayname[SKINNAMESIZE+1];
 	INT16 skinnum[2];
 	UINT16 oppositecolor;
-	char nametag[8];
+	char nametag[8+1];
 	patch_t *namepic;
 	UINT16 tagtextcolor;
 	UINT16 tagoutlinecolor;
@@ -421,12 +419,14 @@ typedef struct
 {
 	char levelname[32];
 	UINT8 skinnum;
+	char skinname [SKINNAMESIZE+1];
 	UINT8 botskin;
 	UINT8 numemeralds;
 	UINT8 numgameovers;
 	INT32 lives;
 	INT32 continuescore;
 	INT32 gamemap;
+	UINT8 flags;
 } saveinfo_t;
 
 extern description_t *description;
@@ -444,7 +444,7 @@ extern INT16 char_on, startchar;
 #define NOSAVESLOT 0 //slot where Play Without Saving appears
 #define MARATHONSLOT 420 // just has to be nonzero, but let's use one that'll show up as an obvious error if something goes wrong while not using our existing saves
 
-#define BwehHehHe() S_StartSound(NULL, sfx_bewar1+M_RandomKey(4)) // Bweh heh he
+#define BwehHehHe() S_StartSoundFromEverywhere(sfx_bewar1+M_RandomKey(4)) // Bweh heh he
 
 void M_TutorialSaveControlResponse(INT32 ch);
 
@@ -485,6 +485,7 @@ UINT16 M_GetColorIndex(UINT16 color);
 menucolor_t* M_GetColorFromIndex(UINT16 index);
 void M_InitPlayerSetupColors(void);
 void M_FreePlayerSetupColors(void);
+void M_RegisterCustomCVOption(consvar_t* cvar);
 
 // These defines make it a little easier to make menus
 #define DEFAULTMENUSTYLE(id, header, source, prev, x, y)\
@@ -523,7 +524,7 @@ void M_FreePlayerSetupColors(void);
 	M_DrawPauseMenu,\
 	x, y,\
 	0,\
-	NULL\
+	M_QuitPauseMenu\
 }
 
 #define CENTERMENUSTYLE(id, header, source, prev, y)\

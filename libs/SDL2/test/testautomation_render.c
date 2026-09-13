@@ -43,7 +43,6 @@ static int _isSupported(int code);
 void InitCreateRenderer(void *arg)
 {
     int posX = 100, posY = 100, width = 320, height = 240;
-    int renderer_flags = SDL_RENDERER_ACCELERATED;
     renderer = NULL;
     window = SDL_CreateWindow("render_testCreateRenderer", posX, posY, width, height, 0);
     SDLTest_AssertPass("SDL_CreateWindow()");
@@ -52,11 +51,7 @@ void InitCreateRenderer(void *arg)
         return;
     }
 
-    if (SDL_strcmp(SDL_GetCurrentVideoDriver(), "dummy") == 0) {
-        renderer_flags = 0;
-    }
-
-    renderer = SDL_CreateRenderer(window, -1, renderer_flags);
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     SDLTest_AssertPass("SDL_CreateRenderer()");
     SDLTest_AssertCheck(renderer != NULL, "Check SDL_CreateRenderer result");
     if (renderer == NULL) {
@@ -70,13 +65,13 @@ void InitCreateRenderer(void *arg)
  */
 void CleanupDestroyRenderer(void *arg)
 {
-    if (renderer) {
+    if (renderer != NULL) {
         SDL_DestroyRenderer(renderer);
         renderer = NULL;
         SDLTest_AssertPass("SDL_DestroyRenderer()");
     }
 
-    if (window) {
+    if (window != NULL) {
         SDL_DestroyWindow(window);
         window = NULL;
         SDLTest_AssertPass("SDL_DestroyWindow");
@@ -943,12 +938,12 @@ _loadTestFace(void)
     SDL_Texture *tface;
 
     face = SDLTest_ImageFace();
-    if (!face) {
+    if (face == NULL) {
         return NULL;
     }
 
     tface = SDL_CreateTextureFromSurface(renderer, face);
-    if (!tface) {
+    if (tface == NULL) {
         SDLTest_LogError("SDL_CreateTextureFromSurface() failed with error: %s", SDL_GetError());
     }
 
@@ -975,7 +970,7 @@ _hasTexColor(void)
 
     /* Get test face. */
     tface = _loadTestFace();
-    if (!tface) {
+    if (tface == NULL) {
         return 0;
     }
 
@@ -1019,7 +1014,7 @@ _hasTexAlpha(void)
 
     /* Get test face. */
     tface = _loadTestFace();
-    if (!tface) {
+    if (tface == NULL) {
         return 0;
     }
 
@@ -1048,7 +1043,7 @@ _hasTexAlpha(void)
 /**
  * @brief Compares screen pixels with image pixels. Helper function.
  *
- * @param referenceSurface Image to compare against.
+ * @param s Image to compare against.
  *
  * \sa
  * http://wiki.libsdl.org/SDL_RenderReadPixels

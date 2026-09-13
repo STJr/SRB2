@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2023 by Sonic Team Junior.
+// Copyright (C) 2012-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -13,11 +13,14 @@
 #ifndef LUA_SCRIPT_H
 #define LUA_SCRIPT_H
 
+#include "p_saveg.h"
 #include "m_fixed.h"
 #include "doomtype.h"
 #include "d_player.h"
 #include "g_state.h"
 #include "taglist.h"
+#include "matrix.h"
+#include "quaternion.h"
 
 #include "blua/lua.h"
 #include "blua/lualib.h"
@@ -29,7 +32,9 @@
 // fixed_t casting
 // TODO add some distinction between fixed numbers and integer numbers
 // for at least the purpose of printing and maybe math.
+#define lua_tofixed(L, i) lua_tointeger(L, i)
 #define luaL_checkfixed(L, i) luaL_checkinteger(L, i)
+#define luaL_optfixed(L, i, d) luaL_optinteger(L, i, d)
 #define lua_pushfixed(L, f) lua_pushinteger(L, f)
 
 // angle_t casting
@@ -43,6 +48,8 @@ void LUA_ClearExtVars(void);
 
 extern INT32 lua_lumploading; // is LUA_LoadLump being called?
 
+extern int mobjmovement_ref; // Used by mobj collision hooks
+
 int LUA_GetErrorMessage(lua_State *L);
 int LUA_Call(lua_State *L, int nargs, int nresults, int errorhandlerindex);
 boolean LUA_LoadLump(UINT16 wad, UINT16 lump);
@@ -52,15 +59,12 @@ void LUA_DumpFile(const char *filename);
 #endif
 fixed_t LUA_EvalMath(const char *word);
 void LUA_Step(void);
-void LUA_Archive(void);
-void LUA_UnArchive(void);
 int LUA_PushGlobals(lua_State *L, const char *word);
 int LUA_CheckGlobals(lua_State *L, const char *word);
 void Got_Luacmd(UINT8 **cp, INT32 playernum); // lua_consolelib.c
 void LUA_CVarChanged(void *cvar); // lua_consolelib.c
 int Lua_optoption(lua_State *L, int narg, int def, int list_ref);
 int Lua_CreateFieldTable(lua_State *L, const char *const lst[]);
-void LUA_HookNetArchive(lua_CFunction archFunc);
 
 void LUA_PushTaggableObjectArray
 (		lua_State *L,
@@ -162,13 +166,14 @@ void COM_Lua_f(void);
 	}\
 }
 
-// uncomment if you want seg_t/node_t in Lua
-// #define HAVE_LUA_SEGS
-
 #define ISINLEVEL \
 	(gamestate == GS_LEVEL || titlemapinaction)
 
 #define INLEVEL if (! ISINLEVEL)\
 return luaL_error(L, "This can only be used in a level!");
+
+vector3_t *LUA_NewVector3(lua_State *L);
+matrix_t *LUA_NewMatrix(lua_State *L);
+quaternion_t *LUA_NewQuaternion(lua_State *L);
 
 #endif/*LUA_SCRIPT_H*/

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2023 by Sonic Team Junior.
+// Copyright (C) 1999-2024 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -21,6 +21,7 @@
 #include "../byteptr.h"
 #include "../d_main.h"
 #include "../g_game.h"
+#include "../m_menu.h"
 #include "../w_wad.h"
 #include "../z_zone.h"
 #include "../doomstat.h"
@@ -40,6 +41,8 @@ typedef struct banreason_s
 
 static banreason_t *reasontail = NULL; //last entry, use prev
 static banreason_t *reasonhead = NULL; //1st entry, use next
+
+static boolean bans_loaded = false;
 
 void Ban_Add(const char *reason)
 {
@@ -85,6 +88,8 @@ void Ban_Load_File(boolean warning)
 	if (!I_ClearBans)
 		return;
 
+	bans_loaded = true;
+
 	f = fopen(va("%s"PATHSEP"%s", srb2home, "ban.txt"), "r");
 
 	if (!f)
@@ -123,6 +128,12 @@ void D_SaveBan(void)
 	banreason_t *reasonlist = reasonhead;
 	const char *address, *mask;
 	const char *path = va("%s"PATHSEP"%s", srb2home, "ban.txt");
+
+	if (!bans_loaded)
+	{
+		// don't save bans if they were never loaded.
+		return;
+	}
 
 	if (!reasonhead)
 	{
@@ -389,10 +400,20 @@ void Command_connect(void)
 		return;
 	}
 
+	// StarManiaKG: allow us to join servers from anywhere at any time //
 	if (Playing() || titledemo)
 	{
-		CONS_Printf(M_GetText("You cannot connect while in a game. End this game first.\n"));
-		return;
+		M_ClearMenus(true);
+		if (demoplayback && titledemo)
+			G_CheckDemoStatus();
+
+		if (netgame)
+		{
+			D_QuitNetGame();
+			CL_Reset();
+		}
+
+		D_StartTitle();
 	}
 
 	server = false;
@@ -411,11 +432,6 @@ void Command_connect(void)
 		if (netgame && !stricmp(COM_Argv(1), "node"))
 		{
 			servernode = (SINT8)atoi(COM_Argv(2));
-		}
-		else if (netgame)
-		{
-			CONS_Printf(M_GetText("You cannot connect while in a game. End this game first.\n"));
-			return;
 		}
 		else if (I_NetOpenSocket)
 		{
@@ -453,7 +469,7 @@ void Command_connect(void)
 void Command_GetPlayerNum(void)
 {
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i])
+		if (players[i].ingame)
 		{
 			if (serverplayer == i)
 				CONS_Printf(M_GetText("num:%2d  node:%2d  %s\n"), i, playernode[i], player_names[i]);
@@ -474,13 +490,13 @@ void Command_Nodes(void)
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
 		const size_t plen = strlen(player_names[i]);
-		if (playeringame[i] && plen > maxlen)
+		if (players[i].ingame && plen > maxlen)
 			maxlen = plen;
 	}
 
 	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i])
+		if (players[i].ingame)
 		{
 			CONS_Printf("%.2u: %*s", i, (int)maxlen, player_names[i]);
 

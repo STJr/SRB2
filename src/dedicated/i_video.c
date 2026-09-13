@@ -1,11 +1,9 @@
-#include "../doomdef.h"
+﻿#include "../doomdef.h"
 #include "../command.h"
 #include "../i_video.h"
 
 rendermode_t rendermode = render_none;
 rendermode_t chosenrendermode = render_none;
-
-boolean highcolor = false;
 
 boolean allow_fullscreen = false;
 
@@ -78,4 +76,3 @@ void I_ReadScreen(UINT8 *scr)
 void I_BeginRead(void){}
 
 void I_EndRead(void){}
-

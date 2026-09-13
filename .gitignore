@@ -26,3 +26,4 @@ Win32_LIB_ASM_Release
 /CMakeUserPresets.json
 /out
 /objs/VC10
+/thirdparty/vcpkg-overlays

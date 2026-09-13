@@ -34,6 +34,7 @@
 #endif
 
 #include "../doomdef.h"
+#include "../d_main.h"
 
 #ifdef HWRENDER
 #include "../hardware/r_opengl/r_opengl.h"
@@ -70,18 +71,10 @@ PFNglGetString pglGetString;
 /**	\brief SDL video display surface
 */
 INT32 oglflags = 0;
-void *GLUhandle = NULL;
 SDL_GLContext sdlglcontext = 0;
 
 void *GetGLFunc(const char *proc)
 {
-	if (strncmp(proc, "glu", 3) == 0)
-	{
-		if (GLUhandle)
-			return hwSym(proc, GLUhandle);
-		else
-			return NULL;
-	}
 	return SDL_GL_GetProcAddress(proc);
 }
 
@@ -89,7 +82,6 @@ boolean LoadGL(void)
 {
 #ifndef STATIC_OPENGL
 	const char *OGLLibname = NULL;
-	const char *GLULibname = NULL;
 
 	if (M_CheckParm("-OGLlib") && M_IsNextParm())
 		OGLLibname = M_GetNextParm();
@@ -101,43 +93,6 @@ boolean LoadGL(void)
 		if (!M_CheckParm("-OGLlib"))
 			CONS_Printf("If you know what is the OpenGL library's name, use -OGLlib\n");
 		return 0;
-	}
-
-#if 0
-	GLULibname = "/proc/self/exe";
-#elif defined (_WIN32)
-	GLULibname = "GLU32.DLL";
-#elif defined (__MACH__)
-	GLULibname = "/System/Library/Frameworks/OpenGL.framework/Libraries/libGLU.dylib";
-#elif defined (macintos)
-	GLULibname = "OpenGLLibrary";
-#elif defined (__unix__)
-	GLULibname = "libGLU.so.1";
-#elif defined (__HAIKU__)
-	GLULibname = "libGLU.so";
-#else
-	GLULibname = NULL;
-#endif
-
-	if (M_CheckParm("-GLUlib") && M_IsNextParm())
-		GLULibname = M_GetNextParm();
-
-	if (GLULibname)
-	{
-		GLUhandle = hwOpen(GLULibname);
-		if (GLUhandle)
-			return SetupGLfunc();
-		else
-		{
-			CONS_Alert(CONS_ERROR, "Could not load GLU Library: %s\n", GLULibname);
-			if (!M_CheckParm ("-GLUlib"))
-				CONS_Alert(CONS_ERROR, "If you know what is the GLU library's name, use -GLUlib\n");
-		}
-	}
-	else
-	{
-		CONS_Alert(CONS_ERROR, "Could not load GLU Library\n");
-		CONS_Alert(CONS_ERROR, "If you know what is the GLU library's name, use -GLUlib\n");
 	}
 #endif
 	return SetupGLfunc();
@@ -155,11 +110,31 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 {
 	INT32 cbpp = cv_scr_depth.value < 16 ? 16 : cv_scr_depth.value;
 	static boolean first_init = false;
+	static int majorGL = 0, minorGL = 0;
+#ifdef DEBUG_TO_FILE
+	const char *gllogdir = NULL;
+#endif
 
 	oglflags = 0;
 
 	if (!first_init)
 	{
+#ifdef DEBUG_TO_FILE
+		if (!gllogstream) 
+#endif
+		{
+#ifdef DEBUG_TO_FILE
+			gllogdir = D_Home();
+
+#ifdef DEFAULTDIR
+			if (gllogdir)
+				gllogstream = fopen(va("%s/"DEFAULTDIR"/ogllog.txt",gllogdir), "wt");
+			else
+#endif
+				gllogstream = fopen("./ogllog.txt", "wt");
+#endif
+		}
+
 		gl_version = pglGetString(GL_VERSION);
 		gl_renderer = pglGetString(GL_RENDERER);
 		gl_extensions = pglGetString(GL_EXTENSIONS);
@@ -188,6 +163,12 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 		pglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maximumAnisotropy);
 	else
 		maximumAnisotropy = 1;
+
+	if (sscanf((const char*)gl_version, "%d.%d", &majorGL, &minorGL)
+		&& (!(majorGL == 1 && minorGL <= 3)))
+		supportMipMap = true;
+	else
+		supportMipMap = false;
 
 	SetupGLFunc4();
 
@@ -232,7 +213,9 @@ void OglSdlFinishUpdate(boolean waitvbl)
 
 	// Sryder:	We need to draw the final screen texture again into the other buffer in the original position so that
 	//			effects that want to take the old screen can do so after this
-	HWR_DrawScreenFinalTexture(realwidth, realheight);
+	// Generic2 has the screen image without palette rendering brightness adjustments.
+	// Using that here will prevent brightness adjustments being applied twice.
+	DrawScreenTexture(HWD_SCREENTEXTURE_GENERIC2, NULL, 0);
 }
 
 EXPORT void HWRAPI(OglSdlSetPalette) (RGBA_t *palette)

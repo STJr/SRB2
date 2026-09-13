@@ -273,7 +273,7 @@ e.g.
     {
         ... initialize game ...
 
-    #ifdef __IPHONEOS__
+    #if __IPHONEOS__
         // Initialize the Game Center for scoring and matchmaking
         InitGameCenter();
 

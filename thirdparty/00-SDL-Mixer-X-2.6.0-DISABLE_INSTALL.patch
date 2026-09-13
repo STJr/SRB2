@@ -1,0 +1,26 @@
+--- a/CMakeLists.txt	2023-11-22 22:42:53.000000000 -0500
++++ b/CMakeLists.txt	2024-02-15 18:46:57.852076200 -0500
+@@ -45,6 +45,7 @@
+ 
+     option(SDL_MIXER_X_STATIC   "Build static library of SDL Mixer X" ${SDL_MIXER_X_STATIC_ENABLED_BY_DEFAULT})
+     option(SDL_MIXER_X_SHARED   "Build shared library of SDL Mixer X" ${SDL_MIXER_X_SHARED_ENABLED_BY_DEFAULT})
++     option(SDL_MIXER_X_DISABLE_INSTALL   "Disable install of SDL Mixer X" OFF)
+ else()
+     set(SDL_MIXER_X_STATIC ON)
+     set(SDL_MIXER_X_SHARED OFF)
+@@ -475,6 +476,7 @@
+     add_subdirectory(examples)
+ endif()
+ 
++if(NOT SDL_MIXER_X_DISABLE_INSTALL)
+ if(SDL_MIXER_X_STATIC AND NOT BUILD_AS_VB6_BINDING)
+     install(TARGETS SDL2_mixer_ext_Static
+             EXPORT SDL2MixerExtStaticTargets
+@@ -500,6 +502,7 @@
+             NAMESPACE SDL2_mixer_ext::
+             DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/SDL2_mixer_ext")
+ endif()
++endif()
+ 
+ 
+ if(BUILD_AS_VB6_BINDING)

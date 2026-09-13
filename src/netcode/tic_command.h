@@ -31,8 +31,8 @@ tic_t ExpandTics(INT32 low, INT32 node);
 void D_Clearticcmd(tic_t tic);
 void D_ResetTiccmds(void);
 
-void PT_ClientCmd(SINT8 nodenum, INT32 netconsole);
-void PT_ServerTics(SINT8 node, INT32 netconsole);
+void PT_ClientCmd(doomcom_t *doomcom, INT32 netconsole);
+void PT_ServerTics(doomcom_t *doomcom, INT32 netconsole);
 
 // send the client packet to the server
 void CL_SendClientCmd(void);

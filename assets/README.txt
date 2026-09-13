@@ -33,13 +33,10 @@ https://discord.gg/b3BGb8A
 Twitter:
 https://twitter.com/SonicTeamJr
 
-Facebook:
-https://facebook.com/SonicRoboBlast2
-
 
 COPYRIGHT AND DISCLAIMER
 
-Design and content in Sonic Robo Blast 2 is copyright 1998-2023 by Sonic Team Jr.
+Design and content in Sonic Robo Blast 2 is copyright 1998-2025 by Sonic Team Jr.
 
 All original material in this game is copyrighted by their respective owners, and no copyright infringement is intended. Sonic Team Jr. is in no way affiliated with SEGA or Sonic Team, and we do not claim ownership of any of SEGA's intellectual property used in SRB2.
 
