@@ -565,7 +565,7 @@ static boolean P_LookForShield(mobj_t *actor)
 		}
 	}
 
-	//return false;
+	return false;
 }
 
 #ifdef WEIGHTEDRECYCLER
@@ -4656,51 +4656,34 @@ void A_AttractChase(void *data)
 	else
 		actor->flags2 &= ~MF2_DONTDRAW;
 
-	// Turn rings into flingrings if shield is lost or out of range
-	if (actor->tracer && actor->tracer->player
-		&& !(actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC) && actor->info->reactiontime && actor->type != (mobjtype_t)actor->info->reactiontime)
+	// check if player has SH_PROTECTELECTRIC and is within distance
+	if (P_LookForShield(actor))
 	{
-		mobj_t *newring;
-		newring = P_SpawnMobj(actor->x, actor->y, actor->z, actor->info->reactiontime);
-		if (!P_MobjWasRemoved(newring))
-		{
-			newring->momx = actor->momx;
-			newring->momy = actor->momy;
-			newring->momz = actor->momz;
-		}
-		P_RemoveMobj(actor);
+		// Keep stuff from going down inside floors and junk
+		actor->flags &= ~MF_NOCLIPHEIGHT;
+
+		// Let attracted rings move through walls and such.
+		actor->flags |= MF_NOCLIP;
+
+		if (!P_MobjWasRemoved(actor->tracer))
+			P_Attract(actor, actor->tracer, false);
+
 		return;
 	}
 
-	P_LookForShield(actor); // Go find 'em, boy!
-
-	if (!actor->tracer
+	// Lost attracted rings don't clip through walls anymore, and turn into fling rings
+	if	((actor->flags & MF_NOCLIP) &&
+		(P_MobjWasRemoved(actor->tracer)
 		|| !actor->tracer->player
 		|| !actor->tracer->health
-		|| !P_CheckSight(actor, actor->tracer)) // You have to be able to SEE it...sorta
+		|| !(actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC)
+		|| !P_CheckSight(actor, actor->tracer))) // You have to be able to SEE it...sorta
 	{
-		// Lost attracted rings don't through walls anymore.
-		actor->flags &= ~MF_NOCLIP;
 		P_SetTarget(&actor->tracer, NULL);
-		return;
+		actor->type = mobjinfo[actor->type].reactiontime; // Become the reactiontime of MT_RING, currently MT_FLINGRING
+		actor->flags = mobjinfo[actor->type].flags;	// Reset actor flags
 	}
 
-	// If a FlingRing gets attracted by a shield, change it into a normal ring.
-	if (actor->type == (mobjtype_t)actor->info->reactiontime)
-	{
-		actor->type = mobjinfo[actor->type].painchance; // Become the regular version of the fling object.
-		actor->flags = mobjinfo[actor->type].flags;		// Reset actor flags.
-		P_SetMobjState(actor, actor->info->spawnstate); // Go to regular object's spawn state.
-		return;
-	}
-
-	// Keep stuff from going down inside floors and junk
-	actor->flags &= ~MF_NOCLIPHEIGHT;
-
-	// Let attracted rings move through walls and such.
-	actor->flags |= MF_NOCLIP;
-
-	P_Attract(actor, actor->tracer, false);
 }
 
 // Function: A_DropMine
