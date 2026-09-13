@@ -25,6 +25,7 @@
 #include "v_video.h"
 #include "z_zone.h"
 #include "w_wad.h"
+#include "m_misc.h"
 
 #ifdef HWRENDER
 #include "hardware/hw_glob.h"

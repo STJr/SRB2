@@ -121,6 +121,7 @@ typedef struct
 	char *stringVar;
 	UINT8 nocecho;
 	UINT8 nochecklist;
+	UINT8 hidden; // Completely hide unlockable from the checklist whether or not it's unlocked.
 } unlockable_t;
 
 #define SECRET_NONE         -6 // Does nil.  Use with levels locked by UnlockRequired

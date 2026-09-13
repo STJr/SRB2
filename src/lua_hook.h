@@ -14,6 +14,7 @@
 #include "d_player.h"
 #include "s_sound.h"
 #include "d_event.h"
+#include "p_local.h"
 #include "lua_hudlib_drawlist.h"
 #include "netcode/d_clisrv.h"
 
@@ -39,6 +40,8 @@ automatically.
 	X (BossDeath),/* A_BossDeath */\
 	X (MobjRemoved),/* P_RemoveMobj */\
 	X (BotRespawn),/* B_CheckRespawn */\
+	X (ShouldBlockMobj),/* PIT_CheckThing */\
+	X (ShouldBlockMobjMove),/* PIT_CheckThing */\
 	X (MobjMoveBlocked),/* P_XYMovement (when movement is blocked) */\
 	X (MobjHitFloor),/* P_ZMovement (when movement is blocked by floor) */\
 	X (MobjHitCeiling),/* P_ZMovement (when movement is blocked by ceiling) */\
@@ -80,8 +83,10 @@ automatically.
 	X (PlayerHeight),/* override player height */\
 	X (PlayerCanEnterSpinGaps),\
 	X (AddonLoaded),\
+	X (CameraThinker),/* P_MoveChaseCamera */\
 	X (KeyDown),\
 	X (KeyUp),\
+	X (PlayerHitFloor), /* P_PlayerHitFloor */ \
 	X (TextInput),\
 
 #define STRING_HOOK_LIST(X) \
@@ -158,6 +163,7 @@ int  LUA_HookTouchSpecial(mobj_t *special, mobj_t *toucher);
 int  LUA_HookShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype);
 int  LUA_HookMobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype);
 int  LUA_HookMobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damagetype);
+int  LUA_HookMobjCollide(mobj_t *mobj1, mobj_t *mobj2, int hook_type);
 int  LUA_HookMobjMoveBlocked(mobj_t *, mobj_t *, line_t *);
 int  LUA_HookMobjHitFloor(mobj_t *);
 int  LUA_HookMobjHitCeiling(mobj_t *);
@@ -167,6 +173,7 @@ int  LUA_HookPlayerMsg(int source, int target, int flags, char *msg);
 int  LUA_HookHurtMsg(player_t *, mobj_t *inflictor, mobj_t *source, UINT8 damagetype);
 int  LUA_HookMapThingSpawn(mobj_t *, mapthing_t *);
 int  LUA_HookFollowMobj(player_t *, mobj_t *);
+int  LUA_HookCameraThinker(player_t *, camera_t *);
 int  LUA_HookPlayerCanDamage(player_t *, mobj_t *);
 void LUA_HookPlayerQuit(player_t *, kickreason_t);
 int  LUA_HookNameChange(player_t *plr, const char *name);
@@ -179,3 +186,4 @@ int  LUA_HookMusicChange(const char *oldname, struct MusicChange *);
 int  LUA_HookSoundPlay(sfxenum_t sfx_id, void *origin, const int origintype);
 fixed_t LUA_HookPlayerHeight(player_t *player);
 int  LUA_HookPlayerCanEnterSpinGaps(player_t *player);
+int LUA_HookPlayerHitFloor(player_t* player);

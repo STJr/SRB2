@@ -112,13 +112,13 @@ typedef struct
 //
 
 // Solid, is an obstacle.
-#define ML_IMPASSIBLE           1
+#define ML_IMPASSIBLE         0x00000001
 
 // Blocks monsters only.
-#define ML_BLOCKMONSTERS        2
+#define ML_BLOCKMONSTERS      0x00000002
 
 // Backside will not be present at all if not two sided.
-#define ML_TWOSIDED             4
+#define ML_TWOSIDED           0x00000004
 
 // If a texture is pegged, the texture will have
 // the end exposed to air held constant at the
@@ -130,29 +130,31 @@ typedef struct
 // top and bottom textures (use next to windows).
 
 // upper texture unpegged
-#define ML_DONTPEGTOP           8
+#define ML_DONTPEGTOP         0x00000008
 
 // lower texture unpegged
-#define ML_DONTPEGBOTTOM       16
+#define ML_DONTPEGBOTTOM      0x00000010
 
-#define ML_SKEWTD              32
+#define ML_SKEWTD             0x00000020
 
 // Don't let Knuckles climb on this line
-#define ML_NOCLIMB             64
+#define ML_NOCLIMB            0x00000040
 
-#define ML_NOSKEW             128
-#define ML_MIDPEG             256
-#define ML_MIDSOLID           512
-#define ML_WRAPMIDTEX        1024
+#define ML_NOSKEW             0x00000080
+#define ML_MIDPEG             0x00000100
+#define ML_MIDSOLID           0x00000200
+#define ML_WRAPMIDTEX         0x00000400
 
-#define ML_NETONLY           2048 // Apply effect only in netgames
-#define ML_NONET             4096 // Apply  effect only in single player games
-#define ML_EFFECT6           8192
+#define ML_NETONLY            0x00000800 // Apply effect only in netgames
+#define ML_NONET              0x00001000 // Apply effect only in single player games
+#define ML_EFFECT6            0x00002000
 
 // Bounce off walls!
-#define ML_BOUNCY           16384
+#define ML_BOUNCY             0x00004000
 
-#define ML_TFERLINE         32768
+#define ML_TFERLINE           0x00008000
+
+#define ML_CLIPMIDTEX         0x00010000
 
 // Sector definition, from editing.
 typedef struct

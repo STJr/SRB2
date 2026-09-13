@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2006 by Randy Heit.
-// Copyright (C) 2023-2024 by Sonic Team Junior.
+// Copyright (C) 2023-2025 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -87,7 +87,7 @@ const char *R_GetCustomTranslationName(unsigned id);
 unsigned R_NumCustomTranslations(void);
 remaptable_t *R_GetTranslationByID(int id);
 UINT8 *R_GetTranslationRemap(int id, skincolornum_t skincolor, INT32 skinnum);
-void R_UpdateTranslationRemaps(skincolornum_t skincolor, INT32 skinnum);
+void R_UpdateTranslationRemaps(skincolornum_t skincolor, INT32 skinnum, INT32 cache_index);
 boolean R_TranslationIsValid(int id);
 
 void R_ParseTrnslate(INT32 wadNum, UINT16 lumpnum);

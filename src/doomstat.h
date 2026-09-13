@@ -70,6 +70,8 @@ extern SINT8 startinglivesbalance[maxgameovers+1];
 #define PRECIP_BLANK 4
 #define PRECIP_STORM_NORAIN 5
 #define PRECIP_STORM_NOSTRIKES 6
+#define PRECIP_THUNDERSNOW 7
+#define PRECIP_THUNDERSNOW_NOSTRIKES 8
 
 // Set if homebrew PWAD stuff has been added.
 extern boolean modifiedgame;

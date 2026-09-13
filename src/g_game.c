@@ -884,12 +884,24 @@ static void G_MakeMapName(mapname_t *name, const char *string)
 	strupr(name->chars);
 }
 
+static UINT16 G_AllocateMap(const char *name, UINT32 lumpnum)
+{
+	G_MakeMapName(&gamemaps[numgamemaps].name, name);
+	gamemaps[numgamemaps].lumpnum = lumpnum;
+
+	numgamemaps++;
+
+	CONS_Debug(DBG_SETUP, "Added map %d (%s)\n", numgamemaps, name);
+
+	return numgamemaps;
+}
+
 void G_InitMaps(void)
 {
 	for (UINT16 i = 0; i < NUMBASEMAPS; i++)
 	{
 		const char *name = G_BuildClassicMapName(i + 1);
-		G_AddMap(name, LUMPERROR);
+		G_AllocateMap(name, LUMPERROR); // bypass allocation checks to make sure we always allocate it
 	}
 
 	G_MakeMapName(&nextmapnames[0], "SCENE_TITLE");
@@ -903,6 +915,9 @@ static UINT16 MapIDForHashedString(const char *name, size_t name_length, UINT32 
 	// Special case
 	if (name_length == 2 && name[0] >= 'A' && name[0] <= 'Z')
 		return M_MapNumber(name[0], name[1]);
+
+	if (name_length == 5 && memcmp(name, "MAP", 3) == 0 && name[3] >= 'A' && name[3] <= 'Z')
+		return M_MapNumber(name[3], name[4]);
 
 	for (UINT16 i = 0; i < numgamemaps; i++)
 	{
@@ -952,14 +967,7 @@ UINT16 G_AddMap(const char *name, UINT32 lumpnum)
 		return mapnum;
 	}
 
-	G_MakeMapName(&gamemaps[numgamemaps].name, name);
-	gamemaps[numgamemaps].lumpnum = lumpnum;
-
-	numgamemaps++;
-
-	CONS_Debug(DBG_SETUP, "Added map %d (%s)\n", numgamemaps, name);
-
-	return numgamemaps;
+	return G_AllocateMap(name, lumpnum);
 }
 
 lumpnum_t G_GetMapLumpnum(const char *name)
@@ -1631,24 +1639,23 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		return;
 	}
 
-	// Centerview can be a toggle in simple mode!
+	static boolean last_centerviewdown[2], centerviewhold[2]; // detect taps for toggle behavior
+	boolean down = PLAYERINPUTDOWN(ssplayer, GC_CENTERVIEW);
+
+	// why was this ever restricted to simple/automatic ???
+	// - nikoberry
+	if (cv_cam_centertoggle[forplayer].value == 0)
+		centerviewdown = down;
+	else
 	{
-		static boolean last_centerviewdown[2], centerviewhold[2]; // detect taps for toggle behavior
-		boolean down = PLAYERINPUTDOWN(ssplayer, GC_CENTERVIEW);
+		if (down && !last_centerviewdown[forplayer])
+			centerviewhold[forplayer] = !centerviewhold[forplayer];
+		last_centerviewdown[forplayer] = down;
 
-		if (!(controlstyle == CS_SIMPLE && cv_cam_centertoggle[forplayer].value))
-			centerviewdown = down;
-		else
-		{
-			if (down && !last_centerviewdown[forplayer])
-				centerviewhold[forplayer] = !centerviewhold[forplayer];
-			last_centerviewdown[forplayer] = down;
+		if (cv_cam_centertoggle[forplayer].value == 2 && !down && !ticcmd_ztargetfocus[forplayer])
+			centerviewhold[forplayer] = false;
 
-			if (cv_cam_centertoggle[forplayer].value == 2 && !down && !ticcmd_ztargetfocus[forplayer])
-				centerviewhold[forplayer] = false;
-
-			centerviewdown = centerviewhold[forplayer];
-		}
+		centerviewdown = centerviewhold[forplayer];
 	}
 
 	if (centerviewdown)
@@ -1768,31 +1775,33 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		cmd->buttons |= BT_JUMP;
 
 	// player aiming shit, ahhhh...
+
+	INT32 player_invert = invertmouse ? -1 : 1;
+	INT32 screen_invert =
+		(player->mo && (player->mo->eflags & MFE_VERTICALFLIP)
+		 && (!thiscam->chase || player->pflags & PF_FLIPCAM)) //because chasecam's not inverted
+		 ? -1 : 1; // set to -1 or 1 to multiply
+	INT32 configlookaxis = ssplayer == 1 ? cv_lookaxis.value : cv_lookaxis2.value;
+
+	// mouse look stuff (mouse look is not the same as mouse aim)
+	if (mouseaiming)
 	{
-		INT32 player_invert = invertmouse ? -1 : 1;
-		INT32 screen_invert =
-			(player->mo && (player->mo->eflags & MFE_VERTICALFLIP)
-			 && (!thiscam->chase || player->pflags & PF_FLIPCAM)) //because chasecam's not inverted
-			 ? -1 : 1; // set to -1 or 1 to multiply
-		 INT32 configlookaxis = ssplayer == 1 ? cv_lookaxis.value : cv_lookaxis2.value;
+		keyboard_look[forplayer] = false;
 
-		// mouse look stuff (mouse look is not the same as mouse aim)
-		if (mouseaiming)
-		{
-			keyboard_look[forplayer] = false;
+		// looking up/down
+		*myaiming += (mldy<<19)*player_invert*screen_invert;
+	}
 
-			// looking up/down
-			*myaiming += (mldy<<19)*player_invert*screen_invert;
-		}
+	if (analogjoystickmove && joyaiming[forplayer] && lookjoystickvector.yaxis != 0 && configlookaxis != 0)
+		*myaiming += (lookjoystickvector.yaxis<<16) * screen_invert;
 
-		if (analogjoystickmove && joyaiming[forplayer] && lookjoystickvector.yaxis != 0 && configlookaxis != 0)
-			*myaiming += (lookjoystickvector.yaxis<<16) * screen_invert;
+	// spring back if not using keyboard neither mouselookin'
+	if (!keyboard_look[forplayer] && configlookaxis == 0 && !joyaiming[forplayer] && !mouseaiming)
+		*myaiming = 0;
 
-		// spring back if not using keyboard neither mouselookin'
-		if (!keyboard_look[forplayer] && configlookaxis == 0 && !joyaiming[forplayer] && !mouseaiming)
-			*myaiming = 0;
-
-		if (!(player->powers[pw_carry] == CR_NIGHTSMODE))
+	if (!(player->powers[pw_carry] == CR_NIGHTSMODE))
+	{
+		if (!ticcmd_centerviewdown[forplayer]) // for parity with mlook
 		{
 			if (PLAYERINPUTDOWN(ssplayer, GC_LOOKUP) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))
 			{
@@ -1804,9 +1813,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 				*myaiming -= KB_LOOKSPEED * screen_invert;
 				keyboard_look[forplayer] = true;
 			}
-			else if (ticcmd_centerviewdown[forplayer])
-				*myaiming = 0;
-		}
+		} else
+			*myaiming = 0;
 
 		// accept no mlook for network games
 		if (!cv_allowmlook.value)
@@ -2164,11 +2172,6 @@ void G_DoLoadLevel(boolean resetplayer)
 #ifdef PARANOIA
 	Z_CheckHeap(-2);
 #endif
-
-	if (camera.chase)
-		P_ResetCamera(&players[displayplayer], &camera);
-	if (camera2.chase && splitscreen)
-		P_ResetCamera(&players[secondarydisplayplayer], &camera2);
 
 	// clear cmd building stuff
 	memset(gamekeydown, 0, sizeof (gamekeydown));
@@ -4420,9 +4423,13 @@ static void G_DoCompleted(void)
 {
 	INT32 i;
 
+	//Get and set prevmap/nextmap
+	prevmap = (INT16)(gamemap-1);
+	nextmap = G_GetNextMap(false, false);
+
 	tokenlist = 0; // Reset the list
 
-	boolean spec = G_IsSpecialStage(gamemap);
+	automapactive = false;
 
 	if (modeattacking && pausedelay)
 		pausedelay = 0;
@@ -4445,115 +4452,6 @@ static void G_DoCompleted(void)
 		AM_Stop();
 
 	S_StopSounds();
-
-	//Get and set prevmap/nextmap
-	prevmap = (INT16)(gamemap-1);
-	nextmap = G_GetNextMap(false, false);
-
-	// go to next level
-	// nextmap is 0-based, unlike gamemap
-	if (nextmapoverride != 0)
-		nextmap = (INT16)(nextmapoverride-1);
-	else if (marathonmode && mapheaderinfo[gamemap-1]->marathonnext)
-		nextmap = (INT16)(mapheaderinfo[gamemap-1]->marathonnext-1);
-	else
-	{
-		nextmap = (INT16)(mapheaderinfo[gamemap-1]->nextlevel-1);
-		if (marathonmode && nextmap == spmarathon_start-1)
-			nextmap = NEXTMAP_TITLE-1; // No infinite loop for you
-	}
-
-	INT16 gametype_to_use;
-
-	if (nextgametype >= 0 && nextgametype < gametypecount)
-		gametype_to_use = nextgametype;
-	else
-		gametype_to_use = gametype;
-
-	// If nextmap is actually going to get used, make sure it points to
-	// a map of the proper gametype -- skip levels that don't support
-	// the current gametype. (Helps avoid playing boss levels in Race,
-	// for instance).
-	if (!spec || nextmapoverride)
-	{
-		if (nextmap >= 0 && nextmap < numgamemaps)
-		{
-			INT16 cm = nextmap;
-			UINT32 tolflag = G_TOLFlag(gametype_to_use);
-			UINT8 *visitedmap = Z_Calloc(((numgamemaps+7)/8) * sizeof(UINT8), PU_STATIC, NULL);
-
-			while (!mapheaderinfo[cm] || !(mapheaderinfo[cm]->typeoflevel & tolflag))
-			{
-				visitedmap[cm/8] |= (1<<(cm&7));
-				if (!mapheaderinfo[cm])
-					cm = -1; // guarantee error execution
-				else if (marathonmode && mapheaderinfo[cm]->marathonnext)
-					cm = (INT16)(mapheaderinfo[cm]->marathonnext-1);
-				else
-					cm = (INT16)(mapheaderinfo[cm]->nextlevel-1);
-
-				if (cm >= numgamemaps || cm < 0) // out of range (either NEXTMAP_* or error)
-				{
-					cm = nextmap; //Start the loop again so that the error checking below is executed.
-
-					//Make sure the map actually exists before you try to go to it!
-					if (!G_MapFileExists(G_BuildMapName(cm + 1)))
-					{
-						CONS_Alert(CONS_ERROR, M_GetText("Next map given (MAP %d) doesn't exist! Reverting to MAP01.\n"), cm+1);
-						cm = 0;
-						break;
-					}
-				}
-
-				if (visitedmap[cm/8] & (1<<(cm&7))) // smells familiar
-				{
-					// We got stuck in a loop, came back to the map we started on
-					// without finding one supporting the current gametype.
-					// Thus, print a warning, and just use this map anyways.
-					CONS_Alert(CONS_WARNING, M_GetText("Can't find a compatible map after map %d; using map %d anyway\n"), prevmap+1, cm+1);
-					break;
-				}
-			}
-
-			Z_Free(visitedmap);
-
-			nextmap = cm;
-		}
-
-		// wrap around in race
-		if (G_IsGameEndMap(nextmap+1) && !(gametyperules & GTR_CAMPAIGN))
-			nextmap = (INT16)(spstage_start-1);
-
-		if (nextmap < 0 || (nextmap >= numgamemaps && !G_IsGameEndMap(nextmap+1)))
-			I_Error("Followed map %d to invalid map %d\n", prevmap + 1, nextmap + 1);
-
-		if (!spec)
-			lastmap = nextmap; // Remember last map for when you come out of the special stage.
-	}
-
-	if ((gottoken = ((gametyperules & GTR_SPECIALSTAGES) && token)))
-	{
-		token--;
-
-//		if (!nextmapoverride) // Having a token should pull the player into the special stage before going to the overridden map (Issue #933)
-			for (i = 0; i < 7; i++)
-				if (!(emeralds & (1<<i)))
-				{
-					nextmap = ((netgame || multiplayer) ? smpstage_start : sstage_start) + i - 1; // to special stage!
-					break;
-				}
-
-		if (i == 7)
-		{
-			gottoken = false;
-			token = 0;
-		}
-	}
-
-	if (spec && !gottoken && !nextmapoverride)
-		nextmap = lastmap; // Exiting from a special stage? Go back to the game. Tails 08-11-2001
-
-	automapactive = false;
 
 	// We are committed to this map now.
 	// We may as well allocate its header if it doesn't exist
@@ -5673,8 +5571,8 @@ static void measurekeywords(mapsearchfreq_t *fr,
 		struct searchdim **dimp, UINT8 *cuntp,
 		const char *s, const char *q, boolean wanttable)
 {
-	char *qp;
-	char *sp;
+	const char *qp;
+	const char *sp;
 	if (wanttable)
 		(*dimp) = Z_Realloc((*dimp), 255 * sizeof (struct searchdim),
 				PU_STATIC, NULL);
@@ -5682,7 +5580,7 @@ static void measurekeywords(mapsearchfreq_t *fr,
 			qp && fr->total < 255;
 			qp = strtok(0, " "))
 	{
-		if (( sp = strcasestr(s, qp) ))
+		if (( sp = stristr(s, qp) ))
 		{
 			if (wanttable)
 			{
@@ -5721,7 +5619,7 @@ INT32 G_FindMap(const char *mapname, char **foundmapnamep,
 	char   *realmapname = NULL;
 	char   *newmapname = NULL;
 	char   *apromapname = NULL;
-	char   *aprop = NULL;
+	const char   *aprop = NULL;
 
 	mapsearchfreq_t *freq;
 	boolean wanttable;
@@ -5773,7 +5671,7 @@ INT32 G_FindMap(const char *mapname, char **foundmapnamep,
 		if (apromapnum == 0 || wanttable)
 		{
 			/* LEVEL 1--match keywords verbatim */
-			if (( aprop = strcasestr(realmapname, mapname) ))
+			if (( aprop = stristr(realmapname, mapname) ))
 			{
 				if (wanttable)
 				{

@@ -433,6 +433,10 @@ static inline void P_RunThinkers(void)
 	size_t i;
 	for (i = 0; i < NUM_THINKERLISTS; i++)
 	{
+		// Precip mobjs are handled at render time
+		if (i == THINK_PRECIP)
+			return;
+
 		PS_START_TIMING(ps_thlist_times[i]);
 		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = currentthinker->next)
 		{

@@ -179,6 +179,7 @@ static const struct {
 	{META_TAGLIST,      "taglist"},
 
 	{META_MOBJ,         "mobj_t"},
+	{META_MOBJMOVEMENT, "mobjmovement_t"},
 	{META_MAPTHING,     "mapthing_t"},
 
 	{META_PLAYER,       "player_t"},

@@ -472,8 +472,8 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 
 #define SETUP3DVERT(vert, vx, vy) {\
 		/* Hurdler: add scrolling texture on floor/ceiling */\
-		vert->s = ((vx) / fflatwidth) + (scrollx / xscale);\
-		vert->t = -((vy) / fflatheight) + (scrolly / yscale);\
+		vert->s = (vx) + ((scrollx * fflatwidth) / xscale);\
+		vert->t = -(vy) + ((scrolly * fflatheight) / yscale);\
 \
 		/* Need to rotate before translate */\
 		if (angle) /* Only needs to be done if there's an altered angle */\
@@ -484,8 +484,8 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 			vert->t = (tempxsow * sin(anglef)) + (tempytow * cos(anglef));\
 		}\
 \
-		vert->s *= xscale;\
-		vert->t *= yscale;\
+		vert->s = (vert->s / fflatwidth) * xscale;\
+		vert->t = (vert->t / fflatheight) * yscale;\
 \
 		if (slope)\
 		{\
@@ -1075,7 +1075,7 @@ static void HWR_RenderMidtexture(INT32 gl_midtexture, float cliplow, float cliph
 	}
 
 	// The cut-off values of a linedef can always be constant, since every line has an absoulute front and or back sector
-	if (gl_curline->polyseg)
+	if (gl_curline->polyseg && ((gl_linedef->flags & ML_CLIPMIDTEX) || (gl_sidedef->flags & SIDEFLAG_CLIP_MIDTEX)) == 0)
 	{
 		lowcut = polybottom;
 		highcut = polytop;
@@ -1484,7 +1484,7 @@ static void HWR_ProcessSeg(void)
 			texturevpeg += gl_sidedef->rowoffset + gl_sidedef->offsety_mid;
 
 			wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
-			wallVerts[0].t = wallVerts[1].t = (texturevpeg + gl_frontsector->ceilingheight - gl_frontsector->floorheight) * grTex->scaleY;
+			wallVerts[0].t = wallVerts[1].t = (texturevpeg + (gl_frontsector->ceilingheight - gl_frontsector->floorheight) * yscale) * grTex->scaleY;
 			wallVerts[0].s = wallVerts[3].s = ((cliplow * xscale) + gl_sidedef->textureoffset + gl_sidedef->offsetx_mid) * grTex->scaleX;
 			wallVerts[2].s = wallVerts[1].s = ((cliphigh * xscale) + gl_sidedef->textureoffset + gl_sidedef->offsetx_mid) * grTex->scaleX;
 
@@ -2227,8 +2227,8 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	{
 		// Go from the polysector's original vertex locations
 		// Means the flat is offset based on the original vertex locations
-		v3d->s = (FixedToFloat(polysector->origVerts[i].x) / fflatwidth) + (scrollx / xscale);
-		v3d->t = -(FixedToFloat(polysector->origVerts[i].y) / fflatheight) + (scrolly / yscale);
+		v3d->s = FixedToFloat(polysector->origVerts[i].x) + ((scrollx * fflatwidth) / xscale);
+		v3d->t = -FixedToFloat(polysector->origVerts[i].y) + ((scrolly * fflatheight) / yscale);
 
 		// Need to rotate before translate
 		if (angle) // Only needs to be done if there's an altered angle
@@ -2242,8 +2242,8 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 			v3d->t = (tempxsow * sin(anglef)) + (tempytow * cos(anglef));
 		}
 
-		v3d->s *= xscale;
-		v3d->t *= yscale;
+		v3d->s = (v3d->s / fflatwidth) * xscale;
+		v3d->t = (v3d->t / fflatheight) * yscale;
 
 		v3d->x = FIXED_TO_FLOAT(polysector->vertices[i]->x);
 		v3d->y = height;
@@ -4836,6 +4836,10 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	// uncapped/interpolation
 	interpmobjstate_t interp = {0};
 
+	// Do this here so the precip sprite doesn't jitter at the beginning of a gametic
+	if (!paused && thing->lastupdatetime < gametic)
+		R_ResetPrecipitationMobjInterpolationState(thing);
+
 	// do interpolation
 	if (R_UsingFrameInterpolation() && !paused)
 	{
@@ -4930,13 +4934,14 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->bbox = false;
 
 	// okay... this is a hack, but weather isn't networked, so it should be ok
-	if (!(thing->precipflags & PCF_THUNK))
+	if (!(paused || P_AutoPause() || objectplacing) && thing->lastupdatetime < gametic)
 	{
 		if (thing->precipflags & PCF_RAIN)
 			P_RainThinker(thing);
 		else
 			P_SnowThinker(thing);
-		thing->precipflags |= PCF_THUNK;
+
+		thing->lastupdatetime = gametic;
 	}
 }
 
@@ -6006,6 +6011,8 @@ void HWR_DoPostProcessor(player_t *player)
 			Surf.PolyColor.s.red = Surf.PolyColor.s.green = Surf.PolyColor.s.blue = 0xff;
 
 		Surf.PolyColor.s.alpha = 0xc0; // match software mode
+
+		V_CubeApply(&Surf.PolyColor.s.red, &Surf.PolyColor.s.green, &Surf.PolyColor.s.blue);
 
 		HWD.pfnDrawPolygon(&Surf, v, 4, PF_Modulated|PF_Additive|PF_NoTexture|PF_NoDepthTest);
 	}

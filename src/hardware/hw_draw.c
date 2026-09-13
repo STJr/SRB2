@@ -346,8 +346,28 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	if (vscale != pscale)
 		fscaleh = FIXED_TO_FLOAT(vscale);
 
-	cx -= (float)(gpatch->leftoffset) * fscalew;
-	cy -= (float)(gpatch->topoffset) * fscaleh;
+	{
+		float offsetx = 0.0f, offsety = 0.0f;
+
+		// left offset
+		if (option & V_FLIP)
+		{
+			float newWidth = min(FIXED_TO_FLOAT(w), (float)gpatch->width);
+			if (w + sx > gpatch->width<<FRACBITS)
+				newWidth -= FIXED_TO_FLOAT(sx);
+
+			offsetx = (newWidth - (float)gpatch->leftoffset) * fscalew;
+		}
+		else
+			offsetx = (float)(gpatch->leftoffset) * fscalew;
+
+		// top offset
+		// TODO: make some kind of vertical version of V_FLIP
+		offsety = (float)(gpatch->topoffset) * fscaleh;
+
+		cx -= offsetx;
+		cy -= offsety;
+	}
 
 	if (splitscreen && (option & V_PERPLAYER))
 	{
@@ -474,8 +494,8 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	}
 
 	// positions of the cx, cy, are between 0 and vid.width/vid.height now, we need them to be between -1 and 1
-	cx = -1 + (cx / (vid.width/2));
-	cy = 1 - (cy / (vid.height/2));
+	cx = -1.0f + (cx / (vid.width / 2.0f));
+	cy = 1.0f - (cy / (vid.height / 2.0f));
 
 	// fwidth and fheight are similar
 	fwidth /= vid.width / 2;
@@ -490,11 +510,22 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
-	v[0].s = v[3].s = (FIXED_TO_FLOAT(sx)/(float)(gpatch->width))*hwrPatch->max_s;
-	if (sx + w > gpatch->width<<FRACBITS)
-		v[2].s = v[1].s = hwrPatch->max_s;
+	if (option & V_FLIP)
+	{
+		v[2].s = v[1].s = (FIXED_TO_FLOAT(sx)/(float)(gpatch->width))*hwrPatch->max_s;
+		if (sx + w > gpatch->width<<FRACBITS)
+			v[0].s = v[3].s = hwrPatch->max_s;
+		else
+			v[0].s = v[3].s = (FIXED_TO_FLOAT(sx+w)/(float)(gpatch->width))*hwrPatch->max_s;
+	}
 	else
-		v[2].s = v[1].s = (FIXED_TO_FLOAT(sx+w)/(float)(gpatch->width))*hwrPatch->max_s;
+	{
+		v[0].s = v[3].s = (FIXED_TO_FLOAT(sx)/(float)(gpatch->width))*hwrPatch->max_s;
+		if (sx + w > gpatch->width<<FRACBITS)
+			v[2].s = v[1].s = hwrPatch->max_s;
+		else
+			v[2].s = v[1].s = (FIXED_TO_FLOAT(sx+w)/(float)(gpatch->width))*hwrPatch->max_s;
+	}
 
 	v[0].t = v[1].t = (FIXED_TO_FLOAT(sy)/(float)(gpatch->height))*hwrPatch->max_t;
 	if (sy + h > gpatch->height<<FRACBITS)
@@ -1193,7 +1224,7 @@ void HWR_DrawFixedFill(fixed_t x, fixed_t y, fixed_t w, fixed_t h, INT32 color)
 	if (splitscreen && (color & V_PERPLAYER))
 	{
 		float adjusty = ((color & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)/2.0f;
-		fh /= 1;
+		fh /= 2;
 		fy /= 2;
 #ifdef QUADS
 		if (splitscreen > 1) // 3 or 4 players

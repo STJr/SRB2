@@ -1271,8 +1271,8 @@ void P_GivePlayerSpheres(player_t *player, INT32 num_spheres)
 	if (!player)
 		return;
 
-	if (player->bot)
-		player = &players[consoleplayer];
+	if ((player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN) && player->botleader)
+		player = player->botleader;
 
 	if (!player->mo)
 		return;
@@ -1298,8 +1298,8 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 	if (!player)
 		return;
 
-	if (player->bot)
-		player = &players[consoleplayer];
+	if ((player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN) && player->botleader)
+		player = player->botleader;
 
 	if (gamestate == GS_LEVEL)
 	{
@@ -2400,6 +2400,13 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 
 	if ((clipmomz = !(P_CheckDeathPitCollide(player->mo))) && player->mo->health && !player->spectator)
 	{
+		UINT8 shouldForce = LUA_HookPlayerHitFloor(player);
+
+		if (shouldForce == 1)
+			return true;
+		else if (shouldForce == 2)
+			return false;
+
 		if (dorollstuff)
 		{
 			if ((player->charability2 == CA2_SPINDASH) && !((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_THOKKED) && !(player->charability == CA_THOK && player->secondjump)
@@ -7483,14 +7490,14 @@ static void P_NiGHTSMovement(player_t *player)
 	{
 		player->pflags &= ~PF_STARTJUMP;
 
-		if (cmd->sidemove != 0)
-			moved = true;
+		if (cmd->sidemove != 0) // TODO: 2.3: Delete this line and...
+			moved = true; // ...this line, as this is just for older demo support
 
 		if (player->drillmeter & 1)
 			player->drillmeter++; // I'll be nice and give them one.
 	}
 
-	if (cmd->forwardmove != 0)
+	if (cmd->forwardmove != 0 || (cmd->sidemove != 0 && !(demoplayback && demoversion < 0x0012)))
 		moved = true;
 
 	if (!player->bumpertime)
@@ -9939,7 +9946,7 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcalled)
 {
 	angle_t angle = 0, focusangle = 0, focusaiming = 0;
-	fixed_t x, y, z, dist, distxy, distz, checkdist, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight, slopez = 0;
+	fixed_t x, y, z, dist, distxy, distz, viewpointx, viewpointy, camspeed, camdist, camheight, pviewheight, slopez = 0;
 	INT32 camrotate;
 	boolean camstill, cameranoclip, camorbit;
 	mobj_t *mo, *sign = NULL;
@@ -9954,7 +9961,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 	mo = player->mo;
 
-	if (player->playerstate == PST_REBORN)
+	if (LUA_HookCameraThinker(player, thiscam) || player->playerstate == PST_REBORN)
 	{
 		P_CalcChasePostImg(player, thiscam);
 		return true;
@@ -10219,10 +10226,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (!sign && !(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
 		dist = FixedMul(dist, player->camerascale);
 
-	checkdist = dist;
-
-	if (checkdist < 128*FRACUNIT)
-		checkdist = 128*FRACUNIT;
 
 	if (!(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE)) // This block here is like 90% Lach's work, thanks bud
 	{
@@ -10458,12 +10461,22 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			}
 	}
 
-		// crushed camera
-		if (myceilingz <= myfloorz + thiscam->height && !resetcalled && !cameranoclip)
+		if (!resetcalled && !cameranoclip)
 		{
-			P_ResetCamera(player, thiscam);
-			return true;
+			// turn transparent if too close (only in single player)
+			if (!multiplayer && !splitscreen && !netgame && ArePointsClose2D(thiscam->x, thiscam->y, mo->x, mo->y, 48*mo->scale))
+				player->mo->flags2 |= MF2_SHADOW;
+			else if (player->mo->flags2 & MF2_SHADOW)
+				player->mo->flags2 &= ~MF2_SHADOW;
+
+			// crushed camera
+			if (myceilingz <= myfloorz + thiscam->height)
+			{
+				P_ResetCamera(player, thiscam);
+				return true;
+			}
 		}
+
 
 		// camera fit?
 		if (myceilingz != myfloorz
@@ -10541,17 +10554,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 		thiscam->angle = angle;
 */
-	// follow the player
-	/*if (player->playerstate != PST_DEAD && (camspeed) != 0)
-	{
-		if (P_AproxDistance(mo->x - thiscam->x, mo->y - thiscam->y) > (checkdist + P_AproxDistance(mo->momx, mo->momy)) * 4
-			|| abs(mo->z - thiscam->z) > checkdist * 3)
-		{
-			if (!resetcalled)
-				P_ResetCamera(player, thiscam);
-			return true;
-		}
-	}*/
 
 	if (twodlevel || (mo->flags2 & MF2_TWOD))
 	{
@@ -10593,27 +10595,6 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		dist = thiscam->aiming - angle;
 		thiscam->aiming -= (dist>>3);
 	}
-
-	// Make player translucent if camera is too close (only in single player).
-	if (!(multiplayer || netgame) && !splitscreen)
-	{
-		fixed_t vx = thiscam->x, vy = thiscam->y;
-		fixed_t vz = thiscam->z + thiscam->height / 2;
-		if (player->awayviewtics && player->awayviewmobj != NULL && !P_MobjWasRemoved(player->awayviewmobj))		// Camera must obviously exist
-		{
-			vx = player->awayviewmobj->x;
-			vy = player->awayviewmobj->y;
-			vz = player->awayviewmobj->z + player->awayviewmobj->height / 2;
-		}
-
-		/* check z distance too for orbital camera */
-		if (ArePointsClose3D(vx, vy, vz, mo->x, mo->y, mo->z + mo->height / 2, FixedMul(48*FRACUNIT, mo->scale)))
-			mo->flags2 |= MF2_SHADOW;
-		else
-			mo->flags2 &= ~MF2_SHADOW;
-	}
-	else
-		mo->flags2 &= ~MF2_SHADOW;
 
 /*	if (!resetcalled && (player->powers[pw_carry] == CR_NIGHTSMODE && player->exiting))
 	{
@@ -11093,8 +11074,8 @@ static void P_MinecartThink(player_t *player)
 
 	if (!minecart || P_MobjWasRemoved(minecart) || !minecart->health)
 	{
-		// Minecart died on you, so kill yourself.
-		P_KillMobj(player->mo, NULL, NULL, 0);
+		//Clear player's carry flag.
+		player->powers[pw_carry] = CR_NONE;
 		return;
 	}
 
@@ -11133,7 +11114,7 @@ static void P_MinecartThink(player_t *player)
 	if (!P_TryMove(minecart, minecart->x + FINECOSINE(fa), minecart->y + FINESINE(fa), true))
 	{
 		if (!P_MobjWasRemoved(minecart))
-			P_KillMobj(minecart, NULL, NULL, 0);
+			P_KillMobj(minecart, NULL, NULL, DMG_INSTAKILL);
 		return;
 	}
 
@@ -11170,7 +11151,7 @@ static void P_MinecartThink(player_t *player)
 
 			if (!axis)
 			{
-				P_KillMobj(minecart, NULL, NULL, 0);
+				P_KillMobj(minecart, NULL, NULL, DMG_INSTAKILL);
 				return;
 			}
 
@@ -11304,10 +11285,14 @@ static void P_MinecartThink(player_t *player)
 		else
 		{
 			minecart->movefactor++;
-			if ((P_IsObjectOnGround(minecart) && minecart->movefactor >= 5) // off rail
-			|| (abs(minecart->momx) < minecart->scale/2 && abs(minecart->momy) < minecart->scale/2)) // hit a wall
+			if (P_IsObjectOnGround(minecart) && minecart->movefactor >= 5) // off rail
 			{
-				P_KillMobj(minecart, NULL, NULL, 0);
+				P_KillMobj(minecart, NULL, NULL, DMG_DEATHPIT);
+				return;
+			}
+			if (abs(minecart->momx) < minecart->scale/2 && abs(minecart->momy) < minecart->scale/2) // hit a wall
+			{
+				P_KillMobj(minecart, NULL, NULL, DMG_INSTAKILL);
 				return;
 			}
 		}
@@ -12200,7 +12185,7 @@ void P_PlayerThink(player_t *player)
 				player->drawangle += (player->powers[pw_justsprung] & ~(1<<15))*(ANG2+ANG1);
 #endif
 		}
-		else if (player->powers[pw_carry] && player->mo->tracer) // carry
+		else if (player->powers[pw_carry] && player->powers[pw_carry] != CR_FAN && player->mo->tracer) // carry
 		{
 			switch (player->powers[pw_carry])
 			{
@@ -12225,10 +12210,6 @@ void P_PlayerThink(player_t *player)
 					break;
 				case CR_DUSTDEVIL:
 					player->drawangle += ANG20;
-					break;
-				case CR_FAN:
-					if (player->pflags & PF_ANALOGMODE) // Don't impact drawangle in any special way when on a fan
-						player->drawangle = player->mo->angle;
 					break;
 				/* -- in case we wanted to have the camera freely movable during zoom tubes
 				case CR_ZOOMTUBE:*/

@@ -736,6 +736,7 @@ void CON_ToggleOff(void)
 		return;
 	}
 
+	I_SetTextInputMode(textinputmodeenabledbylua);
 	con_destlines = 0;
 	con_curlines = 0;
 	CON_ClearHUD();
@@ -826,7 +827,7 @@ static void CON_InputSetString(const char *c)
 	Lock_state();
 
 	memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
-	strcpy(inputlines[inputline], c);
+	strlcpy(inputlines[inputline], c, 1+strlen(c));
 	input_cur = input_sel = input_len = strlen(c);
 
 	Unlock_state();

@@ -119,6 +119,7 @@ typedef enum
 	//  or changing it actively.
 	MF_NOGRAVITY        = 1<<9,
 	// This object is an ambient sound.
+	// TODO: 2.3: Remove this flag and just check for MT_AMBIENT instead
 	MF_AMBIENT          = 1<<10,
 	// Slide this object when it hits a wall.
 	MF_SLIDEME          = 1<<11,
@@ -159,7 +160,11 @@ typedef enum
 	MF_GRENADEBOUNCE    = 1<<28,
 	// Run the action thinker on spawn.
 	MF_RUNSPAWNFUNC     = 1<<29,
-	// free: 1<<30 and 1<<31
+	// Apply slope physics to mobj if on slope
+	MF_APPLYSLOPE       = 1<<30,
+	// Prevent mobj from stepping up or down stairs
+	MF_NOSTEPMOVE       = 1<<31
+	// free: none
 } mobjflag_t;
 
 typedef enum
@@ -269,8 +274,6 @@ typedef enum {
 	PCF_MOVINGFOF = 8,
 	// Is rain.
 	PCF_RAIN = 16,
-	// Ran the thinker this tic.
-	PCF_THUNK = 32,
 } precipflag_t;
 
 // [RH] Like msecnode_t, but for the blockmap
@@ -486,6 +489,8 @@ typedef struct precipmobj_s
 	INT32 tics; // state tic counter
 	state_t *state;
 	INT32 flags; // flags from mobjinfo tables
+
+	tic_t lastupdatetime;
 } precipmobj_t;
 
 typedef struct actioncache_s

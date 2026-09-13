@@ -698,25 +698,31 @@ SINT8 P_MobjFlip(mobj_t *mobj)
 //
 // P_WeaponOrPanel
 //
-// Returns true if weapon ring/panel; otherwise returns false
+// Returns true if weapon ring or panel; otherwise returns false
 //
-boolean P_WeaponOrPanel(mobjtype_t type)
+inline boolean P_WeaponOrPanel(mobjtype_t type)
 {
-	if (type == MT_BOUNCERING
-	|| type == MT_AUTOMATICRING
-	|| type == MT_INFINITYRING
-	|| type == MT_RAILRING
-	|| type == MT_EXPLOSIONRING
-	|| type == MT_SCATTERRING
-	|| type == MT_GRENADERING
-	|| type == MT_BOUNCEPICKUP
-	|| type == MT_RAILPICKUP
-	|| type == MT_AUTOPICKUP
-	|| type == MT_EXPLODEPICKUP
-	|| type == MT_SCATTERPICKUP
-	|| type == MT_GRENADEPICKUP)
-		return true;
-
+	switch (type)
+	{
+		case MT_BOUNCEPICKUP:
+		case MT_RAILPICKUP:
+		case MT_AUTOPICKUP:
+		case MT_EXPLODEPICKUP:
+		case MT_SCATTERPICKUP:
+		case MT_GRENADEPICKUP:
+		case MT_BOUNCERING:
+		case MT_AUTOMATICRING:
+		case MT_INFINITYRING:
+		case MT_RAILRING:
+		case MT_EXPLOSIONRING:
+		case MT_SCATTERRING:
+		case MT_GRENADERING:
+			return true;
+			break;
+		default:
+			break;
+			
+	}
 	return false;
 }
 
@@ -2297,8 +2303,8 @@ boolean P_ZMovement(mobj_t *mo)
 				if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS || mo->type == MT_MINECART)
 				{
 					// Kill enemies, bosses and minecarts that fall into death pits.
-					P_KillMobj(mo, NULL, NULL, 0);
-					return !P_MobjWasRemoved(mo); // allows explosion states to run
+					if (P_DamageMobj(mo, NULL, NULL, 1, DMG_DEATHPIT))
+						return !P_MobjWasRemoved(mo); // allows explosion states to run
 				}
 				else
 				{
@@ -3904,7 +3910,6 @@ void P_RecalcPrecipInSector(sector_t *sector)
 void P_NullPrecipThinker(precipmobj_t *mobj)
 {
 	//(void)mobj;
-	mobj->precipflags &= ~PCF_THUNK;
 	R_ResetPrecipitationMobjInterpolationState(mobj);
 }
 
@@ -3959,6 +3964,7 @@ void P_RainThinker(precipmobj_t *mobj)
 	}
 
 	mobj->z = mobj->floorz;
+	R_ResetPrecipitationMobjInterpolationState(mobj);
 	P_SetPrecipMobjState(mobj, S_SPLASH1);
 }
 
@@ -10194,9 +10200,6 @@ void P_MobjThinker(mobj_t *mobj)
 	if (mobj->flags & MF_NOTHINK)
 		return;
 
-	if ((mobj->flags & MF_BOSS) && mobj->spawnpoint && (bossdisabled & (1<<mobj->spawnpoint->args[0])))
-		return;
-
 	// Remove dead target/tracer.
 	if (mobj->target && P_MobjWasRemoved(mobj->target))
 		P_SetTarget(&mobj->target, NULL);
@@ -10221,32 +10224,32 @@ void P_MobjThinker(mobj_t *mobj)
 	if (mobj->scale != mobj->destscale)
 		P_MobjScaleThink(mobj); // Slowly scale up/down to reach your destscale.
 
-	if ((mobj->type == MT_GHOST || mobj->type == MT_THOK) && mobj->fuse > 0) // Not guaranteed to be MF_SCENERY or not MF_SCENERY!
-	{
-		if (mobj->flags2 & MF2_BOSSNOTRAP) // "fast" flag
-		{
-			if ((signed)((mobj->frame & FF_TRANSMASK) >> FF_TRANSSHIFT) < (NUMTRANSMAPS-1) - (2*mobj->fuse)/3)
-				// fade out when nearing the end of fuse...
-				mobj->frame = (mobj->frame & ~FF_TRANSMASK) | (((NUMTRANSMAPS-1) - (2*mobj->fuse)/3) << FF_TRANSSHIFT);
-		}
-		else
-		{
-			if ((signed)((mobj->frame & FF_TRANSMASK) >> FF_TRANSSHIFT) < (NUMTRANSMAPS-1) - mobj->fuse / 2)
-				// fade out when nearing the end of fuse...
-				mobj->frame = (mobj->frame & ~FF_TRANSMASK) | (((NUMTRANSMAPS-1) - mobj->fuse / 2) << FF_TRANSSHIFT);
-		}
-	}
-
-	// Special thinker for scenery objects
-	if (mobj->flags & MF_SCENERY)
-	{
-		P_MobjSceneryThink(mobj);
-		return;
-	}
-
-	// Check for a Lua thinker first
 	if (!mobj->player)
 	{
+		if ((mobj->type == MT_GHOST || mobj->type == MT_THOK) && mobj->fuse > 0) // Not guaranteed to be MF_SCENERY or not MF_SCENERY!
+		{
+			if (mobj->flags2 & MF2_BOSSNOTRAP) // "fast" flag
+			{
+				if ((signed)((mobj->frame & FF_TRANSMASK) >> FF_TRANSSHIFT) < (NUMTRANSMAPS-1) - (2*mobj->fuse)/3)
+					// fade out when nearing the end of fuse...
+					mobj->frame = (mobj->frame & ~FF_TRANSMASK) | (((NUMTRANSMAPS-1) - (2*mobj->fuse)/3) << FF_TRANSSHIFT);
+			}
+			else
+			{
+				if ((signed)((mobj->frame & FF_TRANSMASK) >> FF_TRANSSHIFT) < (NUMTRANSMAPS-1) - mobj->fuse / 2)
+					// fade out when nearing the end of fuse...
+					mobj->frame = (mobj->frame & ~FF_TRANSMASK) | (((NUMTRANSMAPS-1) - mobj->fuse / 2) << FF_TRANSSHIFT);
+			}
+		}
+
+		// Special thinker for scenery objects
+		if (mobj->flags & MF_SCENERY)
+		{
+			P_MobjSceneryThink(mobj);
+			return;
+		}
+
+		// Check for a Lua thinker first
 		if (LUA_HookMobj(mobj, MOBJ_HOOK(MobjThinker)) || P_MobjWasRemoved(mobj))
 			return;
 	}
@@ -10267,6 +10270,9 @@ void P_MobjThinker(mobj_t *mobj)
 	}
 	else if (mobj->flags & MF_BOSS)
 	{
+		if (mobj->spawnpoint && (bossdisabled & (1<<mobj->spawnpoint->args[0])))
+			return;
+			
 		if (!P_MobjBossThink(mobj))
 			return;
 	}
@@ -10274,6 +10280,21 @@ void P_MobjThinker(mobj_t *mobj)
 	{
 		if (!P_MobjDeadThink(mobj))
 			return;
+
+		// check for a weapon panel
+		switch (mobj->type)
+		{
+			case MT_BOUNCEPICKUP:
+			case MT_RAILPICKUP:
+			case MT_AUTOPICKUP:
+			case MT_EXPLODEPICKUP:
+			case MT_SCATTERPICKUP:
+			case MT_GRENADEPICKUP:
+				mobj->alpha = min(FRACUNIT, mobj->fuse<<10);
+				break;
+			default:
+				break;	
+		}
 	}
 	else
 	{
@@ -10329,16 +10350,8 @@ void P_MobjThinker(mobj_t *mobj)
 	}
 
 	// Sliding physics for slidey mobjs!
-	if (mobj->type == MT_FLINGRING
-		|| mobj->type == MT_FLINGCOIN
-		|| mobj->type == MT_FLINGBLUESPHERE
-		|| mobj->type == MT_FLINGNIGHTSCHIP
-		|| P_WeaponOrPanel(mobj->type)
-		|| mobj->type == MT_FLINGEMERALD
-		|| mobj->type == MT_BIGTUMBLEWEED
-		|| mobj->type == MT_LITTLETUMBLEWEED
-		|| mobj->type == MT_CANNONBALLDECOR
-		|| mobj->type == MT_FALLINGROCK) {
+	if (mobj->flags & MF_APPLYSLOPE)
+	{
 		P_TryMove(mobj, mobj->x, mobj->y, true); // Sets mo->standingslope correctly
 		if (P_MobjWasRemoved(mobj))
 			return;
@@ -10347,11 +10360,9 @@ void P_MobjThinker(mobj_t *mobj)
 	}
 
 	if (mobj->flags & (MF_ENEMY|MF_BOSS) && mobj->health
-		&& P_CheckDeathPitCollide(mobj)) // extra pit check in case these didn't have momz
-	{
-		P_KillMobj(mobj, NULL, NULL, DMG_DEATHPIT);
-		return;
-	}
+		&& P_CheckDeathPitCollide(mobj) // extra pit check in case these didn't have momz
+		&& P_DamageMobj(mobj, NULL, NULL, 1, DMG_DEATHPIT))
+			return;
 
 	// Crush enemies!
 	if (mobj->ceilingz - mobj->floorz < mobj->height)
@@ -10361,45 +10372,14 @@ void P_MobjThinker(mobj_t *mobj)
 			&& mobj->flags & MF_SHOOTABLE)
 		|| mobj->type == MT_EGGSHIELD)
 		&& !(mobj->flags & MF_NOCLIPHEIGHT)
-		&& mobj->health > 0)
-		{
-			P_KillMobj(mobj, NULL, NULL, DMG_CRUSHED);
+		&& mobj->health > 0
+		&& P_DamageMobj(mobj, NULL, NULL, 1, DMG_CRUSHED))
 			return;
-		}
+
 	}
 
 	// Can end up here if a player dies.
 	P_CycleMobjState(mobj);
-
-	if (P_MobjWasRemoved(mobj))
-		return;
-
-	switch (mobj->type)
-	{
-		case MT_BOUNCEPICKUP:
-		case MT_RAILPICKUP:
-		case MT_AUTOPICKUP:
-		case MT_EXPLODEPICKUP:
-		case MT_SCATTERPICKUP:
-		case MT_GRENADEPICKUP:
-			if (mobj->health == 0) // Fading tile
-			{
-				// TODO: Maybe use mobj->alpha instead of messing with frame flags
-				INT32 value = mobj->info->damage/10;
-				value = mobj->fuse/value;
-				value = 10-value;
-				value--;
-
-				if (value <= 0)
-					value = 1;
-
-				mobj->frame &= ~FF_TRANSMASK;
-				mobj->frame |= value << FF_TRANSSHIFT;
-			}
-			break;
-		default:
-			break;
-	}
 }
 
 // Quick, optimized function for the Rail Rings
@@ -11339,6 +11319,7 @@ void P_RemoveMobj(mobj_t *mobj)
 			// no references, dump it directly in the mobj cache
 			mobj->hnext = mobjcache;
 			mobjcache = mobj;
+			LUA_InvalidateUserdata(mobj);
 			return;
 		}
 
@@ -11456,7 +11437,7 @@ void P_SpawnPrecipitation(void)
 		// Don't set height yet...
 		height = precipsector->sector->ceilingheight;
 
-		if (curWeather == PRECIP_SNOW)
+		if (curWeather == PRECIP_SNOW || curWeather == PRECIP_THUNDERSNOW || curWeather == PRECIP_THUNDERSNOW_NOSTRIKES)
 		{
 			// Not in a sector with visible sky -- exception for NiGHTS.
 			if ((!(maptol & TOL_NIGHTS) && (precipsector->sector->ceilingpic != skyflatnum)) == !(precipsector->sector->flags & MSF_INVERTPRECIP))
@@ -11507,7 +11488,8 @@ void P_PrecipitationEffects(void)
 	// If the global weather has lightning strikes,
 	// EVERYONE gets them at the SAME time!
 	else if (globalweather == PRECIP_STORM
-	 || globalweather == PRECIP_STORM_NORAIN)
+	 || globalweather == PRECIP_STORM_NORAIN
+	 || globalweather == PRECIP_THUNDERSNOW)
 		thunderchance = (P_RandomKey(8192));
 	// But on the other hand, if the global weather is ANYTHING ELSE,
 	// don't sync lightning strikes.
@@ -11529,7 +11511,14 @@ void P_PrecipitationEffects(void)
 			break;
 		case PRECIP_STORM_NORAIN: // no rain, lightning and thunder allowed
 			sounds_rain = false;
+			/* FALLTHRU */
 		case PRECIP_STORM: // everything.
+			break;
+		case PRECIP_THUNDERSNOW_NOSTRIKES: // no lightning strikes specifically
+			effects_lightning = false;
+			/* FALLTHRU */
+		case PRECIP_THUNDERSNOW: // everything.
+			sounds_rain = false;
 			break;
 		default:
 			// Other weathers need not apply.
@@ -11588,7 +11577,7 @@ void P_PrecipitationEffects(void)
 		volume = 255;
 
 	if (sounds_rain && (!leveltime || leveltime % 80 == 1))
-	S_StartSoundFromMobjVol(players[displayplayer].mo, sfx_rainin, volume);
+		S_StartSoundFromMobjVol(players[displayplayer].mo, sfx_rainin, volume);
 
 	if (!sounds_thunder)
 		return;
@@ -12082,7 +12071,6 @@ static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
 		if (numdmstarts < MAX_DM_STARTS)
 		{
 			deathmatchstarts[numdmstarts] = mthing;
-			mthing->type = 0;
 			numdmstarts++;
 		}
 		return true;
@@ -12092,7 +12080,6 @@ static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
 		if (numredctfstarts < MAXPLAYERS)
 		{
 			redctfstarts[numredctfstarts] = mthing;
-			mthing->type = 0;
 			numredctfstarts++;
 		}
 		return true;
@@ -12102,7 +12089,6 @@ static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
 		if (numbluectfstarts < MAXPLAYERS)
 		{
 			bluectfstarts[numbluectfstarts] = mthing;
-			mthing->type = 0;
 			numbluectfstarts++;
 		}
 		return true;

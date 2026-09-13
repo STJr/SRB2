@@ -3137,7 +3137,7 @@ const char *I_LocateWad(void)
 static long get_entry(const char* name, const char* buf)
 {
 	long val;
-	char* hit = strstr(buf, name);
+	const char* hit = strstr(buf, name);
 	if (hit == NULL) {
 		return -1;
 	}

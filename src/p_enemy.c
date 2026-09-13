@@ -7361,7 +7361,7 @@ void A_Boss2TakeDamage(void *data)
 		return;
 
 	A_Pain(actor);
-	actor->reactiontime = 1; // turn around
+
 	if (locvar1 == 0) // old A_Invincibilerize behavior
 		actor->movecount = TICRATE;
 	else
@@ -8404,7 +8404,10 @@ void A_Shockwave(void *data)
 	if (LUA_CallAction(A_SHOCKWAVE, actor))
 		return;
 
-	if (locvar2 == 0)
+	if (!locvar1) // use the default shockwave mobj if none supplied
+		locvar1 = MT_SHOCKWAVE;
+
+	if (!locvar2)
 		locvar2 = 24; // a sensible default, just in case
 
 	interval = FixedAngle((360 << FRACBITS) / locvar2);

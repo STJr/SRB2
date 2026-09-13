@@ -152,11 +152,11 @@ boolean P_CanPickupItem(player_t *player, boolean weapon)
 	if (!player->mo || player->mo->health <= 0)
 		return false;
 
-	if (player->bot && player->bot != BOT_MPAI)
+	if ((player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN) && player->botleader)
 	{
 		if (weapon)
 			return false;
-		return P_CanPickupItem(&players[consoleplayer], true); // weapon is true to prevent infinite recursion if p1 is bot - doesn't occur in vanilla, but may be relevant for mods
+		return P_CanPickupItem(player->botleader, true); // weapon is true to prevent infinite recursion if p1 is bot - doesn't occur in vanilla, but may be relevant for mods
 	}
 
 	if (player->powers[pw_flashing] > (flashingtics/4)*3 && player->powers[pw_flashing] < UINT16_MAX)
@@ -235,8 +235,8 @@ void P_DoNightsScore(player_t *player)
 		return; // Don't do any fancy shit for failures.
 
 	dummymo = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z+player->mo->height/2, MT_NIGHTSCORE);
-	if (player->bot && player->bot != BOT_MPAI)
-		player = &players[consoleplayer];
+	if ((player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN) && player->botleader)
+		player = player->botleader;
 
 	if (G_IsSpecialStage(gamemap)) // Global link count? Maybe not a good idea...
 	{
@@ -1426,17 +1426,20 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			break;
 		case MT_HOOPCOLLIDE:
 			// This produces a kind of 'domino effect' with the hoop's pieces.
-			for (; special->hprev != NULL; special = special->hprev); // Move to the first sprite in the hoop
+			for (; special != NULL && special->hprev != NULL; special = special->hprev); // Move to the first sprite in the hoop
 			i = 0;
-			for (; special->type == MT_HOOP; special = special->hnext)
+			for (; special != NULL && special->type == MT_HOOP; special = special->hnext)
 			{
-				if (!P_MobjWasRemoved(special->target))
+				if (!P_MobjWasRemoved(special))
 				{
 					special->fuse = 11;
 					special->movedir = i;
-					special->extravalue1 = special->target->extravalue1;
-					special->extravalue2 = special->target->extravalue2;
-					special->target->threshold = 4242;
+					if (!P_MobjWasRemoved(special->target))
+					{
+						special->extravalue1 = special->target->extravalue1;
+						special->extravalue2 = special->target->extravalue2;
+						special->target->threshold = 4242;
+					}
 				}
 				i++;
 			}
@@ -1460,8 +1463,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					if (players[i].ingame && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 						players[i].drillmeter += TICRATE/2;
 			}
-			else if (player->bot && player->bot != BOT_MPAI)
-				players[consoleplayer].drillmeter += TICRATE/2;
+			else if ((player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN) && player->botleader)
+				player->botleader->drillmeter += TICRATE/2;
 			else
 				player->drillmeter += TICRATE/2;
 
@@ -2931,7 +2934,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			A_Scream(target);
 			target->momx = target->momy = target->momz = 0;
 			if (target->target && target->target->health)
-				P_KillMobj(target->target, target, source, 0);
+				P_DamageMobj(target->target, target, source, 1,
+					damagetype == DMG_DEATHPIT ? DMG_DEATHPIT : DMG_INSTAKILL);
 			break;
 
 		case MT_PLAYER:
@@ -3226,7 +3230,7 @@ static boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, IN
 	if ((player->pflags & PF_TAGIT && source && source->player && !(((cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) || ((damagetype & DMG_CANHURTSELF) && source->player == player)) &&
 		source->player->pflags & PF_TAGIT)))
 	{
-		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
+		if (inflictor && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 		{
 			if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
 			{
@@ -3242,22 +3246,25 @@ static boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, IN
 	if (source && source->player && !((cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) || ((damagetype & DMG_CANHURTSELF) && source->player == player)) && 
 		(player->pflags & PF_TAGIT) == (source->player->pflags & PF_TAGIT))
 	{
-		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
+		if (inflictor)
 		{
-			if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+			if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 			{
-				P_SwitchShield(player, SH_PINK);
-				S_StartSoundFromMobj(target, mobjinfo[MT_PITY_ICON].seesound);
+				if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+				{
+					P_SwitchShield(player, SH_PINK);
+					S_StartSoundFromMobj(target, mobjinfo[MT_PITY_ICON].seesound);
+				}
 			}
+			else if (!(inflictor->flags & MF_FIRE))
+				P_GivePlayerRings(player, 1);
+			if (inflictor->flags2 & MF2_BOUNCERING)
+				inflictor->fuse = 0; // bounce ring disappears at -1 not 0
 		}
-		else if (!(inflictor->flags & MF_FIRE))
-			P_GivePlayerRings(player, 1);
-		if (inflictor->flags2 & MF2_BOUNCERING)
-			inflictor->fuse = 0; // bounce ring disappears at -1 not 0
 		return false;
 	}
 
-	if (inflictor->type == MT_LHRT)
+	if (inflictor && inflictor->type == MT_LHRT)
 		return false;
 
 	// The tag occurs so long as you aren't shooting another tagger with friendlyfire on.
@@ -3327,7 +3334,7 @@ static boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 		// In COOP/RACE, you can't hurt other players unless cv_friendlyfire is on
 		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && (gametyperules & GTR_FRIENDLY))
 		{
-			if ((gametyperules & GTR_FRIENDLY) && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK)) // co-op only
+			if ((gametyperules & GTR_FRIENDLY) && inflictor && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK)) // co-op only
 			{
 				if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
 				{
@@ -3350,24 +3357,27 @@ static boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 		// unless cv_friendlyfire is on.
 		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && target->player->ctfteam == source->player->ctfteam)
 		{
-			if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
+			if (inflictor)
 			{
-				if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+				if (inflictor && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 				{
-					P_SwitchShield(player, SH_PINK);
-					S_StartSoundFromMobj(target, mobjinfo[MT_PITY_ICON].seesound);
+					if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
+					{
+						P_SwitchShield(player, SH_PINK);
+						S_StartSoundFromMobj(target, mobjinfo[MT_PITY_ICON].seesound);
+					}
 				}
+				else if (!(inflictor->flags & MF_FIRE))
+					P_GivePlayerRings(target->player, 1);
+				if (inflictor->flags2 & MF2_BOUNCERING)
+					inflictor->fuse = 0; // bounce ring disappears at -1 not 0
 			}
-			else if (!(inflictor->flags & MF_FIRE))
-				P_GivePlayerRings(target->player, 1);
-			if (inflictor->flags2 & MF2_BOUNCERING)
-				inflictor->fuse = 0; // bounce ring disappears at -1 not 0
 
 			return false;
 		}
 	}
 
-	if (inflictor->type == MT_LHRT)
+	if (inflictor && inflictor->type == MT_LHRT)
 		return false;
 
 	// Add pity.
@@ -3454,34 +3464,37 @@ static void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *source, I
 	else
 		P_SetObjectMomZ(player->mo, FixedDiv(69*FRACUNIT,10*FRACUNIT), false);
 
-	ang = R_PointToAngle2(inflictor->x,	inflictor->y, player->mo->x, player->mo->y);
-
-	// explosion and rail rings send you farther back, making it more difficult
-	// to recover
-	if (inflictor->flags2 & MF2_SCATTER && source)
+	if (!P_MobjWasRemoved(inflictor))
 	{
-		fixed_t dist = P_GetMobjDistance3D(source, player->mo);
+		ang = R_PointToAngle2(inflictor->x,	inflictor->y, player->mo->x, player->mo->y);
 
-		dist = FixedMul(128*FRACUNIT, inflictor->scale) - dist/4;
+		// explosion and rail rings send you farther back, making it more difficult
+		// to recover
+		if (inflictor->flags2 & MF2_SCATTER && source)
+		{
+			fixed_t dist = P_GetMobjDistance3D(source, player->mo);
 
-		if (dist < FixedMul(4*FRACUNIT, inflictor->scale))
-			dist = FixedMul(4*FRACUNIT, inflictor->scale);
+			dist = FixedMul(128*FRACUNIT, inflictor->scale) - dist/4;
 
-		fallbackspeed = dist;
-	}
-	else if (inflictor->flags2 & MF2_EXPLOSION)
-	{
-		if (inflictor->flags2 & MF2_RAILRING)
-			fallbackspeed = FixedMul(28*FRACUNIT, inflictor->scale); // 7x
+			if (dist < FixedMul(4*FRACUNIT, inflictor->scale))
+				dist = FixedMul(4*FRACUNIT, inflictor->scale);
+
+			fallbackspeed = dist;
+		}
+		else if (inflictor->flags2 & MF2_EXPLOSION)
+		{
+			if (inflictor->flags2 & MF2_RAILRING)
+				fallbackspeed = FixedMul(28*FRACUNIT, inflictor->scale); // 7x
+			else
+				fallbackspeed = FixedMul(20*FRACUNIT, inflictor->scale); // 5x
+		}
+		else if (inflictor->flags2 & MF2_RAILRING)
+			fallbackspeed = FixedMul(16*FRACUNIT, inflictor->scale); // 4x
 		else
-			fallbackspeed = FixedMul(20*FRACUNIT, inflictor->scale); // 5x
-	}
-	else if (inflictor->flags2 & MF2_RAILRING)
-		fallbackspeed = FixedMul(16*FRACUNIT, inflictor->scale); // 4x
-	else
-		fallbackspeed = FixedMul(4*FRACUNIT, inflictor->scale); // the usual amount of force
+			fallbackspeed = FixedMul(4*FRACUNIT, inflictor->scale); // the usual amount of force
 
-	P_InstaThrust(player->mo, ang, fallbackspeed);
+		P_InstaThrust(player->mo, ang, fallbackspeed);
+	}
 
 	P_SetMobjState(player->mo, S_PLAY_STUN);
 
@@ -3614,7 +3627,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 
 	if (!cv_friendlyfire.value && source && source->player)
 	{
-		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
+		if (inflictor && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 		{
 			if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
 			{

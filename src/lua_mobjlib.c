@@ -24,6 +24,9 @@
 #include "lua_hud.h" // hud_running errors
 #include "lua_hook.h" // hook_cmd_running errors
 
+// MOBJ //
+// ---- //
+
 enum mobj_e {
 	mobj_valid = 0,
 	mobj_x,
@@ -677,9 +680,11 @@ static int mobj_set(lua_State *L)
 	case mobj_radius:
 	{
 		mobj_t *ptmthing = tmthing;
+		P_UnsetBlockmapEntry(mo);
 		mo->radius = luaL_checkfixed(L, 3);
 		if (mo->radius < 0)
 			mo->radius = 0;
+		P_SetBlockmapEntry(mo);
 		P_CheckPosition(mo, mo->x, mo->y);
 		mo->floorz = tmfloorz;
 		mo->ceilingz = tmceilingz;
@@ -978,6 +983,53 @@ static int mobj_set(lua_State *L)
 #undef NOSETPOS
 #undef NOFIELD
 
+
+// MOBJ MOVEMENT //
+// ------------- //
+
+enum mobjmovement_e {
+	mobjmovement_x = 0,
+	mobjmovement_y
+};
+
+const char *const mobjmovement_opt[] = {
+	"x",
+	"y",
+	NULL,
+};
+
+static int mobjmovement_fields_ref = LUA_NOREF;
+
+int mobjmovement_ref = LUA_NOREF;
+
+static int mobjmovement_get(lua_State *L)
+{
+	luaL_checkudata(L, 1, META_MOBJMOVEMENT);
+	enum mobjmovement_e field = Lua_optoption(L, 2, -1, mobjmovement_fields_ref);
+	lua_settop(L, 2);
+
+	if (field == (enum mobjmovement_e)-1)
+		return LUA_ErrInvalid(L, "fields");
+
+	switch (field)
+	{
+		case mobjmovement_x:
+			lua_pushinteger(L, tmx);
+			break;
+		case mobjmovement_y:
+			lua_pushinteger(L, tmy);
+			break;
+		default:
+			return luaL_error(L, "%s %s", LUA_QL("mobjmovement_t"), va("has no field named: %ui", field));
+	}
+
+	return 1;
+}
+
+
+// MAP THING //
+// --------- //
+
 // args, i -> args[i]
 static int thingargs_get(lua_State *L)
 {
@@ -1274,11 +1326,13 @@ static int lib_nummapthings(lua_State *L)
 int LUA_MobjLib(lua_State *L)
 {
 	LUA_RegisterUserdataMetatable(L, META_MOBJ, mobj_get, mobj_set, NULL);
+	LUA_RegisterUserdataMetatable(L, META_MOBJMOVEMENT, mobjmovement_get, NULL, NULL);
 	LUA_RegisterUserdataMetatable(L, META_THINGARGS, thingargs_get, NULL, thingargs_len);
 	LUA_RegisterUserdataMetatable(L, META_THINGSTRINGARGS, thingstringargs_get, NULL, thingstringargs_len);
 	LUA_RegisterUserdataMetatable(L, META_MAPTHING, mapthing_get, mapthing_set, mapthing_num);
 
 	mobj_fields_ref = Lua_CreateFieldTable(L, mobj_opt);
+	mobjmovement_fields_ref = Lua_CreateFieldTable(L, mobjmovement_opt);
 	mapthing_fields_ref = Lua_CreateFieldTable(L, mapthing_opt);
 
 	LUA_PushTaggableObjectArray(L, "mapthings",
@@ -1288,6 +1342,13 @@ int LUA_MobjLib(lua_State *L)
 			tags_mapthings,
 			&nummapthings, &mapthings,
 			sizeof (mapthing_t), META_MAPTHING);
+
+	// Allocate and cache the mobj movement userdata in advance to avoid the overhead
+	// of reallocating it every time a mobj collision hook gets called
+	lua_newuserdata(L, 0);
+	luaL_getmetatable(L, META_MOBJMOVEMENT);
+	lua_setmetatable(L, -2);
+	mobjmovement_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
 	return 0;
 }

@@ -833,7 +833,9 @@ static void P_SpawnMapThings(boolean spawnemblems)
 
 		if (mt->type >= 600 && mt->type <= 611) // item patterns
 			P_SpawnItemPattern(mt, false);
-		else if (mt->type == 1713) // hoops
+		// Check for spawnemblems here so the hoops don't spawn ghost variants for players joining a netgame mid-level
+		// ...It's a long story.
+		else if (mt->type == 1713 && spawnemblems) // hoops
 			P_SpawnHoop(mt);
 		else // Everything else
 			P_SpawnMapThing(mt);
@@ -1310,6 +1312,7 @@ static void P_LoadSidedefs(UINT8 *data)
 		sd->scalex_top = sd->scalex_mid = sd->scalex_bottom = FRACUNIT;
 		sd->scaley_top = sd->scaley_mid = sd->scaley_bottom = FRACUNIT;
 
+		sd->flags = 0;
 		sd->light = sd->light_top = sd->light_mid = sd->light_bottom = 0;
 		sd->lightabsolute = sd->lightabsolute_top = sd->lightabsolute_mid = sd->lightabsolute_bottom = false;
 
@@ -2011,6 +2014,8 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 		P_SetSidedefSector(i, atol(val));
 	else if (fastcmp(param, "repeatcnt"))
 		sides[i].repeatcnt = atol(val);
+	else if (fastcmp(param, "clipmidtex") && fastcmp("true", val))
+		sides[i].flags |= SIDEFLAG_CLIP_MIDTEX;
 	else if (fastcmp(param, "light"))
 		sides[i].light = atol(val);
 	else if (fastcmp(param, "light_top"))
@@ -2111,10 +2116,10 @@ static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char
 		lines[i].flags |= ML_MIDPEG;
 	else if (fastcmp(param, "midsolid") && fastcmp("true", val))
 		lines[i].flags |= ML_MIDSOLID;
+	else if (fastcmp(param, "clipmidtex") && fastcmp("true", val))
+		lines[i].flags |= ML_CLIPMIDTEX;
 	else if (fastcmp(param, "wrapmidtex") && fastcmp("true", val))
 		lines[i].flags |= ML_WRAPMIDTEX;
-	/*else if (fastcmp(param, "effect6") && fastcmp("true", val))
-		lines[i].flags |= ML_EFFECT6;*/
 	else if (fastcmp(param, "nonet") && fastcmp("true", val))
 		lines[i].flags |= ML_NONET;
 	else if (fastcmp(param, "netonly") && fastcmp("true", val))
@@ -2706,6 +2711,8 @@ static void P_WriteTextmap(void)
 			fprintf(f, "midpeg = true;\n");
 		if (wlines[i].flags & ML_MIDSOLID)
 			fprintf(f, "midsolid = true;\n");
+		if (wlines[i].flags & ML_CLIPMIDTEX)
+			fprintf(f, "clipmidtex = true;\n");
 		if (wlines[i].flags & ML_WRAPMIDTEX)
 			fprintf(f, "wrapmidtex = true;\n");
 		if (wlines[i].flags & ML_NONET)
@@ -2761,6 +2768,8 @@ static void P_WriteTextmap(void)
 			fprintf(f, "texturemiddle = \"%.*s\";\n", 8, textures[wsides[i].midtexture]->name);
 		if (wsides[i].repeatcnt != 0)
 			fprintf(f, "repeatcnt = %d;\n", wsides[i].repeatcnt);
+		if (wsides[i].flags & SIDEFLAG_CLIP_MIDTEX)
+			fprintf(f, "clipmidtex = true;\n");
 		if (wsides[i].light != 0)
 			fprintf(f, "light = %d;\n", wsides[i].light);
 		if (wsides[i].light_top != 0)
@@ -3181,6 +3190,7 @@ static void P_LoadTextmap(void)
 		sd->bottomtexture = R_TextureNumForName("-");
 		sd->sector = NULL;
 		sd->repeatcnt = 0;
+		sd->flags = 0;
 		sd->light = sd->light_top = sd->light_mid = sd->light_bottom = 0;
 		sd->lightabsolute = sd->lightabsolute_top = sd->lightabsolute_mid = sd->lightabsolute_bottom = false;
 		sd->customargs = NULL;
@@ -7925,7 +7935,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	if (mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0')
 		P_ForceCharacter(mapheaderinfo[gamemap-1]->forcecharacter);
 
-	if (!dedicated)
+	if (!dedicated && !reloadinggamestate)
 	{
 		// chasecam on in first-person gametypes and 2D
 		boolean chase = (!(gametyperules & GTR_FIRSTPERSON)) || (maptol & TOL_2D);
@@ -7967,7 +7977,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		}
 		G_ClearModeAttackRetryFlag();
 	}
-	else if (rendermode != render_none && G_IsSpecialStage(gamemap))
+	else if (rendermode != render_none && G_IsSpecialStage(gamemap) && !reloadinggamestate)
 	{
 		P_RunSpecialStageWipe();
 		ranspecialwipe = 1;
@@ -8130,6 +8140,12 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		HWR_LoadLevel();
 #endif
 
+	if (!reloadinggamestate)
+	{
+		P_InitCamera();
+		localaiming = 0;
+		localaiming2 = 0;
+	}
 	// oh god I hope this helps
 	// (addendum: apparently it does!
 	//  none of this needs to be done because it's not the beginning of the map when
@@ -8137,13 +8153,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	//  the client's view of the data.)
 	if (!fromnetsave)
 		P_InitGametype();
-
-	if (!reloadinggamestate)
-	{
-		P_InitCamera();
-		localaiming = 0;
-		localaiming2 = 0;
-	}
 
 	// clear special respawning que
 	iquehead = iquetail = 0;
@@ -8182,11 +8191,10 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	if (!fromnetsave) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
-		INT32 buf = gametic % BACKUPTICS;
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
 			if (players[i].ingame)
-				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
+				memset(&players[i].cmd, 0, sizeof(players[i].cmd));
 		}
 		P_PreTicker(2);
 		P_MapStart(); // just in case MapLoad modifies tmthing
@@ -8359,10 +8367,13 @@ void P_LoadMapsFromFile(UINT16 wadnum, boolean added_ingame)
 
 			name = W_GetFilenameFromFullname(lumpinfo->fullname); // Full lump name, with its extension
 
-			// Extension must be .wad
-			if (!M_CheckFilenameExtension(name, "wad"))
+			// Extension must be .wad or be prefixed with MAP
+			// TODO: 2.3: Remove the ability to load MAPXX markers outside of a WAD within a PK3
+			if (!M_CheckFilenameExtension(name, "wad") && (strlen(name) != 5 || strnicmp(name, "MAP", 3) != 0))
 				continue;
 
+			if (!M_CheckFilenameExtension(name, "wad") && strlen(name) == 5 && strnicmp(name, "MAP", 3) == 0)
+				CONS_Alert(CONS_WARNING, "MAPXX marker \"%s\" detected inside a \"Maps\" folder. This feature is deprecated and will be removed. Please use the WAD format for containing map data instead.\n", lumpinfo->longname);
 			// Get the name without the extension
 			name = lumpinfo->longname;
 

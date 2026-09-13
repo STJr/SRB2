@@ -65,6 +65,7 @@ line_t *ceilingline;
 
 // set by PIT_CheckLine() for any line that stopped the PIT_CheckLine()
 // that is, for any line which is 'solid'
+static fixed_t blockingfrac;
 line_t *blockingline;
 
 msecnode_t *sector_list = NULL;
@@ -953,7 +954,8 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 	}
 
 	{
-		UINT8 shouldCollide = LUA_Hook2Mobj(thing, tmthing, MOBJ_HOOK(MobjCollide)); // checks hook for thing's type
+		// checks hook for thing's type
+		UINT8 shouldCollide = LUA_HookMobjCollide(thing, tmthing, MOBJ_HOOK(MobjCollide));
 		if (P_MobjWasRemoved(tmthing) || P_MobjWasRemoved(thing))
 			return CHECKTHING_NOCOLLIDE; // one of them was removed???
 		if (shouldCollide == 1)
@@ -961,7 +963,8 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 		else if (shouldCollide == 2)
 			return CHECKTHING_NOCOLLIDE; // force no collide
 
-		shouldCollide = LUA_Hook2Mobj(tmthing, thing, MOBJ_HOOK(MobjMoveCollide)); // checks hook for tmthing's type
+		// checks hook for tmthing's type
+		shouldCollide = LUA_HookMobjCollide(tmthing, thing, MOBJ_HOOK(MobjMoveCollide));
 		if (P_MobjWasRemoved(tmthing) || P_MobjWasRemoved(thing))
 			return CHECKTHING_NOCOLLIDE; // one of them was removed???
 		if (shouldCollide == 1)
@@ -1742,100 +1745,124 @@ static unsigned PIT_DoCheckThing(mobj_t *thing)
 	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_SPIKE || tmthing->type == MT_WALLSPIKE) && (thing->player))
 		; // springs and spikes should never be able to step up onto a player
 	// z checking at last
-	// Treat noclip things as non-solid!
+	// at least one of the two objects is solid and doesn't noclip
 	else if ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID
-		&& (tmthing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID)
+		|| (tmthing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID)
 	{
-		fixed_t topz, tmtopz;
+		UINT8 shouldBlock = 0; // 0=default, 1=force block, 2=prevent block
 
-		if (tmthing->eflags & MFE_VERTICALFLIP)
+		shouldBlock = LUA_HookMobjCollide(thing, tmthing, MOBJ_HOOK(ShouldBlockMobj)); // checks hook for thing's type
+		if (P_MobjWasRemoved(tmthing) || P_MobjWasRemoved(thing))
+			return CHECKTHING_NOCOLLIDE; // one of them was removed???
+
+		// not overriden by the first hook, maybe the second will
+		if (shouldBlock == 0)
 		{
-			// pass under
-			tmtopz = tmthing->z;
-
-			if (tmtopz > thing->z + thing->height)
-			{
-				if (thing->z + thing->height > tmfloorz)
-				{
-					tmfloorz = thing->z + thing->height;
-					tmfloorrover = NULL;
-					tmfloorslope = NULL;
-				}
-				return CHECKTHING_COLLIDE;
-			}
-
-			topz = thing->z - thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
-
-			// block only when jumping not high enough,
-			// (dont climb max. 24units while already in air)
-			// since return CHECKTHING_DONE doesn't handle momentum properly,
-			// we lie to P_TryMove() so it's always too high
-			if (tmthing->player && tmthing->z + tmthing->height > topz
-				&& tmthing->z + tmthing->height < tmthing->ceilingz)
-			{
-				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->info->flags & MF_MONITOR)) // Gold monitor hack...
-					return CHECKTHING_DONE;
-
-				tmfloorz = tmceilingz = topz; // block while in air
-				tmceilingrover = NULL;
-				tmceilingslope = NULL;
-				tmfloorthing = thing; // needed for side collision
-
-				collide = CHECKTHING_COLLIDE;
-			}
-			else if (topz < tmceilingz && tmthing->z <= thing->z+thing->height)
-			{
-				tmceilingz = topz;
-				tmceilingrover = NULL;
-				tmceilingslope = NULL;
-				tmfloorthing = thing; // thing we may stand on
-
-				collide = CHECKTHING_COLLIDE;
-			}
+			shouldBlock = LUA_HookMobjCollide(tmthing, thing, MOBJ_HOOK(ShouldBlockMobjMove)); // checks hook for tmthing's type
+			if (P_MobjWasRemoved(tmthing) || P_MobjWasRemoved(thing))
+				return CHECKTHING_NOCOLLIDE; // one of them was removed???
 		}
-		else
-		{
-			// pass under
-			tmtopz = tmthing->z + tmthing->height;
 
-			if (tmtopz < thing->z)
+		// not overriden by either hook? In this case, both objects must be solid
+		if (shouldBlock == 0)
+		{
+			shouldBlock = ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID
+				&& (tmthing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID);
+		}
+
+		if (shouldBlock == 1)
+		{
+			fixed_t topz, tmtopz;
+
+			if (tmthing->eflags & MFE_VERTICALFLIP)
 			{
-				if (thing->z < tmceilingz)
+				// pass under
+				tmtopz = tmthing->z;
+
+				if (tmtopz > thing->z + thing->height)
 				{
-					tmceilingz = thing->z;
+					if (thing->z + thing->height > tmfloorz)
+					{
+						tmfloorz = thing->z + thing->height;
+						tmfloorrover = NULL;
+						tmfloorslope = NULL;
+					}
+					return CHECKTHING_COLLIDE;
+				}
+
+				topz = thing->z - thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
+
+				// block only when jumping not high enough,
+				// (dont climb max. 24units while already in air)
+				// since return CHECKTHING_DONE doesn't handle momentum properly,
+				// we lie to P_TryMove() so it's always too high
+				if (tmthing->player && tmthing->z + tmthing->height > topz
+					&& tmthing->z + tmthing->height < tmthing->ceilingz)
+				{
+					if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->info->flags & MF_MONITOR)) // Gold monitor hack...
+						return CHECKTHING_DONE;
+
+					tmfloorz = tmceilingz = topz; // block while in air
 					tmceilingrover = NULL;
 					tmceilingslope = NULL;
+					tmfloorthing = thing; // needed for side collision
+
+					collide = CHECKTHING_COLLIDE;
 				}
-				return CHECKTHING_COLLIDE;
+				else if (topz < tmceilingz && tmthing->z <= thing->z+thing->height)
+				{
+					tmceilingz = topz;
+					tmceilingrover = NULL;
+					tmceilingslope = NULL;
+					tmfloorthing = thing; // thing we may stand on
+
+					collide = CHECKTHING_COLLIDE;
+				}
 			}
-
-			topz = thing->z + thing->height + thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
-
-			// block only when jumping not high enough,
-			// (dont climb max. 24units while already in air)
-			// since return CHECKTHING_DONE doesn't handle momentum properly,
-			// we lie to P_TryMove() so it's always too high
-			if (tmthing->player && tmthing->z < topz
-				&& tmthing->z > tmthing->floorz)
+			else
 			{
-				if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->info->flags & MF_MONITOR)) // Gold monitor hack...
-					return CHECKTHING_DONE;
+				// pass under
+				tmtopz = tmthing->z + tmthing->height;
 
-				tmfloorz = tmceilingz = topz; // block while in air
-				tmfloorrover = NULL;
-				tmfloorslope = NULL;
-				tmfloorthing = thing; // needed for side collision
+				if (tmtopz < thing->z)
+				{
+					if (thing->z < tmceilingz)
+					{
+						tmceilingz = thing->z;
+						tmceilingrover = NULL;
+						tmceilingslope = NULL;
+					}
+					return CHECKTHING_COLLIDE;
+				}
 
-				collide = CHECKTHING_COLLIDE;
-			}
-			else if (topz > tmfloorz && tmthing->z+tmthing->height >= thing->z)
-			{
-				tmfloorz = topz;
-				tmfloorrover = NULL;
-				tmfloorslope = NULL;
-				tmfloorthing = thing; // thing we may stand on
+				topz = thing->z + thing->height + thing->scale; // FixedMul(FRACUNIT, thing->scale), but thing->scale == FRACUNIT in base scale anyways
 
-				collide = CHECKTHING_COLLIDE;
+				// block only when jumping not high enough,
+				// (dont climb max. 24units while already in air)
+				// since return CHECKTHING_DONE doesn't handle momentum properly,
+				// we lie to P_TryMove() so it's always too high
+				if (tmthing->player && tmthing->z < topz
+					&& tmthing->z > tmthing->floorz)
+				{
+					if (thing->flags & MF_GRENADEBOUNCE && (thing->flags & MF_MONITOR || thing->info->flags & MF_MONITOR)) // Gold monitor hack...
+						return CHECKTHING_DONE;
+
+					tmfloorz = tmceilingz = topz; // block while in air
+					tmfloorrover = NULL;
+					tmfloorslope = NULL;
+					tmfloorthing = thing; // needed for side collision
+
+					collide = CHECKTHING_COLLIDE;
+				}
+				else if (topz > tmfloorz && tmthing->z+tmthing->height >= thing->z)
+				{
+					tmfloorz = topz;
+					tmfloorrover = NULL;
+					tmfloorslope = NULL;
+					tmfloorthing = thing; // thing we may stand on
+
+					collide = CHECKTHING_COLLIDE;
+				}
 			}
 		}
 	}
@@ -1961,6 +1988,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	// so two special lines that are only 8 pixels apart
 	// could be crossed in either order.
 
+	// TODO: Remove this line; blockingline gets set elsewhere now
 	// this line is out of the if so upper and lower textures can be hit by a splat
 	blockingline = ld;
 
@@ -2018,11 +2046,31 @@ static boolean PIT_CheckLine(line_t *ld)
 	return true;
 }
 
+static boolean PTR_BlockTraverse(intercept_t *in)
+{
+	line_t *li;
+
+	I_Assert(in->isaline);
+
+	li = in->d.line;
+
+	if (!P_LineIsBlocking(tmthing, li))
+		return true;
+
+	if (in->frac < blockingfrac)
+	{
+		blockingfrac = in->frac;
+		blockingline = li;
+	}
+	return false;
+}
+
 // =========================================================================
 //                         MOVEMENT CLIPPING
 // =========================================================================
 boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 {
+	fixed_t leadx, leady, trailx, traily;
 	INT32 xl, xh, yl, yh, bx, by;
 	subsector_t *newsubsec;
 	boolean blockval = true;
@@ -2278,6 +2326,35 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 		for (by = yl; by <= yh; by++)
 			if (!P_BlockLinesIterator(bx, by, PIT_CheckLine))
 				blockval = false;
+
+	// trace along the three leading corners
+	if (tmthing->momx > 0)
+	{
+		leadx = tmthing->x + tmthing->radius;
+		trailx = tmthing->x - tmthing->radius;
+	}
+	else
+	{
+		leadx = tmthing->x - tmthing->radius;
+		trailx = tmthing->x + tmthing->radius;
+	}
+
+	if (tmthing->momy > 0)
+	{
+		leady = tmthing->y + tmthing->radius;
+		traily = tmthing->y - tmthing->radius;
+	}
+	else
+	{
+		leady = tmthing->y - tmthing->radius;
+		traily = tmthing->y + tmthing->radius;
+	}
+
+	blockingfrac = FRACUNIT+1;
+
+	P_PathTraverse(leadx, leady, leadx + tmthing->momx, leady + tmthing->momy, PT_ADDLINES, PTR_BlockTraverse);
+	P_PathTraverse(trailx, leady, trailx + tmthing->momx, leady + tmthing->momy, PT_ADDLINES, PTR_BlockTraverse);
+	P_PathTraverse(leadx, traily, leadx + tmthing->momx, traily + tmthing->momy, PT_ADDLINES, PTR_BlockTraverse);
 
 	return blockval;
 }
@@ -2721,7 +2798,9 @@ increment_move
 			//All things are affected by their scale.
 			fixed_t maxstep = FixedMul(MAXSTEPMOVE, thing->scale);
 
-			if (thing->player)
+			if (thing->flags & MF_NOSTEPMOVE)
+				maxstep = 0;
+			else if (thing->player)
 			{
 				// If using SSF_DOUBLESTEPUP, double the maxstep.
 				if (P_PlayerTouchingSectorSpecialFlag(thing->player, SSF_DOUBLESTEPUP)
@@ -2749,9 +2828,6 @@ increment_move
 				if (R_PointInSubsector(x, y)->sector->specialflags & SSF_NOSTEPDOWN)
 					maxstep = 0;
 			}
-
-			if (thing->type == MT_SKIM)
-				maxstep = 0;
 
 			if (tmceilingz - tmfloorz < thing->height
 				|| (thing->player
@@ -2968,7 +3044,7 @@ boolean P_SceneryTryMove(mobj_t *thing, fixed_t x, fixed_t y)
 			if (tmceilingz - thing->z < thing->height)
 				return false; // mobj must lower itself to fit
 
-			if (tmfloorz - thing->z > maxstep)
+			if ((thing->flags & MF_NOSTEPMOVE) || tmfloorz - thing->z > maxstep)
 				return false; // too big a step up
 		}
 	} while(tryx != x || tryy != y);
@@ -3405,7 +3481,7 @@ boolean P_LineIsBlocking(mobj_t *mo, line_t *li)
 	if (opentop - mo->z < mo->height)
 		return true; // mobj is too high
 
-	if (openbottom - mo->z > FixedMul(MAXSTEPMOVE, mo->scale))
+	if ((mo->flags & MF_NOSTEPMOVE) || openbottom - mo->z > FixedMul(MAXSTEPMOVE, mo->scale))
 		return true; // too big a step up
 
 	if (mo->player
@@ -3456,7 +3532,7 @@ static void PTR_GlideClimbTraverse(line_t *li)
 	if (!(checkline->flags & ML_NOCLIMB) && checkline->special != SPECIAL_HORIZON_LINE)
 	{
 		boolean canclimb;
-		angle_t climbangle, climbline;
+		angle_t climbangle, climbline, climbdiffangle;
 		INT32 whichside = P_PointOnLineSide(slidemo->x, slidemo->y, li);
 
 		climbangle = climbline = R_PointToAngle2(li->v1->x, li->v1->y, li->v2->x, li->v2->y);
@@ -3465,11 +3541,12 @@ static void PTR_GlideClimbTraverse(line_t *li)
 			climbline += ANGLE_180;
 
 		climbangle += (ANGLE_90 * (whichside ? -1 : 1));
+		climbdiffangle = slidemo->angle - climbline;
 
 		canclimb = (li->backsector ? P_IsClimbingValid(slidemo->player, climbangle) : true);
 
-		if (((!slidemo->player->climbing && abs((signed)(slidemo->angle - ANGLE_90 - climbline)) < ANGLE_45)
-			|| (slidemo->player->climbing == 1 && abs((signed)(slidemo->angle - climbline)) < ANGLE_135))
+		if (((!slidemo->player->climbing && !(climbdiffangle - ANGLE_90 >= ANGLE_45 && climbdiffangle - ANGLE_90 <= ANGLE_315))
+			|| (slidemo->player->climbing == 1 && !(climbdiffangle >= ANGLE_135 && climbdiffangle <= ANGLE_225)))
 			&& canclimb)
 		{
 			slidemo->angle = climbangle;
