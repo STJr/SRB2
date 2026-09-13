@@ -4567,6 +4567,7 @@ const char *const ML_LIST[] = {
 	"EFFECT6",
 	"BOUNCY",
 	"TFERLINE",
+	"CLIPMIDTEX",
 	NULL
 };
 

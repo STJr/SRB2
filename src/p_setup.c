@@ -1311,6 +1311,7 @@ static void P_LoadSidedefs(UINT8 *data)
 		sd->scalex_top = sd->scalex_mid = sd->scalex_bottom = FRACUNIT;
 		sd->scaley_top = sd->scaley_mid = sd->scaley_bottom = FRACUNIT;
 
+		sd->flags = 0;
 		sd->light = sd->light_top = sd->light_mid = sd->light_bottom = 0;
 		sd->lightabsolute = sd->lightabsolute_top = sd->lightabsolute_mid = sd->lightabsolute_bottom = false;
 
@@ -2012,6 +2013,8 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 		P_SetSidedefSector(i, atol(val));
 	else if (fastcmp(param, "repeatcnt"))
 		sides[i].repeatcnt = atol(val);
+	else if (fastcmp(param, "clipmidtex") && fastcmp("true", val))
+		sides[i].flags |= SIDEFLAG_CLIP_MIDTEX;
 	else if (fastcmp(param, "light"))
 		sides[i].light = atol(val);
 	else if (fastcmp(param, "light_top"))
@@ -2112,10 +2115,10 @@ static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char
 		lines[i].flags |= ML_MIDPEG;
 	else if (fastcmp(param, "midsolid") && fastcmp("true", val))
 		lines[i].flags |= ML_MIDSOLID;
+	else if (fastcmp(param, "clipmidtex") && fastcmp("true", val))
+		lines[i].flags |= ML_CLIPMIDTEX;
 	else if (fastcmp(param, "wrapmidtex") && fastcmp("true", val))
 		lines[i].flags |= ML_WRAPMIDTEX;
-	/*else if (fastcmp(param, "effect6") && fastcmp("true", val))
-		lines[i].flags |= ML_EFFECT6;*/
 	else if (fastcmp(param, "nonet") && fastcmp("true", val))
 		lines[i].flags |= ML_NONET;
 	else if (fastcmp(param, "netonly") && fastcmp("true", val))
@@ -2707,6 +2710,8 @@ static void P_WriteTextmap(void)
 			fprintf(f, "midpeg = true;\n");
 		if (wlines[i].flags & ML_MIDSOLID)
 			fprintf(f, "midsolid = true;\n");
+		if (wlines[i].flags & ML_CLIPMIDTEX)
+			fprintf(f, "clipmidtex = true;\n");
 		if (wlines[i].flags & ML_WRAPMIDTEX)
 			fprintf(f, "wrapmidtex = true;\n");
 		if (wlines[i].flags & ML_NONET)
@@ -2762,6 +2767,8 @@ static void P_WriteTextmap(void)
 			fprintf(f, "texturemiddle = \"%.*s\";\n", 8, textures[wsides[i].midtexture]->name);
 		if (wsides[i].repeatcnt != 0)
 			fprintf(f, "repeatcnt = %d;\n", wsides[i].repeatcnt);
+		if (wsides[i].flags & SIDEFLAG_CLIP_MIDTEX)
+			fprintf(f, "clipmidtex = true;\n");
 		if (wsides[i].light != 0)
 			fprintf(f, "light = %d;\n", wsides[i].light);
 		if (wsides[i].light_top != 0)
@@ -3182,6 +3189,7 @@ static void P_LoadTextmap(void)
 		sd->bottomtexture = R_TextureNumForName("-");
 		sd->sector = NULL;
 		sd->repeatcnt = 0;
+		sd->flags = 0;
 		sd->light = sd->light_top = sd->light_mid = sd->light_bottom = 0;
 		sd->lightabsolute = sd->lightabsolute_top = sd->lightabsolute_mid = sd->lightabsolute_bottom = false;
 		sd->customargs = NULL;
