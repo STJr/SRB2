@@ -3293,6 +3293,8 @@ void readunlockable(MYFILE *f, INT32 num)
 					unlockables[num].nocecho = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
 				else if (fastcmp(word, "NOCHECKLIST"))
 					unlockables[num].nochecklist = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
+				else if (fastcmp(word, "HIDDEN"))
+					unlockables[num].hidden = (UINT8)(i || word2[0] == 'T' || word2[0] == 'Y');
 				else if (fastcmp(word, "TYPE"))
 				{
 					if (fastcmp(word2, "NONE"))
