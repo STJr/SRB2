@@ -2304,7 +2304,7 @@ void V_DrawNameTag(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecol
 {
 	const char *text = string;
 	const char *first_token = text;
-	char *last_token = strchr(text, '\n');
+	const char *last_token = strchr(text, '\n');
 	const INT32 lbreakheight = 21;
 	INT32 ntlines;
 
@@ -2379,7 +2379,7 @@ INT32 V_CountNameTagLines(const char *string)
 	INT32 ntlines = 1;
 	const char *text = string;
 	const char *first_token = text;
-	char *last_token = strchr(text, '\n');
+	const char *last_token = strchr(text, '\n');
 
 	// No line breaks?
 	if (!last_token)

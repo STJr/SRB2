@@ -826,7 +826,7 @@ static void CON_InputSetString(const char *c)
 	Lock_state();
 
 	memset(inputlines[inputline], 0, CON_MAXPROMPTCHARS);
-	strcpy(inputlines[inputline], c);
+	strlcpy(inputlines[inputline], c, 1+strlen(c));
 	input_cur = input_sel = input_len = strlen(c);
 
 	Unlock_state();
