@@ -625,6 +625,7 @@ typedef enum
 
 	// misc.
 	gluniform_leveltime,
+	gluniform_mapobjectscale,
 
 	gluniform_max,
 } gluniform_t;
@@ -653,6 +654,7 @@ static gl_shaderstate_t gl_shaderstate;
 
 // Shader info
 static float shader_leveltime = 0;
+static float shader_mapobjectscale = 1;
 
 // Lactozilla: Shader functions
 static boolean Shader_CompileProgram(gl_shader_t *shader, GLint i);
@@ -793,6 +795,9 @@ EXPORT void HWRAPI(SetShaderInfo) (hwdshaderinfo_t info, INT32 value)
 	{
 		case HWD_SHADERINFO_LEVELTIME:
 			shader_leveltime = (((float)(value-1)) + FIXED_TO_FLOAT(rendertimefrac)) / TICRATE;
+			break;
+		case HWD_SHADERINFO_MAPOBJECTSCALE:
+			shader_mapobjectscale = FIXED_TO_FLOAT(value);
 			break;
 		default:
 			break;
@@ -1785,6 +1790,7 @@ static void Shader_SetUniforms(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAF
 		}
 
 		UNIFORM_1(shader->uniforms[gluniform_leveltime], shader_leveltime, pglUniform1f);
+		UNIFORM_1(shader->uniforms[gluniform_mapobjectscale], shader_mapobjectscale, pglUniform1f);
 
 		#undef UNIFORM_1
 		#undef UNIFORM_2
@@ -1911,6 +1917,7 @@ static boolean Shader_CompileProgram(gl_shader_t *shader, GLint i)
 
 	// misc.
 	shader->uniforms[gluniform_leveltime] = GETUNI("leveltime");
+	shader->uniforms[gluniform_mapobjectscale] = GETUNI("mapobjectscale");
 #undef GETUNI
 
 	// set permanent uniform values

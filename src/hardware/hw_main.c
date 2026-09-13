@@ -5508,7 +5508,10 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	ClearColor.alpha = 1.0f;
 
 	if (cv_glshaders.value)
+	{
 		HWD.pfnSetShaderInfo(HWD_SHADERINFO_LEVELTIME, (INT32)leveltime); // The water surface shader needs the leveltime.
+		HWD.pfnSetShaderInfo(HWD_SHADERINFO_MAPOBJECTSCALE, (INT32)mapobjectscale); // The lighting calculations need the mapobjectscale.
+	}
 
 	if (viewnumber == 0) // Only do it if it's the first screen being rendered
 		HWD.pfnClearBuffer(true, false, &ClearColor); // Clear the Color Buffer, stops HOMs. Also seems to fix the skybox issue on Intel GPUs.

@@ -310,6 +310,7 @@ typedef enum hwdshaderstage hwdshaderstage_t;
 enum hwdshaderinfo
 {
 	HWD_SHADERINFO_LEVELTIME = 1,
+	HWD_SHADERINFO_MAPOBJECTSCALE = 2,
 };
 
 typedef enum hwdshaderinfo hwdshaderinfo_t;

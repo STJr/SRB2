@@ -1352,7 +1352,7 @@ static void R_SplitSprite(vissprite_t *sprite)
 			if (!(newsprite->cut & SC_FULLBRIGHT)
 				|| (newsprite->extra_colormap && (newsprite->extra_colormap->flags & CMF_FADEFULLBRIGHTSPRITES)))
 			{
-				lindex = FixedMul(sprite->xscale, LIGHTRESOLUTIONFIX)>>(LIGHTSCALESHIFT);
+				lindex = FixedMul(FixedMul(sprite->xscale, mapobjectscale), LIGHTRESOLUTIONFIX)>>(LIGHTSCALESHIFT);
 
 				if (lindex >= MAXLIGHTSCALE)
 					lindex = MAXLIGHTSCALE-1;
@@ -2510,7 +2510,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 	{
 		// diminished light
-		lindex = FixedMul(xscale, LIGHTRESOLUTIONFIX)>>(LIGHTSCALESHIFT);
+		lindex = FixedMul(FixedMul(xscale, mapobjectscale), LIGHTRESOLUTIONFIX)>>(LIGHTSCALESHIFT);
 
 		if (lindex >= MAXLIGHTSCALE)
 			lindex = MAXLIGHTSCALE-1;
