@@ -156,7 +156,6 @@ model_t *MD3_LoadModel(const char *fileName, int ztag, boolean useFloat)
 	char *buffer;
 	int surfEnd;
 	int i, t;
-	int matCount;
 	FILE *f;
 
 	if (!latlnginit)
@@ -239,7 +238,6 @@ model_t *MD3_LoadModel(const char *fileName, int ztag, boolean useFloat)
 		frames++;
 	}
 
-	matCount = 0;
 	for (i = 0, surfEnd = 0; i < mdh->numSurfaces; i++)
 	{
 		int j;
@@ -249,7 +247,7 @@ model_t *MD3_LoadModel(const char *fileName, int ztag, boolean useFloat)
 
 		mdShader = (md3Shader*)((char*)mdS + mdS->offsetShaders);
 
-		for (j = 0; j < mdS->numShaders; j++, matCount++)
+		for (j = 0; j < mdS->numShaders; j++)
 		{
 			size_t len = strlen(mdShader[j].name);
 			mdShader[j].name[len-1] = 'z';

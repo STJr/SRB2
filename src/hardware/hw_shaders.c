@@ -110,7 +110,7 @@ boolean HWR_InitShaders(void)
 // returns INT32_MAX if not found
 static INT32 strstr_int(const char *str1, const char *str2)
 {
-	char *location = strstr(str1, str2);
+	const char *location = strstr(str1, str2);
 	if (location)
 		return location - str1;
 	else
