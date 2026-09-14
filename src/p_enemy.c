@@ -307,9 +307,9 @@ void P_NewChaseDir(mobj_t *actor)
 	dirtype_t d[3];
 	dirtype_t tdir = DI_NODIR, olddir, turnaround;
 
-	I_Assert(!P_MobjWasRemoved(actor));
-	I_Assert(actor->target != NULL);
-	I_Assert(!P_MobjWasRemoved(actor->target));
+	// only valid mobjs with valid targets may pass this point
+	if (P_MobjWasRemoved(actor) || !actor->target || P_MobjWasRemoved(actor->target))
+		return;
 
 	olddir = actor->movedir;
 
