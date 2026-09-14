@@ -2828,10 +2828,14 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 				mobj_t *chain = target->tracer->target, *chainnext;
 				while (chain)
 				{
+					if (P_MobjWasRemoved(chain) || chain->type != MT_CRUSHCHAIN)
+						goto afterchain;
+
 					chainnext = chain->target;
 					P_RemoveMobj(chain);
 					chain = chainnext;
 				}
+afterchain:
 				S_StopSound(target->tracer);
 				P_KillMobj(target->tracer, inflictor, source, damagetype);
 			}

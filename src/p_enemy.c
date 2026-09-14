@@ -1953,6 +1953,8 @@ void A_CrushclawLaunch(void *data)
 		}
 		actor->target->angle = R_PointToAngle2(actor->target->x, actor->target->y, crab->target->x, crab->target->y);
 	}
+	else if (actor->target->type != MT_CRUSHCHAIN)
+		return;
 
 	if ((!locvar1) && crab->target)
 	{
@@ -1995,7 +1997,7 @@ void A_CrushclawLaunch(void *data)
 	}
 	else
 	{
-		if (P_MobjWasRemoved(actor))
+		if (P_MobjWasRemoved(actor) || P_MobjWasRemoved(actor->target))
 			return;
 		actor->z = actor->target->z;
 		if ((!locvar1 && (actor->extravalue2 > 256)) || (locvar1 && (actor->extravalue2 < 16)))
@@ -2005,10 +2007,14 @@ void A_CrushclawLaunch(void *data)
 				mobj_t *chain = actor->target, *chainnext;
 				while (chain)
 				{
+					if (P_MobjWasRemoved(chain) || chain->type != MT_CRUSHCHAIN)
+						goto afterchain;
+
 					chainnext = chain->target;
 					P_RemoveMobj(chain);
 					chain = chainnext;
 				}
+afterchain:
 				actor->extravalue2 = 0;
 				actor->angle = R_PointToAngle2(crab->x, crab->y, actor->x, actor->y);
 				P_SetTarget(&actor->target, NULL);
@@ -2032,6 +2038,9 @@ void A_CrushclawLaunch(void *data)
 		fixed_t idx = dx, idy = dy, idz = dz;
 		while (chain)
 		{
+			if (P_MobjWasRemoved(chain) || chain->type != MT_CRUSHCHAIN)
+				return;
+
 			P_MoveOrigin(chain, actor->target->x + idx, actor->target->y + idy, actor->target->z + idz);
 			chain->movefactor = chain->z;
 			idx += dx;
