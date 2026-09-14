@@ -7869,13 +7869,14 @@ static void P_PlayerDropWeapon(player_t *player)
 void P_BlackOw(player_t *player)
 {
 	INT32 i;
+	const fixed_t nukeradius = FixedMul(1536*FRACUNIT, player->mo->scale);
 	S_StartSoundFromMobj(player->mo, sfx_bkpoof); // Sound the BANG!
 
 	for (i = 0; i < MAXPLAYERS; i++)
-		if (players[i].ingame && P_AreMobjsClose2D(player->mo, players[i].mo, 1536*FRACUNIT))
+		if (players[i].ingame && P_AreMobjsClose2D(player->mo, players[i].mo, nukeradius))
 			P_FlashPal(&players[i], PAL_NUKE, 10);
 
-	P_NukeEnemies(player->mo, player->mo, 1536*FRACUNIT); // Search for all nearby enemies and nuke their pants off!
+	P_NukeEnemies(player->mo, player->mo, nukeradius); // Search for all nearby enemies and nuke their pants off!
 	player->powers[pw_shield] = player->powers[pw_shield] & SH_STACK;
 }
 
@@ -9137,7 +9138,7 @@ static void P_NukeAllPlayers(player_t *player)
 //
 void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 {
-	const fixed_t ns = 60 << FRACBITS;
+	const fixed_t ns = FixedMul(60 << FRACBITS, inflictor->scale);
 	mobj_t *mo;
 	angle_t fa;
 	thinker_t *think;
@@ -9146,7 +9147,7 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 	for (i = 0; i < 16; i++)
 	{
 		fa = (i*(FINEANGLES/16));
-		mo = P_SpawnMobj(inflictor->x, inflictor->y, inflictor->z, MT_SUPERSPARK);
+		mo = P_SpawnMobjFromMobj(inflictor, 0, 0, 0, MT_SUPERSPARK);
 		if (!P_MobjWasRemoved(mo))
 		{
 			mo->momx = FixedMul(FINESINE(fa),ns);

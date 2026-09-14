@@ -7675,7 +7675,6 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 			{
 				P_SetMobjState(whoosh, mobj->info->raisestate);
 				whoosh->destscale = whoosh->scale << 1;
-				whoosh->scalespeed = FixedMul(whoosh->scalespeed, whoosh->scale);
 				whoosh->height = 38*whoosh->scale;
 				whoosh->fuse = 10;
 				whoosh->flags |= MF_NOCLIPHEIGHT;
