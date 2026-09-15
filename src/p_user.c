@@ -10489,8 +10489,11 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 
 		if (!resetcalled && !cameranoclip)
 		{
+			fixed_t vx = thiscam->x, vy = thiscam->y;
+			if (player->awayviewtics && player->awayviewmobj != NULL && !P_MobjWasRemoved(player->awayviewmobj))
+				vx = player->awayviewmobj->x, vy = player->awayviewmobj->y;
 			// turn transparent if too close (only in single player)
-			if (!multiplayer && !splitscreen && !netgame && ArePointsClose2D(thiscam->x, thiscam->y, mo->x, mo->y, 48*mo->scale))
+			if (!multiplayer && !splitscreen && !netgame && ArePointsClose2D(vx, vy, mo->x, mo->y, 48*mo->scale))
 				player->mo->flags2 |= MF2_SHADOW;
 			else if (player->mo->flags2 & MF2_SHADOW)
 				player->mo->flags2 &= ~MF2_SHADOW;
