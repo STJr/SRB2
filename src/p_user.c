@@ -2169,7 +2169,7 @@ void P_SpawnThokMobj(player_t *player)
 	if (player->spectator)
 		return;
 
-	if (!type)
+	if (type < 1 ||  type >= NUMMOBJTYPES)
 		return;
 
 	if (type == MT_GHOST)
@@ -2233,7 +2233,7 @@ void P_SpawnSpinMobj(player_t *player, mobjtype_t type)
 	if (player->spectator)
 		return;
 
-	if (!type)
+	if (type < 1 ||  type >= NUMMOBJTYPES)
 		return;
 
 	if (type == MT_GHOST)
