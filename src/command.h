@@ -108,24 +108,24 @@ void VS_Print(vsbuf_t *buf, const char *data); // strcats onto the sizebuf
 
 typedef enum
 {
-	CV_SAVE = 1,   // save to config when quit game
-	CV_CALL = 2,   // call function on change
-	CV_NETVAR = 4, // send it when change (see logboris.txt at 12-4-2000)
-	CV_NOINIT = 8, // dont call function when var is registered (1st set)
-	CV_FLOAT = 16, // the value is fixed 16 : 16, where unit is FRACUNIT
-	               // (allow user to enter 0.45 for ex)
-	               // WARNING: currently only supports set with CV_Set()
-	CV_NOTINNET = 32,    // some varaiable can't be changed in network but is not netvar (ex: splitscreen)
-	CV_MODIFIED = 64,    // this bit is set when cvar is modified
-	CV_SHOWMODIF = 128,  // say something when modified
-	CV_SHOWMODIFONETIME = 256, // same but will be reset to 0 when modified, set in toggle
-	CV_NOSHOWHELP = 512, // Don't show variable in the HELP list Tails 08-13-2002
-	CV_HIDEN = 1024, // variable is not part of the cvar list so cannot be accessed by the console
-	                 // can only be set when we have the pointer to it
-                   // used on menus
-	CV_CHEAT = 2048, // Don't let this be used in multiplayer unless cheats are on.
-	CV_ALLOWLUA = 4096,/* Let this be called from Lua */
-	CV_MENU = 8192, // Lua exclusive flag, to give choice to modders regarding custom options menu.
+	CV_SAVE             = 1,     // save to config when quit game
+	CV_CALL             = 1<<1,  // call function on change
+	CV_NETVAR           = 1<<2,  // send it when change (see logboris.txt at 12-4-2000)
+	CV_NOINIT           = 1<<3,  // dont call function when var is registered (1st set)
+	CV_FLOAT            = 1<<4,  // the value is fixed 16 : 16, where unit is FRACUNIT
+	                             // (allow user to enter 0.45 for ex)
+	                             // WARNING: currently only supports set with CV_Set()
+	CV_NOTINNET         = 1<<5,  // some varaiable can't be changed in network but is not netvar (ex: splitscreen)
+	CV_MODIFIED         = 1<<6,  // this bit is set when cvar is modified
+	CV_SHOWMODIF        = 1<<7,  // say something when modified
+	CV_SHOWMODIFONETIME = 1<<8,  // same but will be reset to 0 when modified, set in toggle
+	CV_NOSHOWHELP       = 1<<9,  // Don't show variable in the HELP list Tails 08-13-2002
+	CV_HIDEN            = 1<<10, // variable is not part of the cvar list so cannot be accessed by the console
+	                             // can only be set when we have the pointer to it
+	                             // used on menus
+	CV_CHEAT            = 1<<11, // Don't let this be used in multiplayer unless cheats are on.
+	CV_ALLOWLUA         = 1<<12, // Let this be called from Lua
+	CV_MENU             = 1<<13, // Lua exclusive flag, to give choice to modders regarding custom options menu.
 } cvflags_t;
 
 typedef struct CV_PossibleValue_s
