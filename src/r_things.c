@@ -1324,7 +1324,12 @@ static void R_SplitSprite(vissprite_t *sprite)
 		newsprite->cut |= SC_TOP;
 		if (!(sector->lightlist[i].caster->fofflags & FOF_NOSHADE))
 		{
-			lightnum = (*sector->lightlist[i].lightlevel >> LIGHTSEGSHIFT);
+			if (newsprite->cut & SC_SEMIBRIGHT)
+				lightnum = 128 + (*sector->lightlist[i].lightlevel>>1);
+			else
+				lightnum = *sector->lightlist[i].lightlevel;
+			
+			lightnum >>= LIGHTSEGSHIFT;
 
 			if (lightnum < 0)
 				spritelights = scalelight[0];
@@ -1342,9 +1347,6 @@ static void R_SplitSprite(vissprite_t *sprite)
 
 				if (lindex >= MAXLIGHTSCALE)
 					lindex = MAXLIGHTSCALE-1;
-
-				if (newsprite->cut & SC_SEMIBRIGHT)
-					lindex = (MAXLIGHTSCALE/2) + (lindex >>1);
 
 				newsprite->colormap = spritelights[lindex];
 			}
@@ -1790,6 +1792,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t gz = 0, gzt = 0;
 	INT32 heightsec, phs;
 	INT32 light = 0;
+	lighttable_t **lights_array = spritelights;
 	fixed_t this_scale, highresscale;
 	fixed_t spritexscale, spriteyscale;
 
@@ -2341,18 +2344,30 @@ static void R_ProjectSprite(mobj_t *thing)
 			return;
 	}
 
+	INT32 lightnum;
+
 	if (thing->subsector->sector->numlights)
 	{
 		light = P_GetSectorLightNumAt(thing->subsector->sector, interp.x, interp.y, splat ? gz : gzt);
 
-		INT32 lightnum = (*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT);
-		if (lightnum < 0)
-			spritelights = scalelight[0];
-		else if (lightnum >= LIGHTLEVELS)
-			spritelights = scalelight[LIGHTLEVELS-1];
-		else
-			spritelights = scalelight[lightnum];
+		lightnum = *thing->subsector->sector->lightlist[light].lightlevel;
 	}
+	else
+	{
+		lightnum = thing->subsector->sector->lightlevel;
+	}
+
+	if (R_ThingIsSemiBright(thing))
+		lightnum = 128 + (lightnum>>1);
+
+	lightnum = (lightnum >> LIGHTSEGSHIFT);
+
+	if (lightnum < 0)
+		lights_array = scalelight[0];
+	else if (lightnum >= LIGHTLEVELS)
+		lights_array = scalelight[LIGHTLEVELS-1];
+	else
+		lights_array = scalelight[lightnum];
 
 	heightsec = thing->subsector->sector->heightsec;
 	if (viewplayer->mo && viewplayer->mo->subsector)
@@ -2501,10 +2516,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		if (lindex >= MAXLIGHTSCALE)
 			lindex = MAXLIGHTSCALE-1;
 
-		if (vis->cut & SC_SEMIBRIGHT)
-			lindex = (MAXLIGHTSCALE/2) + (lindex >> 1);
-
-		vis->colormap = spritelights[lindex];
+		vis->colormap = lights_array[lindex];
 	}
 
 	if (vflip)
