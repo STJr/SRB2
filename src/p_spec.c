@@ -2576,7 +2576,16 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				// If titlemap, set the camera ref for title's thinker
 				// This is not revoked until overwritten; awayviewtics is ignored
 				if (titlemapinaction)
+				{
+					if (titlemapcameraref != altview)
+					{
+						// Why do I have to run this twice to reset the skybox's interpolation in OpenGL???
+						R_ResetViewInterpolation(0);
+						R_ResetViewInterpolation(0);
+						camera.reset = true;
+					}
 					titlemapcameraref = altview;
+				}
 				else if (!mo->player->awayviewtics || mo->player->awayviewmobj != altview) {
 					P_SetTarget(&mo->player->awayviewmobj, altview);
 

@@ -4916,6 +4916,8 @@ const char *const MENUTYPES_LIST[] = {
 	"SP_NIGHTS_REPLAY",
 	"SP_NIGHTS_GHOST",
 
+	"SP_MARATHON",
+
 	// Multiplayer
 	"MP_MAIN",
 	"MP_SPLITSCREEN", // SplitServer
