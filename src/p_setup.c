@@ -7355,6 +7355,26 @@ static void P_InitLevelSettings(void)
 		CV_SetValue(&cv_analog[1], true);
 }
 
+static void P_ResetSpawnpoints(void)
+{
+	UINT8 i;
+
+	numdmstarts = numredctfstarts = numbluectfstarts = 0;
+
+	// reset the player starts
+	for (i = 0; i < MAXPLAYERS; i++)
+		playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
+
+	for (i = 0; i < MAX_DM_STARTS; i++)
+		deathmatchstarts[i] = NULL;
+
+	for (i = 0; i < 2; i++)
+		skyboxmo[i] = NULL;
+
+	for (i = 0; i < 16; i++)
+		skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
+}
+
 // Respawns all the mapthings and mobjs in the map from the already loaded map data.
 void P_RespawnThings(void)
 {
@@ -7384,6 +7404,7 @@ void P_RespawnThings(void)
 	localaiming = 0;
 	localaiming2 = 0;
 
+	P_ResetSpawnpoints(); // Clear the player spawnpoint arrays so we don't fill them with duplicates
 	P_SpawnMapThings(true);
 
 	// restore skybox viewpoint/centerpoint if necessary, set them to defaults if we can't do that
@@ -7439,26 +7460,6 @@ static void P_ForceCharacter(const char *forcecharskin)
 		if (!netgame)
 			players[i].skincolor = skins[skinnum]->prefcolor;
 	}
-}
-
-static void P_ResetSpawnpoints(void)
-{
-	UINT8 i;
-
-	numdmstarts = numredctfstarts = numbluectfstarts = 0;
-
-	// reset the player starts
-	for (i = 0; i < MAXPLAYERS; i++)
-		playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
-
-	for (i = 0; i < MAX_DM_STARTS; i++)
-		deathmatchstarts[i] = NULL;
-
-	for (i = 0; i < 2; i++)
-		skyboxmo[i] = NULL;
-
-	for (i = 0; i < 16; i++)
-		skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
 }
 
 static void P_LoadRecordGhosts(void)
