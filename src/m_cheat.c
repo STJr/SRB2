@@ -1572,6 +1572,9 @@ void Command_ObjectPlace_f(void)
 		players[0].mo->momz = op_oldmomz;
 		players[0].mo->height = op_oldheight;
 		players[0].mo->gravity = op_oldgravity;
+		// Do this in case gravity is modified directly via flags.
+		if ((players[0].mo->flags & MF_NOGRAVITY) && !(op_oldgravity == 0))
+			players[0].mo->flags &= ~MF_NOGRAVITY;
 		P_SetThingPosition(players[0].mo);
 
 		// Return their color to normal.
