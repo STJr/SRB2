@@ -185,9 +185,9 @@ static void BlendTab_Translucent(UINT8 *table, int style, UINT8 blendamt)
 	if (table == NULL)
 		I_Error("BlendTab_Translucent: input table was NULL!");
 
-	for (bg = 0; bg < 0xFF; bg++)
+	for (bg = 0; bg < 0x100; bg++)
 	{
-		for (fg = 0; fg < 0xFF; fg++)
+		for (fg = 0; fg < 0x100; fg++)
 		{
 			RGBA_t backrgba = V_GetMasterColor(bg);
 			RGBA_t frontrgba = V_GetMasterColor(fg);
@@ -214,9 +214,9 @@ static void BlendTab_Subtractive(UINT8 *table, int style, UINT8 blendamt)
 		return;
 	}
 
-	for (bg = 0; bg < 0xFF; bg++)
+	for (bg = 0; bg < 0x100; bg++)
 	{
-		for (fg = 0; fg < 0xFF; fg++)
+		for (fg = 0; fg < 0x100; fg++)
 		{
 			RGBA_t backrgba = V_GetMasterColor(bg);
 			RGBA_t frontrgba = V_GetMasterColor(fg);
@@ -242,9 +242,9 @@ static void BlendTab_Modulative(UINT8 *table)
 	if (table == NULL)
 		I_Error("BlendTab_Modulative: input table was NULL!");
 
-	for (bg = 0; bg < 0xFF; bg++)
+	for (bg = 0; bg < 0x100; bg++)
 	{
-		for (fg = 0; fg < 0xFF; fg++)
+		for (fg = 0; fg < 0x100; fg++)
 		{
 			RGBA_t backrgba = V_GetMasterColor(bg);
 			RGBA_t frontrgba = V_GetMasterColor(fg);
