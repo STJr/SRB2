@@ -4141,7 +4141,7 @@ static INT16 RandMap(UINT32 tolflags, INT16 pprevmap)
 
 	// Find all the maps that are ok and and put them in an array.
 	for (ix = 0; ix < numgamemaps; ix++)
-		if (mapheaderinfo[ix] && (mapheaderinfo[ix]->typeoflevel & tolflags) == tolflags
+		if (mapheaderinfo[ix] && (mapheaderinfo[ix]->typeoflevel & tolflags)
 		 && ix != pprevmap // Don't pick the same map.
 		 && (!M_MapLocked(ix+1, serverGamedata)) // Don't pick locked maps.
 		)
