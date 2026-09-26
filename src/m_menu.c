@@ -7963,7 +7963,15 @@ static void M_DrawSoundTest(void)
 			}
 			else
 			{
-				V_DrawString(x, y, (t == st_sel ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE, soundtestdefs[t]->title);
+				if (V_StringWidth(soundtestdefs[t]->title, 0) <= 140)
+					V_DrawString(x, y, (t == st_sel ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE, soundtestdefs[t]->title);
+				else
+				{
+					char tempstring[20];
+					strlcpy(tempstring, soundtestdefs[t]->title, 16);
+					strcat(tempstring, "...");
+					V_DrawString(x, y, (t == st_sel ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE, tempstring);
+				}
 				if (curplaying == soundtestdefs[t])
 				{
 					V_DrawFill(165+140-9, y-4, 8, 16, 150);
