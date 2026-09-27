@@ -109,7 +109,7 @@ static struct
 // ripples da water texture
 static fixed_t R_CalculateRippleOffset(INT32 y)
 {
-	fixed_t distance = FixedMul(planeheight, yslope[y]);
+	fixed_t distance = FixedDiv(FixedMul(planeheight, yslope[y]), mapobjectscale);
 	const INT32 yay = (planeripple.offset + (distance>>9)) & 8191;
 	return FixedDiv(FINESINE(yay), (1<<12) + (distance>>11));
 }
@@ -118,8 +118,8 @@ static void R_CalculatePlaneRipple(angle_t angle)
 {
 	angle >>= ANGLETOFINESHIFT;
 	angle = (angle + 2048) & 8191; // 90 degrees
-	planeripple.xfrac = FixedMul(FINECOSINE(angle), ds_bgofs);
-	planeripple.yfrac = FixedMul(FINESINE(angle), ds_bgofs);
+	planeripple.xfrac = FixedMul(FixedMul(FINECOSINE(angle), ds_bgofs), mapobjectscale);
+	planeripple.yfrac = FixedMul(FixedMul(FINESINE(angle), ds_bgofs), mapobjectscale);
 }
 
 static void R_UpdatePlaneRipple(void)
@@ -192,7 +192,7 @@ static void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 			ds_bgofs = -y;
 	}
 
-	pindex = distance >> LIGHTZSHIFT;
+	pindex = FixedDiv(distance, mapobjectscale) >> LIGHTZSHIFT;
 	if (pindex >= MAXLIGHTZ)
 		pindex = MAXLIGHTZ - 1;
 
@@ -261,7 +261,7 @@ static void R_MapFogPlane(INT32 y, INT32 x1, INT32 x2)
 
 	distance = FixedMul(planeheight, yslope[y]);
 
-	pindex = distance >> LIGHTZSHIFT;
+	pindex = FixedDiv(distance, mapobjectscale) >> LIGHTZSHIFT;
 	if (pindex >= MAXLIGHTZ)
 		pindex = MAXLIGHTZ - 1;
 

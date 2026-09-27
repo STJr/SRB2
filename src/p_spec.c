@@ -2803,9 +2803,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 438: // Set player scale
 			if (mo)
 			{
-				mo->destscale = FixedDiv(line->args[0]<<FRACBITS, 100<<FRACBITS);
-				if (mo->destscale < FRACUNIT/100)
-					mo->destscale = FRACUNIT/100;
+				mo->destscale = FixedMul(FixedDiv(line->args[0]<<FRACBITS, 100<<FRACBITS), mapobjectscale);
+				if (mo->destscale < mapobjectscale/100)
+					mo->destscale = mapobjectscale/100;
 				if (mo->player && bot)
 					bot->destscale = mo->destscale;
 			}
@@ -6053,6 +6053,12 @@ static void P_RunLevelLoadExecutors(void)
   */
 void P_InitSpecials(void)
 {
+	// Set the map object scale
+	mapobjectscale = mapheaderinfo[gamemap-1]->mobj_scale;
+	// TODO: 2.3: Delete
+	if (maptol & TOL_ERZ3)
+		mapobjectscale /= 2;
+	
 	// Set the default gravity. Custom gravity overrides this setting.
 	gravity = mapheaderinfo[gamemap-1]->gravity;
 

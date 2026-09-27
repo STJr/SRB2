@@ -431,6 +431,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word,"gravity")) {
 		lua_pushinteger(L, gravity);
 		return 1;
+	} else if (fastcmp(word, "mapobjectscale")) {
+		lua_pushinteger(L, mapobjectscale);
+		return 1;
 	} else if (fastcmp(word,"VERSION")) {
 		lua_pushinteger(L, VERSION);
 		return 1;

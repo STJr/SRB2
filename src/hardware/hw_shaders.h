@@ -75,7 +75,7 @@
 		"float lightnum = clamp(light / 17.0, 0.0, 15.0);\n" \
 		"float lightz = clamp(z / 16.0, 0.0, 127.0);\n" \
 		"float startmap = (15.0 - lightnum) * 4.0;\n" \
-		"float scale = 160.0 / (lightz + 1.0);\n" \
+		"float scale = (160.0 / (lightz + 1.0)) * mapobjectscale;\n" \
 		"float cap = (155.0 - light) * 0.26;\n" \
 		"return max(startmap * STARTMAP_FUDGE - scale * 0.5 * SCALE_FUDGE, cap);\n" \
 	"}\n"
@@ -126,6 +126,7 @@
 	"uniform sampler2D lighttable_tex;\n" \
 	"uniform vec4 poly_color;\n" \
 	"uniform float lighting;\n" \
+	"uniform float mapobjectscale;\n" \
 	GLSL_DOOM_COLORMAP \
 	"void main(void) {\n" \
 		"vec4 texel = texture2D(tex, gl_TexCoord[0].st);\n" \
@@ -139,6 +140,7 @@
 	"uniform float lighting;\n" \
 	"uniform float fade_start;\n" \
 	"uniform float fade_end;\n" \
+	"uniform float mapobjectscale;\n" \
 	GLSL_DOOM_COLORMAP \
 	GLSL_DOOM_LIGHT_EQUATION \
 	"void main(void) {\n" \
@@ -179,6 +181,7 @@
 	"uniform sampler2D lighttable_tex;\n" \
 	"uniform vec4 poly_color;\n" \
 	"uniform float lighting;\n" \
+	"uniform float mapobjectscale;\n" \
 	GLSL_DOOM_COLORMAP \
 	"void main(void) {\n" \
 		"vec4 texel = texture2D(tex, gl_TexCoord[0].st);\n" \
@@ -195,6 +198,7 @@
 	"uniform float lighting;\n" \
 	"uniform float fade_start;\n" \
 	"uniform float fade_end;\n" \
+	"uniform float mapobjectscale;\n" \
 	GLSL_DOOM_COLORMAP \
 	GLSL_DOOM_LIGHT_EQUATION \
 	"void main(void) {\n" \
@@ -238,6 +242,7 @@
 	"uniform vec4 poly_color;\n" \
 	"uniform float lighting;\n" \
 	"uniform float leveltime;\n" \
+	"uniform float mapobjectscale;\n" \
 	GLSL_DOOM_COLORMAP \
 	"void main(void) {\n" \
 		GLSL_WATER_TEXEL \
@@ -252,6 +257,7 @@
 	"uniform float fade_start;\n" \
 	"uniform float fade_end;\n" \
 	"uniform float leveltime;\n" \
+	"uniform float mapobjectscale;\n" \
 	GLSL_DOOM_COLORMAP \
 	GLSL_DOOM_LIGHT_EQUATION \
 	"void main(void) {\n" \
@@ -280,6 +286,7 @@
 	"uniform float lighting;\n" \
 	"uniform float fade_start;\n" \
 	"uniform float fade_end;\n" \
+	"uniform float mapobjectscale;\n" \
 	GLSL_DOOM_COLORMAP \
 	GLSL_DOOM_LIGHT_EQUATION \
 	"void main(void) {\n" \
@@ -397,6 +404,7 @@
 	"uniform float lighting;\n" \
 	"uniform float fade_start;\n" \
 	"uniform float fade_end;\n" \
+	"uniform float mapobjectscale;\n" \
 	GLSL_DOOM_COLORMAP \
 	GLSL_DOOM_LIGHT_EQUATION \
 	"void main(void) {\n" \

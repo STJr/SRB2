@@ -1244,20 +1244,34 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 
 	dc_colormap = colormaps;
 
-	dc_iscale = FixedDiv(FRACUNIT, vis->scale);
 	dc_texturemid = vis->texturemid;
 	dc_texheight = 0;
+	
+	fixed_t frac = vis->startfrac;
+	windowtop = windowbottom = sprbotscreen = INT32_MAX;
+
+	fixed_t this_scale = vis->thingscale;
+	if (this_scale <= 0)
+		this_scale = 1;
+	if (this_scale != FRACUNIT)
+	{
+		if (!(vis->cut & SC_ISSCALED))
+		{
+			vis->scale = FixedMul(vis->scale, this_scale);
+			vis->xiscale = FixedDiv(vis->xiscale, this_scale);
+			vis->cut |= SC_ISSCALED;
+		}
+		dc_texturemid = FixedDiv(dc_texturemid, this_scale);
+	}
 
 	spryscale = vis->scale;
 	sprtopscreen = centeryfrac - FixedMul(dc_texturemid,spryscale);
-	windowtop = windowbottom = sprbotscreen = INT32_MAX;
+	dc_iscale = FixedDiv(FRACUNIT, vis->scale);
 
 	if (vis->x1 < 0)
 		vis->x1 = 0;
 	if (vis->x2 >= vid.width)
 		vis->x2 = vid.width-1;
-
-	fixed_t frac = vis->startfrac;
 
 	for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, frac += vis->xiscale)
 		R_DrawMaskedColumn(&patch->columns[frac>>FRACBITS], patch->height);
@@ -1338,7 +1352,7 @@ static void R_SplitSprite(vissprite_t *sprite)
 			if (!(newsprite->cut & SC_FULLBRIGHT)
 				|| (newsprite->extra_colormap && (newsprite->extra_colormap->flags & CMF_FADEFULLBRIGHTSPRITES)))
 			{
-				lindex = FixedMul(sprite->xscale, LIGHTRESOLUTIONFIX)>>(LIGHTSCALESHIFT);
+				lindex = FixedMul(FixedMul(sprite->xscale, mapobjectscale), LIGHTRESOLUTIONFIX)>>(LIGHTSCALESHIFT);
 
 				if (lindex >= MAXLIGHTSCALE)
 					lindex = MAXLIGHTSCALE-1;
@@ -2496,7 +2510,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 	{
 		// diminished light
-		lindex = FixedMul(xscale, LIGHTRESOLUTIONFIX)>>(LIGHTSCALESHIFT);
+		lindex = FixedMul(FixedMul(xscale, mapobjectscale), LIGHTRESOLUTIONFIX)>>(LIGHTSCALESHIFT);
 
 		if (lindex >= MAXLIGHTSCALE)
 			lindex = MAXLIGHTSCALE-1;
@@ -2544,6 +2558,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	//SoM: 3/17/2000
 	fixed_t gz, gzt;
+	fixed_t this_scale;
 
 	// uncapped/interpolation
 	interpmobjstate_t interp = {0};
@@ -2562,6 +2577,11 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 		R_InterpolatePrecipMobjState(thing, FRACUNIT, &interp);
 	}
 
+	this_scale = interp.scale;
+
+	if (this_scale < 1)
+		return;
+
 	// transform the origin point
 	tr_x = interp.x - viewx;
 	tr_y = interp.y - viewy;
@@ -2569,7 +2589,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin); // near/far distance
 
 	// thing is behind view plane?
-	if (tz < MINZ)
+	if (tz < FixedMul(MINZ, this_scale))
 		return;
 
 	tx = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos); // sideways distance
@@ -2608,14 +2628,14 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	lump = sprframe->lumpid[0];     //Fab: see note above
 
 	// calculate edges of the shape
-	tx -= spritecachedinfo[lump].offset;
+	tx -= FixedMul(spritecachedinfo[lump].offset, this_scale);
 	x1 = (centerxfrac + FixedMul (tx,xscale)) >>FRACBITS;
 
 	// off the right side?
 	if (x1 > viewwidth)
 		return;
 
-	tx += spritecachedinfo[lump].width;
+	tx += FixedMul(spritecachedinfo[lump].width, this_scale);
 	x2 = ((centerxfrac + FixedMul (tx,xscale)) >>FRACBITS) - 1;
 
 	// off the left side
@@ -2634,8 +2654,8 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 
 	//SoM: 3/17/2000: Disregard sprites that are out of view..
-	gzt = interp.z + spritecachedinfo[lump].topoffset;
-	gz = gzt - spritecachedinfo[lump].height;
+	gzt = interp.z + FixedMul(spritecachedinfo[lump].topoffset, this_scale);
+	gz = gzt - FixedMul(spritecachedinfo[lump].height, this_scale);
 
 	if (thing->subsector->sector->cullheight)
 	{
@@ -2646,6 +2666,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	// store information in a vissprite
 	vis = R_NewVisSprite();
 	vis->scale = vis->sortscale = yscale; //<<detailshift;
+	vis->thingscale = interp.scale;
 	vis->dispoffset = 0; // Monster Iestyn: 23/11/15
 	vis->gx = interp.x;
 	vis->gy = interp.y;
@@ -2674,7 +2695,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->xiscale = iscale;
 
 	if (vis->x1 > x1)
-		vis->startfrac += vis->xiscale*(vis->x1-x1);
+		vis->startfrac += FixedDiv(vis->xiscale, this_scale) * (vis->x1-x1);
 
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
