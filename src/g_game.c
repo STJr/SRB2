@@ -4404,7 +4404,7 @@ INT16 G_GetNextMap(boolean ignoretokens, boolean silent)
 	if (spec && (!gottoken || ignoretokens) && !nextmapoverride)
 		newmapnum = lastmap; // Exiting from a special stage? Go back to the game. Tails 08-11-2001
 
-	if (!(gametyperules & GTR_CAMPAIGN))
+	if (!(gametyperules & GTR_CAMPAIGN) && !nextmapoverride)
 	{
 		if (cv_advancemap.value == 0) // Stay on same map.
 			newmapnum = prevmap;
