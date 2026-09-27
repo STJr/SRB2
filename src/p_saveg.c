@@ -3768,6 +3768,10 @@ static thinker_t* LoadCeilingThinker(save_t *save_p, actionf_p1 thinker)
 	ht->sourceline = P_ReadFixed(save_p);
 	if (ht->sector)
 		ht->sector->ceilingdata = ht;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&ht->thinker, ht->sector, true);
+
 	return &ht->thinker;
 }
 
@@ -3789,6 +3793,10 @@ static thinker_t* LoadFloormoveThinker(save_t *save_p, actionf_p1 thinker)
 	ht->sourceline = P_ReadFixed(save_p);
 	if (ht->sector)
 		ht->sector->floordata = ht;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&ht->thinker, ht->sector, false);
+
 	return &ht->thinker;
 }
 
@@ -3874,6 +3882,10 @@ static thinker_t* LoadElevatorThinker(save_t *save_p, actionf_p1 thinker, boolea
 		ht->sector->floordata = ht;
 	}
 
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&ht->thinker, ht->sector, false);
+	R_CreateInterpolator_SectorPlane(&ht->thinker, ht->sector, true);
+
 	return &ht->thinker;
 }
 
@@ -3913,6 +3925,23 @@ static thinker_t* LoadScrollThinker(save_t *save_p, actionf_p1 thinker)
 	ht->accel = P_ReadINT32(save_p);
 	ht->exclusive = P_ReadINT32(save_p);
 	ht->type = P_ReadUINT8(save_p);
+
+	// interpolation
+	switch (ht->type)
+	{
+		case sc_side:
+			R_CreateInterpolator_SideScroll(&ht->thinker, &sides[ht->affectee]);
+			break;
+		case sc_floor:
+			R_CreateInterpolator_SectorScroll(&ht->thinker, &sectors[ht->affectee], false);
+			break;
+		case sc_ceiling:
+			R_CreateInterpolator_SectorScroll(&ht->thinker, &sectors[ht->affectee], true);
+			break;
+		default:
+			break;
+	}
+
 	return &ht->thinker;
 }
 
@@ -4095,17 +4124,30 @@ FUNCINLINE static ATTRINLINE thinker_t *LoadDynamicVertexSlopeThinker(save_t *sa
 FUNCINLINE static ATTRINLINE thinker_t *LoadPolyrotatetThinker(save_t *save_p, actionf_p1 thinker)
 {
 	polyrotate_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	// interpolation
+	polyobj_t *po;
 	ht->thinker.function = thinker;
 	ht->polyObjNum = P_ReadINT32(save_p);
 	ht->speed = P_ReadINT32(save_p);
 	ht->distance = P_ReadINT32(save_p);
 	ht->turnobjs = P_ReadUINT8(save_p);
+
+	if (!(po = Polyobj_GetForNum(ht->polyObjNum)))
+	{
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", ht->polyObjNum);
+		return NULL;
+	}
+
+	R_CreateInterpolator_Polyobj(&ht->thinker, po);
+
 	return &ht->thinker;
 }
 
 static thinker_t* LoadPolymoveThinker(save_t *save_p, actionf_p1 thinker)
 {
 	polymove_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	// interpolation
+	polyobj_t *po;
 	ht->thinker.function = thinker;
 	ht->polyObjNum = P_ReadINT32(save_p);
 	ht->speed = P_ReadINT32(save_p);
@@ -4113,12 +4155,26 @@ static thinker_t* LoadPolymoveThinker(save_t *save_p, actionf_p1 thinker)
 	ht->momy = P_ReadFixed(save_p);
 	ht->distance = P_ReadINT32(save_p);
 	ht->angle = P_ReadAngle(save_p);
+
+	if (!(po = Polyobj_GetForNum(ht->polyObjNum)))
+	{
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", ht->polyObjNum);
+		return NULL;
+	}
+
+	R_CreateInterpolator_Polyobj(&ht->thinker, po);
+
 	return &ht->thinker;
 }
 
 FUNCINLINE static ATTRINLINE thinker_t *LoadPolywaypointThinker(save_t *save_p, actionf_p1 thinker)
 {
 	polywaypoint_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	// interpolation
+	polyobj_t *po;
+	polyobj_t *oldpo;
+	INT32 start;
+
 	ht->thinker.function = thinker;
 	ht->polyObjNum = P_ReadINT32(save_p);
 	ht->speed = P_ReadINT32(save_p);
@@ -4128,12 +4184,40 @@ FUNCINLINE static ATTRINLINE thinker_t *LoadPolywaypointThinker(save_t *save_p, 
 	ht->returnbehavior = P_ReadUINT8(save_p);
 	ht->continuous = P_ReadUINT8(save_p);
 	ht->stophere = P_ReadUINT8(save_p);
+
+	if (!(po = Polyobj_GetForNum(ht->polyObjNum)))
+	{
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", ht->polyObjNum);
+		return NULL;
+	}
+
+	R_CreateInterpolator_Polyobj(&ht->thinker, po);
+	// T_PolyObjWaypoint is the only polyobject movement
+	// that can adjust z, so we add these ones too.
+	R_CreateInterpolator_SectorPlane(&ht->thinker, po->lines[0]->backsector, false);
+	R_CreateInterpolator_SectorPlane(&ht->thinker, po->lines[0]->backsector, true);
+
+	// Most other polyobject functions handle children by recursively
+	// giving each child another thinker. T_PolyObjWaypoint handles
+	// it manually though, which means we need to manually give them
+	// interpolation here instead.
+	start = 0;
+	oldpo = po;
+	while ((po = Polyobj_GetChild(oldpo, &start)))
+	{
+		R_CreateInterpolator_Polyobj(&ht->thinker, po);
+		R_CreateInterpolator_SectorPlane(&ht->thinker, po->lines[0]->backsector, false);
+		R_CreateInterpolator_SectorPlane(&ht->thinker, po->lines[0]->backsector, true);
+	}
+
 	return &ht->thinker;
 }
 
 FUNCINLINE static ATTRINLINE thinker_t *LoadPolyslidedoorThinker(save_t *save_p, actionf_p1 thinker)
 {
 	polyslidedoor_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	// interpolation
+	polyobj_t *po;
 	ht->thinker.function = thinker;
 	ht->polyObjNum = P_ReadINT32(save_p);
 	ht->delay = P_ReadINT32(save_p);
@@ -4148,12 +4232,23 @@ FUNCINLINE static ATTRINLINE thinker_t *LoadPolyslidedoorThinker(save_t *save_p,
 	ht->momx = P_ReadFixed(save_p);
 	ht->momy = P_ReadFixed(save_p);
 	ht->closing = P_ReadUINT8(save_p);
+
+	if (!(po = Polyobj_GetForNum(ht->polyObjNum)))
+	{
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", ht->polyObjNum);
+		return NULL;
+	}
+
+	R_CreateInterpolator_Polyobj(&ht->thinker, po);
+
 	return &ht->thinker;
 }
 
 FUNCINLINE static ATTRINLINE thinker_t *LoadPolyswingdoorThinker(save_t *save_p, actionf_p1 thinker)
 {
 	polyswingdoor_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	// interpolation
+	polyobj_t *po;
 	ht->thinker.function = thinker;
 	ht->polyObjNum = P_ReadINT32(save_p);
 	ht->delay = P_ReadINT32(save_p);
@@ -4163,30 +4258,61 @@ FUNCINLINE static ATTRINLINE thinker_t *LoadPolyswingdoorThinker(save_t *save_p,
 	ht->initDistance = P_ReadINT32(save_p);
 	ht->distance = P_ReadINT32(save_p);
 	ht->closing = P_ReadUINT8(save_p);
+
+	if (!(po = Polyobj_GetForNum(ht->polyObjNum)))
+	{
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", ht->polyObjNum);
+		return NULL;
+	}
+
+	R_CreateInterpolator_Polyobj(&ht->thinker, po);
+
 	return &ht->thinker;
 }
 
 FUNCINLINE static ATTRINLINE thinker_t *LoadPolydisplaceThinker(save_t *save_p, actionf_p1 thinker)
 {
 	polydisplace_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	// interpolation
+	polyobj_t *po;
 	ht->thinker.function = thinker;
 	ht->polyObjNum = P_ReadINT32(save_p);
 	ht->controlSector = LoadSector(P_ReadUINT32(save_p));
 	ht->dx = P_ReadFixed(save_p);
 	ht->dy = P_ReadFixed(save_p);
 	ht->oldHeights = P_ReadFixed(save_p);
+
+	if (!(po = Polyobj_GetForNum(ht->polyObjNum)))
+	{
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", ht->polyObjNum);
+		return NULL;
+	}
+
+	R_CreateInterpolator_Polyobj(&ht->thinker, po);
+
 	return &ht->thinker;
 }
 
 FUNCINLINE static ATTRINLINE thinker_t *LoadPolyrotdisplaceThinker(save_t *save_p, actionf_p1 thinker)
 {
 	polyrotdisplace_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	// interpolation
+	polyobj_t *po;
 	ht->thinker.function = thinker;
 	ht->polyObjNum = P_ReadINT32(save_p);
 	ht->controlSector = LoadSector(P_ReadUINT32(save_p));
 	ht->rotscale = P_ReadFixed(save_p);
 	ht->turnobjs = P_ReadUINT8(save_p);
 	ht->oldHeights = P_ReadFixed(save_p);
+
+	if (!(po = Polyobj_GetForNum(ht->polyObjNum)))
+	{
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjRotate: bad polyobj %d\n", ht->polyObjNum);
+		return NULL;
+	}
+
+	R_CreateInterpolator_Polyobj(&ht->thinker, po);
+
 	return &ht->thinker;
 }
 
