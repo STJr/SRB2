@@ -12,6 +12,7 @@
 /// \brief game loop functions, events handling
 
 #include "doomdef.h"
+#include "fastcmp.h"
 #include "console.h"
 #include "d_main.h"
 #include "d_player.h"
@@ -4133,7 +4134,7 @@ UINT32 G_TOLFlag(INT32 pgametype)
   *         has those flags.
   * \author Graue <graue@oceanbase.org>
   */
-static INT16 RandMap(UINT32 tolflags, INT16 pprevmap)
+static INT16 RandMap(UINT32 tolflags, INT16 pprevmap, boolean respectheaders)
 {
 	INT16 *okmaps = Z_Malloc(numgamemaps * sizeof(INT16), PU_STATIC, NULL);
 	INT32 numokmaps = 0;
@@ -4141,9 +4142,10 @@ static INT16 RandMap(UINT32 tolflags, INT16 pprevmap)
 
 	// Find all the maps that are ok and and put them in an array.
 	for (ix = 0; ix < numgamemaps; ix++)
-		if (mapheaderinfo[ix] && (mapheaderinfo[ix]->typeoflevel & tolflags)
+		if (mapheaderinfo[ix] && (mapheaderinfo[ix]->typeoflevel & tolflags) == tolflags
 		 && ix != pprevmap // Don't pick the same map.
-		 && (!M_MapLocked(ix+1, serverGamedata)) // Don't pick locked maps.
+		 && (!M_MapLocked(ix+1, serverGamedata) // Don't pick locked maps.
+		 && (!respectheaders || (respectheaders && mapheaderinfo[pprevmap] && fastcmp(mapheaderinfo[ix]->selectheading, mapheaderinfo[pprevmap]->selectheading)))) // Don't pick maps under a different heading.
 		)
 			okmaps[numokmaps++] = ix;
 
@@ -4408,8 +4410,8 @@ INT16 G_GetNextMap(boolean ignoretokens, boolean silent)
 	{
 		if (cv_advancemap.value == 0) // Stay on same map.
 			newmapnum = prevmap;
-		else if (cv_advancemap.value == 2) // Go to random map.
-			newmapnum = RandMap(G_TOLFlag(gametype_to_use), prevmap);
+		else if (cv_advancemap.value >= 2) // Go to random map.
+			newmapnum = RandMap(G_TOLFlag(gametype_to_use), prevmap, cv_advancemap.value == 3);
 	}
 
 	return newmapnum;
