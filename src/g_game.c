@@ -3583,7 +3583,7 @@ void G_DoReborn(INT32 playernum)
 
 void G_AddPlayer(INT32 playernum)
 {
-	INT32 countplayers = 0, notexiting = 0;
+	INT32 countplayers = 0, exiting = 0;
 
 	player_t *p = &players[playernum];
 
@@ -3598,11 +3598,14 @@ void G_AddPlayer(INT32 playernum)
 
 			if (players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN) // ignore dumb, stupid tails
 				continue;
+				
+			if (i != playernum) // don't count YOURSELF or else this code is pointless!
+			{
+				countplayers++;
 
-			countplayers++;
-
-			if (!players[i].exiting)
-				notexiting++;
+				if ((players[i].pflags & PF_FINISHED) || players[i].exiting)
+					exiting++;
+			}
 
 			if (!(cv_coopstarposts.value && G_GametypeUsesCoopStarposts() && (p->starpostnum < players[i].starpostnum)))
 				continue;
@@ -3624,7 +3627,7 @@ void G_AddPlayer(INT32 playernum)
 	if (G_GametypeUsesLives() || ((netgame || multiplayer) && (gametyperules & GTR_FRIENDLY)))
 		p->lives = cv_startinglives.value;
 
-	if ((countplayers && !notexiting) || G_IsSpecialStage(gamemap))
+	if ((exiting && countplayers == exiting) || G_IsSpecialStage(gamemap)) // spawn as exiting if everyone else is already exiting or are in a special stage
 		P_DoPlayerExit(p, false);
 }
 
