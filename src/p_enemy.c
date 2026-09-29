@@ -12669,19 +12669,23 @@ void A_LightBeamReset(void *data)
 	if (LUA_CallAction(A_LIGHTBEAMRESET, actor))
 		return;
 
-	P_SetScale(actor, FixedMul(FRACUNIT + P_SignedRandom()*FRACUNIT/256, actor->scale), true);
-
 	if (!actor->spawnpoint)
+	{
+		P_SetScale(actor, FixedMul(FRACUNIT + P_SignedRandom()*FRACUNIT/256, mapobjectscale), true);
 		return; // this can't work properly welp
+	}
+	
+	fixed_t origscale = FixedMul(mapobjectscale, actor->spawnpoint->scale);
+	P_SetScale(actor, FixedMul(FRACUNIT + P_SignedRandom()*FRACUNIT/256, origscale), true);
 
-	actor->momx = -FixedMul((P_SignedRandom()*FINESINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/128, actor->scale);
-	actor->momy = FixedMul((P_SignedRandom()*FINECOSINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/128, actor->scale);
-	actor->momz = FixedMul((P_SignedRandom()*FRACUNIT)/128, actor->scale);
+	actor->momx = -FixedMul((P_SignedRandom()*FINESINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/128, origscale);
+	actor->momy = FixedMul((P_SignedRandom()*FINECOSINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/128, origscale);
+	actor->momz = FixedMul((P_SignedRandom()*FRACUNIT)/128, origscale);
 
 	P_SetOrigin(actor,
-		actor->spawnpoint->x*FRACUNIT - FixedMul((P_SignedRandom()*FINESINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/2, actor->scale),
-		actor->spawnpoint->y*FRACUNIT + FixedMul((P_SignedRandom()*FINECOSINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/2, actor->scale),
-		actor->spawnpoint->z*FRACUNIT + FixedMul((P_SignedRandom()*FRACUNIT)/2, actor->scale));
+		actor->spawnpoint->x*FRACUNIT - FixedMul((P_SignedRandom()*FINESINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/2, origscale),
+		actor->spawnpoint->y*FRACUNIT + FixedMul((P_SignedRandom()*FINECOSINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/2, origscale),
+		actor->spawnpoint->z*FRACUNIT + FixedMul((P_SignedRandom()*FRACUNIT)/2, origscale));
 }
 
 // Function: A_MineExplode
