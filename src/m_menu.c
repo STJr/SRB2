@@ -7963,14 +7963,32 @@ static void M_DrawSoundTest(void)
 			}
 			else
 			{
-				if (V_StringWidth(soundtestdefs[t]->title, 0) <= 140)
+				if (V_StringWidth(soundtestdefs[t]->title, 0) <= 135)
 					V_DrawString(x, y, (t == st_sel ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE, soundtestdefs[t]->title);
+				else if (V_ThinStringWidth(soundtestdefs[t]->title, 0) <= 135)
+					V_DrawThinString(x, y, (t == st_sel ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE, soundtestdefs[t]->title);
 				else
 				{
-					char tempstring[20];
-					strlcpy(tempstring, soundtestdefs[t]->title, 16);
+					INT32 dotswidth = V_ThinStringWidth("...", V_ALLOWLOWERCASE);
+					INT32 newstringwidth = 0;
+					INT32 c;
+					size_t j = 0;
+					for (j = 0; j < strlen(soundtestdefs[t]->title); j++)
+					{
+						if (newstringwidth + dotswidth > 135)
+							break;
+						// Borrowed from V_FontStringWidth
+						c = soundtestdefs[t]->title[j] - FONTSTART;
+						if (c < 0 || c >= FONTSIZE || !tny_font.chars[c])
+							newstringwidth += tny_font.spacewidth;
+						else
+							newstringwidth += tny_font.chars[c]->width + tny_font.kerning;
+					}
+					char tempstring[j + 4];
+					
+					strlcpy(tempstring, soundtestdefs[t]->title, j);
 					strcat(tempstring, "...");
-					V_DrawString(x, y, (t == st_sel ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE, tempstring);
+					V_DrawThinString(x, y, (t == st_sel ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE, tempstring);
 				}
 				if (curplaying == soundtestdefs[t])
 				{
