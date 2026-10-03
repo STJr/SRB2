@@ -7984,10 +7984,10 @@ static void M_DrawSoundTest(void)
 						else
 							newstringwidth += tny_font.chars[c]->width + tny_font.kerning;
 					}
-					char tempstring[j + 4];
-					
+					char tempstring[36];
 					strlcpy(tempstring, soundtestdefs[t]->title, j);
 					strcat(tempstring, "...");
+					tempstring[j + 4] = '\0';
 					V_DrawThinString(x, y, (t == st_sel ? V_YELLOWMAP : 0)|V_ALLOWLOWERCASE, tempstring);
 				}
 				if (curplaying == soundtestdefs[t])
