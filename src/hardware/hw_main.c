@@ -926,19 +926,17 @@ static boolean HWR_BlendMidtextureSurface(FSurfaceInfo *pSurf)
 
 	pSurf->PolyColor.s.alpha = 0xFF;
 
-	if (!gl_curline->polyseg)
+	if (gl_linedef->blendmode && gl_linedef->blendmode != AST_FOG)
 	{
-		if (gl_linedef->blendmode && gl_linedef->blendmode != AST_FOG)
-		{
-			if (gl_linedef->alpha >= 0 && gl_linedef->alpha < FRACUNIT)
-				blendmode = HWR_SurfaceBlend(gl_linedef->blendmode, R_GetLinedefTransTable(gl_linedef->alpha), pSurf);
-			else
-				blendmode = HWR_GetBlendModeFlag(gl_linedef->blendmode);
-		}
-		else if (gl_linedef->alpha >= 0 && gl_linedef->alpha < FRACUNIT)
-			blendmode = HWR_TranstableToAlpha(R_GetLinedefTransTable(gl_linedef->alpha), pSurf);
+		if (gl_linedef->alpha >= 0 && gl_linedef->alpha < FRACUNIT)
+			blendmode = HWR_SurfaceBlend(gl_linedef->blendmode, R_GetLinedefTransTable(gl_linedef->alpha), pSurf);
+		else
+			blendmode = HWR_GetBlendModeFlag(gl_linedef->blendmode);
 	}
-	else if (gl_curline->polyseg->translucency > 0)
+	else if (gl_linedef->alpha >= 0 && gl_linedef->alpha < FRACUNIT)
+		blendmode = HWR_TranstableToAlpha(R_GetLinedefTransTable(gl_linedef->alpha), pSurf);
+
+	if (gl_curline->polyseg && gl_curline->polyseg->translucency > 0)
 	{
 		// Polyobject translucency is done differently
 		if (gl_curline->polyseg->translucency >= NUMTRANSMAPS) // wall not drawn
