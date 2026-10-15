@@ -1381,7 +1381,7 @@ static void HWR_ProcessSeg(void)
 				texturevpeg += gl_sidedef->rowoffset + gl_sidedef->offsety_bottom;
 
 			// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
-			texturevpeg %= FixedDiv(textureheight[gl_bottomtexture], abs(gl_sidedef->scaley_bottom));
+			texturevpeg %= textureheight[gl_bottomtexture];
 
 			wallVerts[3].t = wallVerts[2].t = texturevpeg * grTex->scaleY;
 			wallVerts[0].t = wallVerts[1].t = (texturevpeg + (gl_backsector->floorheight - gl_frontsector->floorheight) * yscale) * grTex->scaleY;
