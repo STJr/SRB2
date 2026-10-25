@@ -13877,7 +13877,7 @@ void A_DustDevilThink(void *data)
 			layer = P_SpawnMobjFromMobj(actor, 70 * FINECOSINE(fa), 70 * FINESINE(fa), 0, MT_DUSTLAYER);
 			if (P_MobjWasRemoved(layer))
 				continue;
-			layer->momz = 5 * scale;
+			P_SetObjectMomZ(layer, 5*FRACUNIT, false);
 			layer->angle = ANGLE_90 + ANGLE_90*i;
 			layer->extravalue1 = TICRATE * 3;
 
