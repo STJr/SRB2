@@ -6659,6 +6659,9 @@ static void P_ConvertBinaryThingTypes(void)
 			if (mapthings[i].options & MTF_AMBUSH)
 				mapthings[i].args[6] |= TMB_BARRIER;
 			break;
+		case 291: // Egg Capsule animal release
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
+			break;
 		case 292: //Boss waypoint
 			mapthings[i].args[0] = mapthings[i].angle;
 			mapthings[i].args[1] = mapthings[i].options & 7;

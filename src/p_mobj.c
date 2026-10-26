@@ -8213,7 +8213,9 @@ static boolean P_MobjDeadThink(mobj_t *mobj)
 			mobj_t* mo2;
 			mobj_t* flicky;
 
-			z = mobj->subsector->sector->floorheight + mobj->scale + FixedMul(P_RandomKey(64) << FRACBITS, mobj->scale);
+			// TODO: 2.3: Always use the mobj's z position instead of making it an option
+			z = ((mobj->spawnpoint && mobj->spawnpoint->args[0]) ? mobj->z : mobj->subsector->sector->floorheight) +
+				mobj->scale + FixedMul(P_RandomKey(64) << FRACBITS, mobj->scale);
 			for (i = 0; i < 3; i++)
 			{
 				const angle_t fa = P_RandomKey(FINEANGLES) & FINEMASK;
