@@ -4567,9 +4567,12 @@ void P_DoJump(player_t *player, boolean soundandstate, boolean allowflip)
 		{
 			player->mo->momz = 9*FRACUNIT;
 			player->powers[pw_carry] = CR_NONE;
-			if (!(player->mo->tracer->flags & MF_MISSILE)) // Missiles remember their owner!
-				P_SetTarget(&player->mo->tracer->target, NULL);
-			P_SetTarget(&player->mo->tracer, NULL);
+			if (!P_MobjWasRemoved(player->mo->tracer))
+			{
+				if (!(player->mo->tracer->flags & MF_MISSILE)) // Missiles remember their owner!
+					P_SetTarget(&player->mo->tracer->target, NULL);
+				P_SetTarget(&player->mo->tracer, NULL);
+			}
 		}
 		else if (player->powers[pw_carry] == CR_ROPEHANG)
 		{
