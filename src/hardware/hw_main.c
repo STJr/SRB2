@@ -1469,12 +1469,13 @@ static void HWR_ProcessSeg(void)
 			yscale = FixedToFloat(gl_sidedef->scaley_mid);
 
 			fixed_t texturevpeg;
+			fixed_t texheight = FixedDiv(textureheight[gl_sidedef->midtexture], abs(gl_sidedef->scaley_mid));
 
 			// PEGGING
 			if ((gl_linedef->flags & (ML_DONTPEGBOTTOM|ML_NOSKEW)) == (ML_DONTPEGBOTTOM|ML_NOSKEW))
-				texturevpeg = (gl_frontsector->floorheight + textureheight[gl_sidedef->midtexture] - gl_frontsector->ceilingheight) * yscale;
+				texturevpeg = (gl_frontsector->floorheight + texheight - gl_frontsector->ceilingheight) * yscale;
 			else if (gl_linedef->flags & ML_DONTPEGBOTTOM)
-				texturevpeg = (worldbottom + textureheight[gl_sidedef->midtexture] - worldtop) * yscale;
+				texturevpeg = (worldbottom + texheight - worldtop) * yscale;
 			else
 				// top of texture at top
 				texturevpeg = 0;
