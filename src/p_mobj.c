@@ -13371,8 +13371,8 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			const angle_t mobjangle = FixedAngle(mthing->angle << FRACBITS); // the mobj's own angle hasn't been set quite yet so...
 			const fixed_t baseradius = mobj->info->radius - FRACUNIT;
 			mobj_t* base = P_SpawnMobjFromMobj(mobj, 
-				P_ReturnThrustX(mobj, mobjangle, baseradius),
-				P_ReturnThrustY(mobj, mobjangle, baseradius),
+				-P_ReturnThrustX(mobj, mobjangle, baseradius),
+				-P_ReturnThrustY(mobj, mobjangle, baseradius),
 				0, MT_WALLSPIKEBASE);
 			if (P_MobjWasRemoved(base))
 			{
